@@ -24,21 +24,21 @@ test('Ferdie and Tatay Efren play offline, and saved matches keep their opponent
   await page.screenshot({ path: 'artifacts/laro-master-dama.png', fullPage: true }); expect(errors).toEqual([]);
 });
 
-test('mobile arrows form a cross, Takbo is on the left, and two-finger movement works', async ({ page, context }) => {
+test('circular pad is left of Takbo and supports two-finger diagonal sprinting', async ({ page, context }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await ready(page);
-  const box = async (dir: string) => (await page.locator(`[data-dir="${dir}"]`).boundingBox())!;
-  const up = await box('0,-1'), left = await box('-1,0'), right = await box('1,0'), down = await box('0,1'), run = (await page.locator('#touch-run').boundingBox())!;
-  expect(Math.abs(up.x - down.x)).toBeLessThan(1); expect(left.x).toBeLessThan(up.x); expect(right.x).toBeGreaterThan(up.x);
-  expect(up.y).toBeLessThan(left.y); expect(down.y).toBeGreaterThan(right.y); expect(run.x + run.width).toBeLessThan(left.x);
-  await expect(page.locator('#touch-run')).toHaveText('Takbo');
-  const startX = Number(await page.locator('#game').getAttribute('data-x'));
+  const pad = (await page.locator('#touch-pad').boundingBox())!, run = (await page.locator('#touch-run').boundingBox())!;
+  expect(pad.width).toBe(pad.height); expect(pad.x + pad.width).toBeLessThan(run.x);
+  await expect(page.locator('[data-dir]')).toHaveCount(0); await expect(page.locator('#touch-run')).toHaveText('Takbo');
+  const startX = Number(await page.locator('#game').getAttribute('data-x')), startY = Number(await page.locator('#game').getAttribute('data-y'));
   const cdp = await context.newCDPSession(page);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: run.x + run.width / 2, y: run.y + run.height / 2, id: 1 }, { x: right.x + right.width / 2, y: right.y + right.height / 2, id: 2 }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: run.x + run.width / 2, y: run.y + run.height / 2, id: 1 }, { x: pad.x + pad.width * .75, y: pad.y + pad.height * .25, id: 2 }] });
   await page.waitForTimeout(450);
-  expect(Number(await page.locator('#game').getAttribute('data-x'))).toBeGreaterThan(startX + 75);
-  const energy = await page.locator('#stamina-fill').getAttribute('style'); expect(energy).not.toContain('100%');
+  expect(Number(await page.locator('#game').getAttribute('data-x'))).toBeGreaterThan(startX + 45);
+  expect(Number(await page.locator('#game').getAttribute('data-y'))).toBeLessThan(startY - 45);
+  expect(await page.locator('#stamina-fill').getAttribute('style')).not.toContain('100%');
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await expect(page.locator('.held')).toHaveCount(0);
-  await page.screenshot({ path: 'artifacts/laro-cross-controls.png', fullPage: true });
+  await expect(page.locator('#touch-pad')).toHaveAttribute('data-moving', 'false');
+  await page.screenshot({ path: 'artifacts/laro-circular-controls.png', fullPage: true });
 });
 
 test('native fullscreen includes navigation and dialogs and can be exited cleanly', async ({ page }) => {
@@ -48,7 +48,7 @@ test('native fullscreen includes navigation and dialogs and can be exited cleanl
   await expect(page.locator('#game-display')).toHaveAttribute('data-display-mode', 'native');
   await expect(page.locator('html')).toHaveAttribute('data-orientation-request', 'landscape');
   expect(await page.evaluate(() => document.fullscreenElement?.contains(document.querySelector('#fullscreen-nav')))).toBe(true);
-  await expect(page.getByRole('button', { name: 'Move up', exact: true })).toBeVisible(); await expect(page.locator('#touch-run')).toBeVisible();
+  await expect(page.locator('#touch-pad')).toBeVisible(); await expect(page.locator('#touch-run')).toBeVisible();
   await page.locator('[data-screen-nav="nav-play"]').click(); await page.locator('[data-menu-game="tinik"]').click(); await page.locator('#tinik-practice').click();
   await expect(page.locator('#game')).toHaveAttribute('data-mode', 'tinik');
   await expect(page.locator('#game')).toHaveAttribute('data-jump-state', 'run'); await page.locator('#activity-action').click(); await expect(page.locator('#game')).toHaveAttribute('data-jump-state', 'air');

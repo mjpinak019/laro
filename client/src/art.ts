@@ -3,7 +3,9 @@ import { COLORS } from './store';
 import type { Rect } from './rules';
 import { pixelLabel } from './pixel-font';
 import { CHARACTER_HEIGHT, CHARACTER_WIDTH, outlineSprite } from './sprite-outline';
-import { propObstacles, WORLD_PROPS, type WorldMap } from './world-props';
+import { propGroundPoint, propObstacles, WORLD_PROPS, type WorldMap } from './world-props';
+import { BOT_APPEARANCES, characterTexture, type CharacterLook } from './characters';
+import { drawCharacter } from './character-art';
 import { HUB_EXTRA_OBSTACLES, HUB_SIZE } from './hub';
 import { HIDE_OBJECTS } from './games/hide-objects';
 
@@ -105,7 +107,12 @@ function drawPropShadows(c: Painter, map: WorldMap) {
   for (const prop of WORLD_PROPS[map]) {
     const scale = prop.scale ?? 1;
     if (prop.kind === 'tree') shadow(c, prop.x + 8 * scale, prop.y + 6 * scale, 20 * scale, 7 * scale);
-    else shadow(c, prop.x + 14 * scale, prop.y + 4 * scale, 23 * scale, 7 * scale);
+    else if (prop.kind === 'palm') shadow(c, prop.x + 14 * scale, prop.y + 4 * scale, 23 * scale, 7 * scale);
+    else {
+      const ground = propGroundPoint(prop);
+      if (prop.kind === 'fence') rect(c, prop.x, ground.y / 2 - 1, prop.width ?? 64, 2, '#244a3026');
+      else shadow(c, ground.x / 2 + 2, ground.y / 2, prop.kind === 'bench' ? 18 : 7, 3);
+    }
   }
 }
 
@@ -127,8 +134,6 @@ function drawHub(c: Painter) {
   house(c, 231, 50, 58, 54, '#d0ad82', '#b07c58');
   house(c, 320, 25, 64, 56, '#d4bca2', '#897b71');
   house(c, 20, 231, 66, 56, '#9fae9e', '#6d8582');
-  fence(c, 148, 105, 132); fence(c, 300, 85, 96); fence(c, 309, 266, 129);
-  bench(c, 169, 229); bench(c, 246, 148);
   // A sunlit plaza with a little planter at its center.
   shadow(c, 224, 191, 25, 9);
   rect(c, 203, 169, 34, 26, '#a59778'); rect(c, 201, 167, 38, 7, '#e0d2a8'); rect(c, 207, 174, 26, 16, '#728a5d');
@@ -136,7 +141,6 @@ function drawHub(c: Painter) {
   shadow(c, 89, 195, 17, 6); rect(c, 73, 177, 26, 16, '#447f88'); rect(c, 72, 174, 28, 4, '#d8cda3');
   rect(c, 76, 179, 13, 8, '#8cbbba'); rect(c, 92, 184, 8, 5, '#365f68');
   rect(c, 75, 192, 6, 6, '#404b45'); rect(c, 94, 191, 6, 6, '#404b45'); rect(c, 100, 183, 4, 3, '#eadb9b');
-  pot(c, 22, 151); pot(c, 96, 151); pot(c, 143, 100); pot(c, 289, 112);
   drawPropShadows(c, 'hub');
   // Gateposts, chalk hopscotch, and scattered flowering ground cover.
   rect(c, 297, 208, 4, 17, '#806c4d'); rect(c, 297, 201, 4, 5, '#e6c278');
@@ -154,7 +158,6 @@ function drawHub(c: Painter) {
   rect(c, 620, 200, 39, 280, '#cdb994');
   rect(c, 163, 310, 145, 144, '#c4b694');
   for (let y = 314; y < 450; y += 12) for (let x = 167; x < 304; x += 17) rect(c, x, y, 15, 10, '#d2c29e');
-  bench(c, 180, 399); bench(c, 251, 399); pot(c, 166, 319); pot(c, 302, 320);
   label(c, 'DAMA SA TINDAHAN', 235, 430, '#3e6047', 8);
   pennants(c, 157, 300, 160);
   house(c, 548, 42, 190, 86, '#d8c69b', '#92765d');
@@ -163,8 +166,6 @@ function drawHub(c: Painter) {
   for (let i = 0; i < 12; i++) rect(c, 540 + i * 16, 224, 9, 2, '#f1dfb4');
   rect(c, 628, 220, 23, 7, '#9cab75');
   label(c, 'LUKSONG-TINIK', 650, 260, '#49674b', 9);
-  fence(c, 526, 277, 74); fence(c, 685, 277, 68);
-  bench(c, 542, 246); bench(c, 705, 247); pot(c, 744, 145);
   rect(c, 528, 306, 234, 129, '#b6a98a');
   drawHidingObject(c, 'crates', 535, 305, 50, 57);
   drawHidingObject(c, 'barrels', 710, 332, 56, 53);
@@ -173,7 +174,6 @@ function drawHub(c: Painter) {
   drawHidingObject(c, 'bamboo', 730, 392, 27, 46);
   label(c, 'TAGU-TAGUAN', 650, 447, '#3b6045', 9);
   label(c, 'LIKOD-BAHAY', 649, 468, '#45684b', 8);
-  fence(c, 520, 441, 94); fence(c, 675, 441, 90);
   label(c, 'TAMBAYAN', 229, 319, '#5c704e', 8);
   pennants(c, 513, 296, 258);
 }
@@ -215,31 +215,9 @@ function drawCourt(c: Painter) {
   label(c, 'TURN HERE  /  BALIK!', 240, 50, '#395843', 7);
   label(c, 'HOME  /  BAHAY', 240, 262, '#4e6447', 7);
   for (let i = 0; i < 10; i++) { rect(c, 105 + i * 28, 248, 14, 3, '#e7d49f'); rect(c, 119 + i * 28, 248, 14, 3, '#8b9d72'); }
-  fence(c, 91, 18, 299); fence(c, 91, 282, 299);
   drawPropShadows(c, 'court');
-  bench(c, 26, 136); bench(c, 422, 167); pot(c, 51, 178); pot(c, 419, 215);
   pennants(c, 98, 15, 284);
   label(c, 'PUROK 01', 40, 205, '#e5dfb4', 7);
-}
-
-function character(c: Painter, color: string, direction: number, frame: number) {
-  const bob = frame % 2;
-  // Feet anchor at (12, 27), leaving room for overhead name labels.
-  const stride = frame === 1 ? -2 : frame === 3 ? 2 : 0;
-  rect(c, 7, 21 - bob, 4, 5 + bob + stride, '#465b56'); rect(c, 13, 21 - bob, 4, 5 + bob - stride, '#334d49');
-  rect(c, 6, 26 + stride, 5, 2, '#e9d8b3'); rect(c, 13, 26 - stride, 5, 2, '#e9d8b3');
-  rect(c, 5, 14 - bob, 14, 9, color); rect(c, 5, 21 - bob, 14, 2, '#00000016');
-  rect(c, 3, 15 - bob - stride / 2, 3, 7, '#d5a377'); rect(c, 18, 15 - bob + stride / 2, 3, 7, '#bc895f');
-  rect(c, 7, 5 - bob, 11, 10, '#dda97c'); rect(c, 6, 3 - bob, 13, 6, '#3b3d36');
-  rect(c, 8, 2 - bob, 9, 2, '#3b3d36'); rect(c, 6, 8 - bob, 3, 4, '#3b3d36');
-  if (direction === 3) { rect(c, 8, 6 - bob, 10, 7, '#3b3d36'); }
-  else {
-    const eyeX = direction === 1 ? 8 : direction === 2 ? 15 : 10;
-    rect(c, eyeX, 10 - bob, 1, 2, '#37433c');
-    if (direction === 0) rect(c, 15, 10 - bob, 1, 2, '#37433c');
-    rect(c, 11, 14 - bob, 3, 2, '#bd875f');
-  }
-  rect(c, 8, 16 - bob, 2, 4, '#ffffff32');
 }
 
 export const HUB_OBSTACLES: Rect[] = [
@@ -250,7 +228,6 @@ export const HUB_OBSTACLES: Rect[] = [
   { x: 32, y: 460, width: 151, height: 133 },
   { x: 398, y: 330, width: 86, height: 64 },
   { x: 142, y: 347, width: 65, height: 48 },
-  { x: 296, y: 206, width: 264, height: 22 },
   ...propObstacles('hub'),
   ...HUB_EXTRA_OBSTACLES,
 ];
@@ -261,16 +238,27 @@ export function createArt(scene: Phaser.Scene) {
   }
   const treeImage = canvas(64, 56); tree(treeImage.getContext('2d')!, 32, 48, 1, false); scene.textures.addCanvas('world-tree', treeImage);
   const palmImage = canvas(80, 60); palm(palmImage.getContext('2d')!, 36, 55, false); scene.textures.addCanvas('world-palm', palmImage);
+  const benchImage = canvas(36, 24); bench(benchImage.getContext('2d')!, 3, 11); scene.textures.addCanvas('world-bench', benchImage);
+  const vaseImage = canvas(20, 24), vase = vaseImage.getContext('2d')!; pot(vase, 10, 17);
+  for (const [x, y] of [[5, 8], [13, 5], [10, 10]]) { rect(vase, x, y, 3, 3, '#edbb88'); rect(vase, x + 1, y + 1, 1, 1, '#9a654c'); }
+  scene.textures.addCanvas('world-vase', vaseImage);
+  const fenceWidths = new Set(Object.values(WORLD_PROPS).flat().filter(prop => prop.kind === 'fence').map(prop => prop.width ?? 64));
+  for (const width of fenceWidths) { const image = canvas(width + 4, 20); fence(image.getContext('2d')!, 2, 3, width); scene.textures.addCanvas(`world-fence-${width}`, image); }
   const tableImage = canvas(64, 48), table = tableImage.getContext('2d')!;
   rect(table, 10, 25, 6, 19, '#65543b'); rect(table, 48, 25, 6, 19, '#65543b');
   rect(table, 4, 3, 56, 31, '#6c543a'); rect(table, 6, 4, 52, 27, '#b58b57');
   for (let row = 0; row < 8; row++) for (let col = 0; col < 8; col++) { rect(table, 20 + col * 3, 5 + row * 3, 3, 3, (row + col) % 2 ? '#4b6c54' : '#d3c18d'); if ((row + col) % 2 && (row < 3 || row > 4)) rect(table, 21 + col * 3, 6 + row * 3, 2, 2, row < 3 ? '#7fb0a4' : '#ecc57b'); }
   scene.textures.addCanvas('world-dama-table', tableImage);
-  for (const [index, color] of [...COLORS, '#c97969'].entries()) {
+  const outfits: { look: CharacterLook; color: number }[] = [
+    ...(['boy', 'girl'] as const).flatMap(look => COLORS.map((_, color) => ({ look, color }))),
+    ...Object.values(BOT_APPEARANCES),
+  ];
+  for (const outfit of outfits) {
+    const color = [...COLORS, '#c97969'][outfit.color];
     for (let facing = 0; facing < 4; facing++) for (let frame = 0; frame < 4; frame++) {
       const image = canvas(CHARACTER_WIDTH, CHARACTER_HEIGHT), c = image.getContext('2d')!;
-      character(c, color, facing, frame); outlineSprite(c);
-      scene.textures.addCanvas(`kid-${index}-${facing}-${frame}`, image);
+      drawCharacter(c, color, outfit.look, facing, frame); outlineSprite(c);
+      scene.textures.addCanvas(characterTexture(outfit.look, outfit.color, facing, frame), image);
     }
   }
 }
@@ -292,14 +280,13 @@ export function createActivityArt(scene: Phaser.Scene) {
     }
     rect(c, 83, 174, 68, 28, '#477f83'); rect(c, 88, 177, 27, 17, '#92b7ab'); rect(c, 83, 173, 68, 4, '#e3d2a5');
     rect(c, 89, 203, 10, 5, '#3d5148'); rect(c, 132, 203, 10, 5, '#3d5148');
-    fence(c, 252, 167, 22); rect(c, 253, 171, 17, 56, '#8a815b');
+    rect(c, 253, 171, 17, 56, '#8a815b');
     for (const [x, y, w, h] of [[37, 230, 85, 40], [345, 172, 73, 45], [180, 32, 65, 30]]) {
       rect(c, x, y + 5, w, h - 5, '#4d7c4c'); rect(c, x + 3, y, w - 6, h - 8, '#648e53');
       for (let dx = 5; dx < w; dx += 12) { rect(c, x + dx, y + 4, 7, 4, '#85a365'); rect(c, x + dx - 2, y + h - 10, 7, 4, '#396c46'); }
     }
     drawPropShadows(c, 'alley');
     for (const object of HIDE_OBJECTS) drawHidingObject(c, object.kind, object.rect.x / 2, object.rect.y / 2, object.rect.width / 2, object.rect.height / 2);
-    pot(c, 39, 126); pot(c, 160, 121); bench(c, 335, 263); bench(c, 190, 222);
     pennants(c, 160, 64, 135); pennants(c, 290, 125, 140);
     rect(c, 237, 146, 7, 18, '#8c7650'); rect(c, 234, 140, 13, 10, '#e1c485');
     label(c, 'TAGU-TAGUAN', 240, 288, '#3d6047', 10);
@@ -312,10 +299,9 @@ export function createActivityArt(scene: Phaser.Scene) {
     house(c, 70, 43, 215, 84, '#d9c799', '#8a6e5d');
     rect(c, 135, 80, 84, 16, '#426e5b'); label(c, 'PAARALAN', 177, 91, '#f3dfae', 9);
     tree(c, 35, 139, 1.6); tree(c, 352, 136, 1.5); palm(c, 420, 141);
-    fence(c, 0, 132, 480);
     rect(c, 0, 150, 480, 150, '#cbb68d'); rect(c, 0, 182, 480, 6, '#bda77f');
     for (let i = 0; i < 450; i++) rect(c, (i * 67) % 480, 155 + (i * 31) % 145, 2, 1, i % 3 ? '#c1ab82' : '#dac49a');
-    bench(c, 67, 167); bench(c, 360, 165);
+    drawPropShadows(c, 'schoolyard');
     pennants(c, 50, 24, 365);
     label(c, 'ISA PANG TAAS!', 240, 278, '#66744c', 10);
     scene.textures.addCanvas('schoolyard', image);

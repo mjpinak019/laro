@@ -2,6 +2,8 @@ import './style.css';
 import './typography.css';
 import './games/games.css';
 import './play-screen.css';
+import './avatar.css';
+import './touch-pad.css';
 import { createGame } from './game';
 import { COLORS, loadProfile, saveProfile, storageAvailable } from './store';
 import type { Match } from './rules';
@@ -9,9 +11,11 @@ import { GameDirector } from './games/director';
 import { savedDama } from './games/dama';
 import { GAMES, type ActivityUI, type GameId, type NewGameId, type Result } from './games/types';
 import { HUB_SIZE, HUB_SITES } from './hub';
-import { CHARACTERS } from './characters';
+import { CHARACTERS, type AvatarGender } from './characters';
+import { paintCharacterPreview } from './character-art';
 import { DAMA_LEVELS, isDamaDifficulty, type DamaDifficulty } from './games/dama-levels';
 import { PlayScreen } from './play-screen';
+import { TouchPad } from './touch-pad';
 
 const icons = {
   home: '<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',
@@ -58,7 +62,7 @@ app.innerHTML = `
             <div id="countdown" class="countdown" hidden></div>
             <div class="player-chip"><span class="mini-avatar" id="mini-avatar"></span><div><strong id="player-name"></strong><span>THAT’S YOU</span></div></div>
             <button id="emote-button" class="emote-button" aria-label="Wave to your neighbors" title="Wave · Space">☺ <span>SPACE</span></button>
-            <div class="touch-controls" aria-label="Touch movement controls"><button id="touch-run" aria-label="Takbo · hold to run">Takbo</button><div class="dpad"><button data-dir="0,-1" aria-label="Move up">↑</button><button data-dir="-1,0" aria-label="Move left">←</button><button data-dir="0,1" aria-label="Move down">↓</button><button data-dir="1,0" aria-label="Move right">→</button></div></div>
+            <div class="touch-controls" aria-label="Touch movement controls"><div id="touch-pad" class="touch-pad" role="group" aria-label="Movement control pad" aria-describedby="touch-pad-help" tabindex="0"><span class="stick-knob" aria-hidden="true"></span></div><span id="touch-pad-help" class="sr-only">Drag the circular pad to move in any direction, including diagonals. You can also use WASD or arrow keys.</span><button id="touch-run" aria-label="Takbo · hold to run">Takbo</button></div>
           </div>
           <div class="world-bottom"><span class="hint" id="hint" role="status">Getting the neighborhood ready…</span><span class="stamina"><span>ENERGY</span><span class="stamina-track"><i id="stamina-fill"></i></span></span></div>
           <nav id="fullscreen-nav" class="fullscreen-nav" aria-label="Fullscreen game navigation"><button data-screen-nav="nav-hub">Barangay</button><button data-screen-nav="nav-play">Games</button><button data-screen-nav="avatar-button">Avatar</button><button data-screen-nav="guide-button">Rules</button><button data-screen-nav="settings-button">Settings</button><button data-screen-nav="sound-button">Sound</button><button id="exit-play-screen">Exit ⛶</button></nav>
@@ -77,7 +81,7 @@ app.innerHTML = `
   <dialog id="modal" aria-labelledby="modal-title"><button id="close-modal" class="close-modal" aria-label="Close dialog">×</button><div id="modal-content"></div></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 `;
-document.querySelector('.version')!.textContent = 'ALPHA 0.4';
+document.querySelector('.version')!.textContent = 'ALPHA 0.5';
 document.querySelector('#nav-play span')!.textContent = 'Games';
 document.querySelector('.more-games')!.innerHTML = '<span>FOUR NEIGHBORHOOD CLASSICS</span><span>All playable offline · your progress stays here.</span>';
 document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${(Object.keys(GAMES) as GameId[]).map((id, index) => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${['╬', '◉', '♧', '↟'][index]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);
@@ -93,6 +97,9 @@ function refreshProfile() {
   $('#quick-settings').textContent = selectedGame === 'dama' ? `Dama: ${DAMA_LEVELS[profile.damaDifficulty].label} · ${DAMA_LEVELS[profile.damaDifficulty].opponent}` : `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
   $('#player-name').textContent = profile.name;
   $('#mini-avatar').style.setProperty('--shirt', COLORS[profile.color]);
+  $('#mini-avatar').classList.add('has-portrait');
+  const portrait = document.createElement('canvas'); paintCharacterPreview(portrait, profile.gender, COLORS[profile.color]); $('#mini-avatar').replaceChildren(portrait);
+  $('#game').dataset.avatarGender = profile.gender;
   const record = selectedGame === 'patintero' ? { wins: profile.wins, best: profile.best, played: profile.played } : profile.records[selectedGame];
   $('#wins').textContent = String(record.wins); $('#coins').textContent = String(profile.coins);
   $('#best').textContent = selectedGame === 'dama' ? String(record.played) : record.best ? selectedGame === 'tinik' ? `${record.best}/6` : `${record.best}s` : '—';
@@ -103,7 +110,7 @@ function refreshProfile() {
 }
 function persist() { saveProfile(profile); refreshProfile(); }
 function openModal(content: string, dismissible = true) {
-  touchDirections.clear(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
+  touchPad.reset(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
   scene.resetInput();
   game.input.keyboard!.preventDefault = false;
   lastFocus = document.activeElement as HTMLElement;
@@ -275,7 +282,7 @@ $('#sound-button').onclick = () => { profile.muted = !profile.muted; persist(); 
 function guide() {
   if (selectedGame !== 'patintero') {
     const pages: Record<NewGameId, string> = {
-      dama: `<p>LARO’s Filipino-style preset: an 8×8 board, twelve pieces per side, and Gold moves first.</p><ol class="rules-list"><li>Ordinary pieces step diagonally forward, but can capture forward or backward.</li><li>Captures are mandatory. Choose a sequence that takes the most pieces, and finish every jump with the same piece.</li><li>Captured pieces remain blockers until the complete sequence ends. Equal-length routes are your choice.</li><li>Kings fly along clear diagonals. Each capture jumps one opponent and lands on an empty square beyond it.</li><li>A piece becomes a king only if it ends its complete turn on the far rank.</li><li>Win when the opponent has no pieces or legal moves. Threefold repetition or 40 full moves without a capture or ordinary-piece move is a draw.</li></ol><p>Choose Easy, Normal, or Hard with ${CHARACTERS.mamaShoni}, Expert with ${CHARACTERS.ferdie}, or Master with ${CHARACTERS.tatayEfren}. You can also pass the device between two people. An unfinished match saves automatically. Bot wins earn 60 coins, draws 20, and losses 10. Friendly pass-and-play has no rewards.</p>`,
+      dama: `<p>LARO’s Filipino-style preset: an 8×8 board, twelve pieces per side, and Gold moves first.</p><ol class="rules-list"><li>Ordinary pieces step diagonally forward, but can capture forward or backward.</li><li>Captures are mandatory. Choose a sequence that takes the most pieces, and finish every jump with the same piece.</li><li>Captured pieces remain blockers until the complete sequence ends. Equal-length routes are your choice.</li><li>Kings fly along clear diagonals. Each capture jumps one opponent and lands on an empty square beyond it.</li><li>A piece becomes a king only if it ends its complete turn on the far rank.</li><li>Win when the opponent has no pieces or legal moves. Threefold repetition or 40 full moves without a capture or ordinary-piece move is a draw.</li></ol><p>Choose Easy with ${CHARACTERS.mamaShoni}, Normal with ${CHARACTERS.audrey}, Hard with ${CHARACTERS.mj}, Expert with ${CHARACTERS.ferdie}, or Master with ${CHARACTERS.tatayEfren}. You can also pass the device between two people. An unfinished match saves automatically. Bot wins earn 60 coins, draws 20, and losses 10. Friendly pass-and-play has no rewards.</p>`,
       taguan: `<p>${CHARACTERS.audrey} counts for 10 seconds. Use that time to hide, then survive a 75-second search.</p><ol class="rules-list"><li>Move with WASD, arrows, touch buttons, or by clicking the ground.</li><li>Hold Shift / Takbo to sprint. Sprinting uses energy and makes noise.</li><li>Press E or Crouch to move quietly. Shrubs, laundry, and bamboo conceal you; buildings, crates, and barrels block sight. Crouching in the open does not make you invisible.</li><li>The awareness meter fills when ${CHARACTERS.audrey} can see you. Break sight around a wall and relocate.</li><li>${CHARACTERS.audrey} investigates sounds and remembers where she last saw you, but cannot see through buildings. She must reach you to catch you.</li></ol><p>Easy mode shows her sight cone. Normal and Hard increase her speed, sight, and memory. Surviving earns 60 / 80 / 100 coins on Easy / Normal / Hard; a finished caught round earns 10. No transformation, disguise, or weapons.</p>`,
       tinik: '<p>Two neighborhood kids raise their hands and feet into a growing obstacle. Your run-up is automatic.</p><ol class="rules-list"><li>Watch your feet approach the takeoff zone. Speed and obstacle position change at each height.</li><li>Press Space or Jump once. Your jump follows a predictable arc.</li><li>Clear the whole obstacle and land to advance to the next height.</li><li>Touch the hands and lose a chance. Three misses end a challenge.</li><li>Clear all six heights to win. Practice gives unlimited retries without coins or records.</li></ol><p>Hard uses a small takeoff notch after height two; Practice keeps the full guide. A challenge win earns 60 / 80 / 100 coins on Easy / Normal / Hard, plus 10 per remaining chance. A finished attempt earns 10 plus 5 per cleared height. Escape pauses the run-up and jump.</p>',
     };
@@ -288,11 +295,17 @@ function guide() {
 }
 $('#guide-button').onclick = guide; $('#rules-button').onclick = guide;
 $('#avatar-button').onclick = () => {
-  openModal(`<div class="eyebrow">A FAMILIAR FACE</div><h2 id="modal-title">Make yourself at home.</h2><form id="avatar-form"><label class="field-label" for="nickname">YOUR NICKNAME</label><input id="nickname" maxlength="16" required autocomplete="nickname" /><span class="field-label">YOUR FAVORITE SHIRT</span><div class="swatches">${COLORS.map((color, index) => `<button type="button" class="swatch ${profile.color === index ? 'selected' : ''}" data-color="${index}" style="--swatch:${color}" aria-label="${['Sunflower', 'Ocean', 'Guava', 'Calamansi'][index]} shirt" aria-pressed="${profile.color === index}"><span class="mini-avatar" style="--shirt:${color}"></span></button>`).join('')}</div><button class="primary-button" type="submit">Save my avatar ${icon('arrow')}</button></form>`);
+  openModal(`<div class="eyebrow">A FAMILIAR FACE</div><h2 id="modal-title">Make yourself at home.</h2><form id="avatar-form"><label class="field-label" for="nickname">YOUR NICKNAME</label><input id="nickname" maxlength="16" required autocomplete="nickname" /><fieldset class="avatar-genders"><legend class="field-label">YOUR CHARACTER</legend>${(['boy', 'girl'] as const).map(gender => `<button type="button" class="avatar-choice" data-avatar-gender="${gender}" aria-pressed="${profile.gender === gender}"><canvas aria-hidden="true"></canvas><span>${gender === 'boy' ? 'Boy' : 'Girl'}</span></button>`).join('')}</fieldset><span class="field-label">YOUR FAVORITE SHIRT</span><div class="swatches">${COLORS.map((color, index) => `<button type="button" class="swatch ${profile.color === index ? 'selected' : ''}" data-color="${index}" style="--swatch:${color}" aria-label="${['Sunflower', 'Ocean', 'Guava', 'Calamansi'][index]} shirt" aria-pressed="${profile.color === index}"><canvas aria-hidden="true"></canvas></button>`).join('')}</div><button class="primary-button" type="submit">Save my avatar ${icon('arrow')}</button></form>`);
   $<HTMLInputElement>('#nickname').value = profile.name;
-  let selected = profile.color;
-  document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(button => { button.onclick = () => { selected = Number(button.dataset.color); document.querySelectorAll('[data-color]').forEach(item => { item.classList.toggle('selected', item === button); item.setAttribute('aria-pressed', String(item === button)); }); }; });
-  $('#avatar-form').onsubmit = event => { event.preventDefault(); const name = $<HTMLInputElement>('#nickname').value.trim(); if (!name) { $<HTMLInputElement>('#nickname').setCustomValidity('Please enter a nickname.'); $<HTMLInputElement>('#nickname').reportValidity(); return; } profile.name = name; profile.color = selected; persist(); scene.updateAvatar(); closeModal(); toast('Looking good! Your avatar is saved.'); };
+  let selected = profile.color, gender: AvatarGender = profile.gender;
+  const repaint = () => {
+    document.querySelectorAll<HTMLButtonElement>('button[data-avatar-gender]').forEach(button => { const value = button.dataset.avatarGender as AvatarGender; button.classList.toggle('selected', value === gender); button.setAttribute('aria-pressed', String(value === gender)); paintCharacterPreview(button.querySelector('canvas')!, value, COLORS[selected]); });
+    document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(button => { const color = Number(button.dataset.color); button.classList.toggle('selected', color === selected); button.setAttribute('aria-pressed', String(color === selected)); paintCharacterPreview(button.querySelector('canvas')!, gender, COLORS[color]); });
+  };
+  document.querySelectorAll<HTMLButtonElement>('button[data-avatar-gender]').forEach(button => { button.onclick = () => { gender = button.dataset.avatarGender as AvatarGender; repaint(); }; });
+  document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(button => { button.onclick = () => { selected = Number(button.dataset.color); repaint(); }; });
+  repaint();
+  $('#avatar-form').onsubmit = event => { event.preventDefault(); const name = $<HTMLInputElement>('#nickname').value.trim(); if (!name) { $<HTMLInputElement>('#nickname').setCustomValidity('Please enter a nickname.'); $<HTMLInputElement>('#nickname').reportValidity(); return; } profile.name = name; profile.color = selected; profile.gender = gender; persist(); scene.updateAvatar(); closeModal(); toast('Looking good! Your avatar is saved.'); };
   $('#nickname').oninput = () => $<HTMLInputElement>('#nickname').setCustomValidity('');
 };
 $('#settings-button').onclick = () => {
@@ -316,17 +329,11 @@ const playScreen = new PlayScreen($('#game-display'), $('#fullscreen-button'), (
 $('#fullscreen-button').onclick = () => { void playScreen.toggle(); };
 $('#exit-play-screen').onclick = () => { void playScreen.exit(); };
 document.querySelectorAll<HTMLButtonElement>('[data-screen-nav]').forEach(button => { button.onclick = () => $<HTMLButtonElement>(`#${button.dataset.screenNav}`).click(); });
-const touchDirections = new Map<number, { x: number; y: number }>();
-function syncTouchDirection() { scene.setTouch([...touchDirections.values()].reduce((sum, value) => sum + value.x, 0), [...touchDirections.values()].reduce((sum, value) => sum + value.y, 0)); }
-document.querySelectorAll<HTMLButtonElement>('[data-dir]').forEach(button => {
-  button.onpointerdown = event => { event.preventDefault(); button.setPointerCapture(event.pointerId); const [x, y] = button.dataset.dir!.split(',').map(Number); touchDirections.set(event.pointerId, { x, y }); button.classList.add('held'); syncTouchDirection(); };
-  const release = (event: PointerEvent) => { touchDirections.delete(event.pointerId); button.classList.remove('held'); syncTouchDirection(); };
-  button.onpointerup = release; button.onpointercancel = release; button.onlostpointercapture = release;
-});
+const touchPad = new TouchPad($('#touch-pad'), (x, y) => scene.setTouch(x, y));
 $('#touch-run').onpointerdown = event => { event.preventDefault(); $('#touch-run').setPointerCapture(event.pointerId); $('#touch-run').classList.add('held'); scene.setSprint(true); };
 const stopTakbo = () => { $('#touch-run').classList.remove('held'); scene.setSprint(false); };
 $('#touch-run').onpointerup = stopTakbo; $('#touch-run').onpointercancel = stopTakbo; $('#touch-run').onlostpointercapture = stopTakbo;
-window.addEventListener('blur', () => { touchDirections.clear(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held')); scene.resetInput(); });
+window.addEventListener('blur', () => { touchPad.reset(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held')); scene.resetInput(); });
 refreshProfile();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

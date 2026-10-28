@@ -1,0 +1,12 @@
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.touch-pad { --stick-x: 0px; --stick-y: 0px; position: relative; flex: 0 0 132px; width: 132px; height: 132px; border-radius: 50%; border: 2px solid #b9c895a6; background: repeating-conic-gradient(from 22.5deg, #476744 0deg 44deg, #a8bd8659 44deg 45deg); box-shadow: inset 0 0 0 9px #1f3d2a55, 0 3px 0 #183a2b80; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.touch-pad::before { content: ''; position: absolute; inset: 13px; border: 1px solid #b8c99170; border-radius: 50%; pointer-events: none; }
+.stick-knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; border-radius: 50%; transform: translate(calc(-50% + var(--stick-x)), calc(-50% + var(--stick-y))); border: 2px solid #e5d8a7; background: radial-gradient(circle at 35% 28%, #b1c486, #728e58); box-shadow: 0 4px 9px #142f2477, inset 0 0 0 6px #eff0c61a; pointer-events: none; }
+.touch-pad.held { cursor: grabbing; border-color: #f1d18e; }
+.touch-pad.held .stick-knob { background: #d1d69a; }
+.play-fullscreen.touch-screen .touch-pad { pointer-events: auto; background-color: #2e4e36ed; }
+.play-fullscreen.touch-screen .player-chip { left: 164px; }
+.play-fullscreen.touch-screen .activity-action, .play-fullscreen.touch-screen .emote-button { right: 110px; }
+.touch-controls #touch-run { border-radius: 50%; height: 76px; width: 76px; font-size: 14px; letter-spacing: 0; touch-action: none; user-select: none; transition: none; }
+.play-fullscreen.touch-screen #touch-run { height: 76px; width: 76px; }
+@media (max-width: 600px) { .play-fullscreen.touch-screen .player-chip { left: 12px; } .play-fullscreen.touch-screen .activity-action, .play-fullscreen.touch-screen .emote-button { right: 12px; } }

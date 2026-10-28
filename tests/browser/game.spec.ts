@@ -4,7 +4,7 @@ test('hub renders, player walks, avatar persists, and menus remain accessible', 
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('canvas')).toBeVisible();
+  await expect(page.locator('#game canvas')).toBeVisible();
   const startX = Number(await page.locator('#game').getAttribute('data-x'));
   await page.keyboard.down('d'); await page.waitForTimeout(450); await page.keyboard.up('d');
   await expect.poll(async () => Number(await page.locator('#game').getAttribute('data-x'))).toBeGreaterThan(startX + 30);
@@ -52,10 +52,10 @@ test('production reloads with the network disconnected and no external asset req
 test('mobile layout fits, touch movement works, and rulebook opens', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
-  await expect(page.getByRole('button', { name: 'Move right', exact: true })).toBeVisible();
+  await expect(page.locator('#touch-pad')).toBeVisible();
   const startX = Number(await page.locator('#game').getAttribute('data-x'));
-  const button = await page.getByRole('button', { name: 'Move right', exact: true }).boundingBox();
-  await page.mouse.move(button!.x + button!.width / 2, button!.y + button!.height / 2);
+  const button = await page.locator('#touch-pad').boundingBox();
+  await page.mouse.move(button!.x + button!.width * .8, button!.y + button!.height / 2);
   await page.mouse.down();
   await page.waitForTimeout(400);
   await page.mouse.up();

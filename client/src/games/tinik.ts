@@ -5,6 +5,7 @@ import { JUMP, jumpHeight, tinikStage, touchesStage } from './arcade-rules';
 import type { Difficulty } from '../rules';
 import type { ActivityUI } from './types';
 import { OUTLINE_COLOR } from '../sprite-outline';
+import { addWorldProps } from '../world-props';
 
 export class TinikScene extends ActivityScene {
   private x = 165;
@@ -26,7 +27,7 @@ export class TinikScene extends ActivityScene {
 
   constructor(ui: ActivityUI, private practice = false) { super('tinik', ui); this.difficulty = ui.profile.difficulty; }
   create() {
-    createActivityArt(this); this.add.image(480, 300, 'schoolyard').setScale(2);
+    createActivityArt(this); this.add.image(480, 300, 'schoolyard').setScale(2); addWorldProps(this, 'schoolyard');
     this.obstacle = this.add.graphics().setDepth(448); this.trail = this.add.graphics().setDepth(449);
     this.playerSetup(this.x, 450); this.inputSetup(); this.facing = 2;
     this.keys.SPACE.on('down', () => this.action());

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Point } from '../rules';
 import type { ActivityControls, ActivityUI } from './types';
 import { CHARACTER_ORIGIN } from '../sprite-outline';
+import { characterTexture } from '../characters';
 
 export abstract class ActivityScene extends Phaser.Scene implements ActivityControls {
   protected keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -24,12 +25,12 @@ export abstract class ActivityScene extends Phaser.Scene implements ActivityCont
   }
   protected playerSetup(x: number, y: number) {
     this.shadow = this.add.ellipse(x, y + 2, 28, 10, 0x294e38, .23);
-    this.player = this.add.image(x, y, `kid-${this.ui.profile.color}-0-0`).setScale(2).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y);
+    this.player = this.add.image(x, y, characterTexture(this.ui.profile.gender, this.ui.profile.color)).setScale(2).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y);
     this.nameTag = this.add.text(x, y - 65, this.ui.profile.name, { fontFamily: 'monospace', fontSize: '15px', color: '#fff0d1', backgroundColor: '#284b3bdd', padding: { x: 7, y: 4 } }).setOrigin(.5, 1);
   }
   protected drawPlayer(at: Point, time: number, moving: boolean, vector: Point, z = 0) {
     if (moving) this.facing = Math.abs(vector.x) > Math.abs(vector.y) ? vector.x < 0 ? 1 : 2 : vector.y < 0 ? 3 : 0;
-    this.player.setPosition(Math.round(at.x), Math.round(at.y - z)).setTexture(`kid-${this.ui.profile.color}-${this.facing}-${moving ? Math.floor(time / 115) % 4 : 0}`).setDepth(at.y);
+    this.player.setPosition(Math.round(at.x), Math.round(at.y - z)).setTexture(characterTexture(this.ui.profile.gender, this.ui.profile.color, this.facing, moving ? Math.floor(time / 115) % 4 : 0)).setDepth(at.y);
     this.shadow.setPosition(at.x, at.y + 3).setDepth(at.y - 1).setScale(Math.max(.5, 1 - z / 250));
     this.nameTag.setPosition(at.x, at.y - z - 64).setDepth(1000);
   }

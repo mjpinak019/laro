@@ -2,7 +2,7 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.4 is a local game collection with a barangay hub, Patintero,
+Alpha 0.5 is a local game collection with a barangay hub, Patintero,
 Dama, Tagu-taguan, and Luksong-tinik. All four games work offline.
 
 The interface now uses larger body text, controls, instructions, and
@@ -85,8 +85,8 @@ would need a separate server, but the current offline games do not.
 - Browser-local coins, wins, completed rounds, and best winning time.
   Blocked browser storage falls back to session-only progress. There is no
   online account, cloud save, network multiplayer, or cosmetic shop in this build.
-- Dama with five bot difficulties: Easy, Normal, and Hard with Mama Shoni,
-  Expert with Ferdie, and Master with Tatay Efren. Also included are friendly
+- Dama with five unique opponents: Mama Shoni (Easy), Audrey (Normal),
+  MJ (Hard), Ferdie (Expert), and Tatay Efren (Master). Also included are friendly
   two-player pass-and-play, highlighted
   legal moves, complete capture chains, flying kings, promotion, win/loss/draw,
   resignation, and automatic resume of an unfinished match. The bots
@@ -118,7 +118,8 @@ would need a separate server, but the current offline games do not.
   `records.dama`, `records.taguan`, and `records.tinik` under the same profile key.
 
 Controls: WASD/arrows to move, Shift to sprint, E to interact, Space to wave,
-Escape to pause. On mobile, use the cross-shaped arrows on the right and hold Takbo on the left.
+Escape to pause. On mobile, drag the circular control pad on the left and hold Takbo on the right.
+The pad supports diagonal movement, a neutral centre, and pointer capture.
 Two fingers can hold Takbo and a direction together.
 Match rules are explained in the in-game rulebook.
 
@@ -143,14 +144,17 @@ seeker and save-sa-poste variants of Tagu-taguan are future additions.
 
 ## Names, Dama opponents, and mobile fullscreen
 
-Display names live in `client/src/characters.ts`. They are shared by the
+Display names and bot appearance assignments live in `client/src/characters.ts`.
+Mama Shoni is an elderly woman; Tatay Efren is an elderly man with a walking
+stick. Ferdie and MJ are boys; Audrey, Sheena, and Weng are girls. Weng replaces
+Maya. Each bot has a distinct hairstyle or outfit, and Dama shows their portrait. They are shared by the
 barangay, guard labels, Tagu-taguan, Dama menus, and dialogue. The default
 player is Ikaw; old untouched Kaibigan profiles migrate without losing coins
 or records, and custom nicknames stay unchanged.
 
 Dama has its own saved difficulty setting in the match setup and Settings;
-street games retain Easy/Normal/Hard. Ferdie is Expert and Tatay Efren is
-Master. Resuming an existing board keeps the difficulty saved with that board.
+street games retain Easy/Normal/Hard. Each Dama tier has a different neighbor:
+Mama Shoni, Audrey, MJ, Ferdie, and Tatay Efren from Easy through Master. Resuming an existing board keeps the difficulty saved with that board.
 
 The fullscreen button expands the complete play panel, including pause,
 Barangay, Games, Avatar, Rules, Settings, Sound, exit, and all dialogs. Mobile
@@ -161,9 +165,23 @@ the page cannot force the device to rotate or hide browser chrome there.
 Touch controls remain available in landscape; Dama uses a compact board layout.
 
 The browser checks cover native fullscreen and simulated fullscreen/orientation
-rejection in Chrome, two-finger sprinting, both stronger opponents playing
+rejection in Chrome, two-finger diagonal sprinting with the circular pad, both stronger opponents playing
 offline, and saved-opponent persistence. Actual phone/browser fullscreen
 behavior still depends on the device. PC controller input is not implemented.
+
+Avatar settings offer Boy and Girl with live previews and four shirt colors.
+The choice is shared by the hub and all arcade games and persists offline.
+Profiles from older builds default to Boy without resetting other progress.
+The artwork is generated locally for every facing and walking frame, with
+consistent dark outlines and feet anchors.
+
+Benches, flower vases, and fence sections are separate objects throughout the
+barangay, court, hiding arena, and jumping schoolyard. Their ground position
+controls draw depth; collision uses the same placement metadata and smaller
+physical footprints. Existing background copies have been removed. Trees
+and palms retain trunk collision and depth sorting. The village contains nine
+benches, ten flower vases, and ten fence sections, with open routes between
+game locations. Props in the side-view schoolyard stay behind the jump lane.
 
 ## Development and checks
 
@@ -253,8 +271,8 @@ modules loaded successfully without compiling it.
 
 ## Verification and dependency report
 
-Alpha 0.4 validation: production build and TypeScript checks pass; all 32
-rule tests and 24 browser scenarios pass. The world-art scenario walks
+Alpha 0.5 validation: production build and TypeScript checks pass; all 34
+rule tests and 27 browser scenarios pass. The world-art scenario walks
 behind and in front of a tree, verifies its trunk collision, and captures
 screenshots of the outlined characters and sharpened signage. Tagu-taguan
 also checks that camping in the starting bush is not a free win. New coverage

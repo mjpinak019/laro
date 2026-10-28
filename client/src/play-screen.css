@@ -1,4 +1,4 @@
-/* Touch layout: Takbo on the left; familiar cross-shaped arrows on the right. */
+/* Fullscreen play panel; the circular touch pad is styled in touch-pad.css. */
 .fullscreen-nav { display: none; }
 .rotate-hint { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); z-index: 8; width: max-content; max-width: calc(100% - 20px); padding: 8px 12px; background: #243c30f2; border: 1px solid #e4bd78; border-radius: 6px; color: #f5e2b6; font-size: 12px; text-align: center; pointer-events: none; }
 .opponent-select { width: 100%; padding: 12px; color: #f3e4be; background: #1d3024; border: 1px solid #748260; border-radius: 5px; font: inherit; }

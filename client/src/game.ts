@@ -2,11 +2,11 @@ import Phaser from 'phaser';
 import { createArt, HUB_OBSTACLES } from './art';
 import { checkpoint, FIELD, move, newMatch, reward, segmentDistance, SPAWN, tag, tickMatch, type Match, type Point } from './rules';
 import { type Profile } from './store';
-import { addWorldProps } from './world-props';
+import { addWorldProps, propObstacles } from './world-props';
 import { CHARACTER_ORIGIN } from './sprite-outline';
 import { HUB_SIZE, HUB_SITES, nearbySite } from './hub';
 import type { GameId } from './games/types';
-import { CHARACTERS } from './characters';
+import { BOT_APPEARANCES, CHARACTERS, characterTexture, type CharacterId, type CharacterLook } from './characters';
 
 export interface GameUI {
   profile: Profile;
@@ -18,7 +18,7 @@ export interface GameUI {
   sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote'): void;
   enterGame(game: GameId): void;
 }
-type Kid = { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; name: Phaser.GameObjects.Text; facing: number; color: number; x: number; y: number };
+type Kid = { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; name: Phaser.GameObjects.Text; facing: number; color: number; look: CharacterLook; x: number; y: number };
 type Guard = { kid: Kid; axis: 'x' | 'y'; position: number; offset: number };
 const textStyle: Phaser.Types.GameObjects.Text.TextStyle = { fontFamily: 'monospace', fontSize: '15px', color: '#fcf0d1', backgroundColor: '#284b3be6', padding: { x: 8, y: 5 } };
 
@@ -80,17 +80,18 @@ export class BarangayScene extends Phaser.Scene {
 
   private blur = () => { this.controls = { x: 0, y: 0 }; this.target = undefined; this.touchSprint = false; this.interactRequested = false; this.keys && Object.values(this.keys).forEach(key => key.reset()); };
 
-  private kid(x: number, y: number, color: number, name: string): Kid {
+  private kid(x: number, y: number, color: number, name: string, look: CharacterLook = this.ui.profile.gender): Kid {
     const shadow = this.add.ellipse(x, y + 2, 27, 10, 0x294e38, 0.22);
-    const sprite = this.add.image(x, y, `kid-${color}-0-0`).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y).setScale(2);
+    const sprite = this.add.image(x, y, characterTexture(look, color)).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y).setScale(2);
     const nameTag = this.add.text(x, y - 61, name, textStyle).setOrigin(0.5, 1);
-    return { x, y, color, facing: 0, sprite, shadow, name: nameTag };
+    return { x, y, color, look, facing: 0, sprite, shadow, name: nameTag };
   }
+  private bot(x: number, y: number, id: CharacterId) { const appearance = BOT_APPEARANCES[id]; return this.kid(x, y, appearance.color, CHARACTERS[id], appearance.look); }
 
   private drawKid(kid: Kid, time: number, moving = false, vector: Point = { x: 0, y: 0 }) {
     if (moving) kid.facing = Math.abs(vector.x) > Math.abs(vector.y) ? vector.x < 0 ? 1 : 2 : vector.y < 0 ? 3 : 0;
     const frame = moving ? Math.floor(time / 115) % 4 : 0;
-    kid.sprite.setPosition(Math.round(kid.x), Math.round(kid.y)).setTexture(`kid-${kid.color}-${kid.facing}-${frame}`).setDepth(kid.y);
+    kid.sprite.setPosition(Math.round(kid.x), Math.round(kid.y)).setTexture(characterTexture(kid.look, kid.color, kid.facing, frame)).setDepth(kid.y);
     kid.shadow.setPosition(kid.x, kid.y + 2).setDepth(kid.y - 1);
     kid.name.setPosition(kid.x, kid.y - 59).setDepth(1000);
   }
@@ -110,7 +111,7 @@ export class BarangayScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height).setScroll(0, 0);
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
     this.cameras.main.setScroll(Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600));
-    this.neighbors = [this.kid(227, 316, 3, CHARACTERS.mamaShoni), this.kid(675, 396, 1, CHARACTERS.mj), this.kid(792, 417, 4, CHARACTERS.audrey), this.kid(372, 750, 1, CHARACTERS.tatayEfren), this.kid(1250, 420, 2, CHARACTERS.maya), this.kid(1360, 420, 3, CHARACTERS.ferdie), this.kid(1400, 860, 4, CHARACTERS.sheena)];
+    this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'weng'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena')];
     this.ui.location('hub'); this.ui.status(null);
     this.ui.hint('Explore the larger barangay. Walk to a game marker and press E, or use Games.');
   }
@@ -126,10 +127,10 @@ export class BarangayScene extends Phaser.Scene {
     this.player.x = SPAWN.x; this.player.y = SPAWN.y; this.player.facing = 3; this.player.sprite.setAlpha(1);
     this.match = newMatch(); this.reported = false; this.sprint = 100;
     this.guards = [
-      { kid: this.kid(300, 180, 4, CHARACTERS.audrey), axis: 'x', position: 180, offset: 0.4 },
-      { kid: this.kid(650, 280, 1, CHARACTERS.mj), axis: 'x', position: 280, offset: 2.1 },
-      { kid: this.kid(400, 380, 3, CHARACTERS.ferdie), axis: 'x', position: 380, offset: 4.3 },
-      { kid: this.kid(480, 210, 2, CHARACTERS.sheena), axis: 'y', position: 480, offset: 1.3 },
+      { kid: this.bot(300, 180, 'audrey'), axis: 'x', position: 180, offset: 0.4 },
+      { kid: this.bot(650, 280, 'mj'), axis: 'x', position: 280, offset: 2.1 },
+      { kid: this.bot(400, 380, 'ferdie'), axis: 'x', position: 380, offset: 4.3 },
+      { kid: this.bot(480, 210, 'sheena'), axis: 'y', position: 480, offset: 1.3 },
     ];
     this.ui.location('match'); this.ui.status(this.match); this.ui.hint('Get ready! Cross to the far green strip, then return home.');
   }
@@ -140,7 +141,7 @@ export class BarangayScene extends Phaser.Scene {
   resetInput() { this.blur(); }
   interact() { if (!this.ui.blocked()) this.interactRequested = true; }
   rememberHubPosition() { if (this.player && this.mode === 'hub') this.hubReturnPoint = { x: this.player.x, y: this.player.y }; }
-  updateAvatar() { if (this.player) { this.player.color = this.ui.profile.color; this.player.name.setText(this.ui.profile.name); } }
+  updateAvatar() { if (this.player) { this.player.color = this.ui.profile.color; this.player.look = this.ui.profile.gender; this.player.name.setText(this.ui.profile.name); } }
   emote() { if (!this.ui.blocked()) { this.say('Tara, laro!'); this.ui.sound('emote'); } }
 
   private say(text: string) {
@@ -179,7 +180,7 @@ export class BarangayScene extends Phaser.Scene {
     const previous = { x: this.player.x, y: this.player.y };
     if (canMove) {
       const bounds = this.mode === 'hub' ? { x: 24, y: 45, width: HUB_SIZE.width - 50, height: HUB_SIZE.height - 70 } : { x: FIELD.left + 13, y: 86, width: FIELD.right - FIELD.left - 26, height: 462 };
-      const next = move(this.player, input, fast ? 255 : 176, dt, this.mode === 'hub' ? HUB_OBSTACLES : [], bounds);
+      const next = move(this.player, input, fast ? 255 : 176, dt, this.mode === 'hub' ? HUB_OBSTACLES : propObstacles('court'), bounds);
       this.player.x = next.x; this.player.y = next.y;
       if (this.target && Math.hypot(next.x - previous.x, next.y - previous.y) < 0.1) this.target = undefined;
     }

@@ -1,0 +1,16 @@
+.avatar-genders { display: flex; gap: 12px; padding: 0; margin: 22px 0; border: 0; }
+.avatar-genders legend { margin-bottom: 10px; }
+.avatar-choice { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 10px; background: #1e3226; color: #e5dfbe; border: 2px solid #526748; border-radius: 7px; font: inherit; }
+.avatar-choice.selected { border-color: #e6bd76; background: #3e5336; }
+.avatar-choice canvas, .swatch canvas { width: 42px; height: 56px; image-rendering: pixelated; }
+.avatar-choice canvas { width: 48px; height: 64px; }
+.mini-avatar.has-portrait { width: 24px; height: 32px; background: none; clip-path: none; }
+.mini-avatar.has-portrait::before { display: none; }
+.mini-avatar canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.dama-heading.has-portrait { grid-template-columns: 52px minmax(0, 1fr); gap: 6px 12px; text-align: left; align-items: center; }
+.dama-heading.has-portrait > canvas { grid-column: 1; grid-row: 1 / span 3; width: 48px; height: 64px; image-rendering: pixelated; }
+.dama-heading.has-portrait > span, .dama-heading.has-portrait > strong { grid-column: 2; }
+.dama-stage { position: relative; min-height: 650px; }
+.play-fullscreen[data-activity='dama'] .dama-stage { position: absolute; min-height: 0; height: 100%; }
+@media (max-width: 720px) { .dama-stage { min-height: 610px; } .avatar-genders { margin-block: 16px; } }
+@media (orientation: landscape) { .play-fullscreen .dama-heading.has-portrait { grid-template-columns: 1fr; text-align: center; gap: 5px; } .play-fullscreen .dama-heading.has-portrait > canvas { grid-column: 1; grid-row: auto; justify-self: center; } .play-fullscreen .dama-heading.has-portrait > span, .play-fullscreen .dama-heading.has-portrait > strong { grid-column: 1; } }

@@ -7,7 +7,7 @@ import type { ActivityUI } from './types';
 import { addWorldProps } from '../world-props';
 import { CHARACTER_ORIGIN } from '../sprite-outline';
 import type { Difficulty } from '../rules';
-import { CHARACTERS } from '../characters';
+import { BOT_APPEARANCES, CHARACTERS, characterTexture } from '../characters';
 
 const patrol: Point[] = [{ x: 100, y: 300 }, { x: 180, y: 500 }, { x: 400, y: 440 }, { x: 600, y: 480 }, { x: 820, y: 500 }, { x: 880, y: 140 }, { x: 420, y: 100 }, { x: 560, y: 280 }];
 
@@ -47,7 +47,7 @@ export class TaguanScene extends ActivityScene {
     this.playerSetup(this.at.x, this.at.y); this.inputSetup();
     this.keys.E.on('down', () => this.action());
     this.seekerShadow = this.add.ellipse(this.seeker.x, this.seeker.y + 2, 28, 10, 0x294e38, .22);
-    this.seekerSprite = this.add.image(this.seeker.x, this.seeker.y, 'kid-4-1-0').setScale(2).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y);
+    this.seekerSprite = this.add.image(this.seeker.x, this.seeker.y, characterTexture('audrey', BOT_APPEARANCES.audrey.color, 1)).setScale(2).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y);
     this.seekerName = this.add.text(this.seeker.x, this.seeker.y - 64, `${CHARACTERS.audrey} · TAYA`, { fontFamily: 'monospace', fontSize: '15px', color: '#fff0cf', backgroundColor: '#685044', padding: { x: 7, y: 4 } }).setOrigin(.5, 1).setDepth(1000);
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => { if (!this.blocked()) this.walkingTarget = { x: pointer.x, y: pointer.y }; });
     this.ui.location('taguan'); this.refresh();
@@ -146,7 +146,7 @@ export class TaguanScene extends ActivityScene {
       else if (this.remaining === 0) this.end(true);
     }
     const facing = Math.abs(this.facingVector.x) > Math.abs(this.facingVector.y) ? this.facingVector.x < 0 ? 1 : 2 : this.facingVector.y < 0 ? 3 : 0;
-    this.seekerSprite.setPosition(this.seeker.x, this.seeker.y).setDepth(this.seeker.y).setTexture(`kid-4-${facing}-${this.countdown > 0 ? 0 : Math.floor(time / 130) % 4}`);
+    this.seekerSprite.setPosition(this.seeker.x, this.seeker.y).setDepth(this.seeker.y).setTexture(characterTexture('audrey', BOT_APPEARANCES.audrey.color, facing, this.countdown > 0 ? 0 : Math.floor(time / 130) % 4));
     this.seekerShadow.setPosition(this.seeker.x, this.seeker.y + 2).setDepth(this.seeker.y - 1);
     this.seekerName.setPosition(this.seeker.x, this.seeker.y - 64).setText(this.countdown > 0 ? `${CHARACTERS.audrey} · ${Math.ceil(this.countdown)}` : `${CHARACTERS.audrey} · ${this.botState}`);
     this.paintVision(); if (!this.finished) this.refresh();

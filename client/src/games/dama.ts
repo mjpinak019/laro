@@ -1,7 +1,9 @@
 import { applyDama, chooseDamaMove, initialDama, legalMoves, validDamaSave, type DamaMove, type DamaState } from './dama-rules';
 import type { ActivityControls, ActivityUI } from './types';
 import { DAMA_LEVELS, type DamaDifficulty } from './dama-levels';
-import { DEFAULT_PLAYER_NAME } from '../characters';
+import { BOT_APPEARANCES, DEFAULT_PLAYER_NAME } from '../characters';
+import { paintCharacterPreview } from '../character-art';
+import { COLORS } from '../store';
 
 const KEY = 'laro.dama.match.v1';
 export function savedDama(): DamaState | null {
@@ -103,7 +105,7 @@ export class DamaGame implements ActivityControls {
     const turn = this.thinking ? `${opponent.opponent} is thinking…` : `${player} to move`;
     const counts = [this.state.board.filter(piece => piece > 0).length, this.state.board.filter(piece => piece < 0).length];
     this.element.innerHTML = `
-      <div class="dama-heading"><span class="eyebrow">${this.state.mode === 'bot' ? `${opponent.label.toUpperCase()} · ${opponent.opponent.toUpperCase()}` : 'SA TABI NG TINDAHAN'}</span><strong id="dama-turn" aria-live="polite">${turn}</strong><span>${this.state.mode === 'bot' ? `${DEFAULT_PLAYER_NAME} · Gold / ${opponent.opponent} · Teal` : 'Pass-and-play · Gold / Teal'} · Move ${Math.floor(this.state.ply / 2) + 1}</span></div>
+      <div class="dama-heading ${this.state.mode === 'bot' ? 'has-portrait' : ''}">${this.state.mode === 'bot' ? `<canvas id="dama-portrait" role="img" aria-label="${opponent.opponent}"></canvas>` : ''}<span class="eyebrow">${this.state.mode === 'bot' ? `${opponent.label.toUpperCase()} · ${opponent.opponent.toUpperCase()}` : 'SA TABI NG TINDAHAN'}</span><strong id="dama-turn" aria-live="polite">${turn}</strong><span>${this.state.mode === 'bot' ? `${DEFAULT_PLAYER_NAME} · Gold / ${opponent.opponent} · Teal` : 'Pass-and-play · Gold / Teal'} · Move ${Math.floor(this.state.ply / 2) + 1}</span></div>
       <div class="dama-table"><div class="dama-board" role="group" aria-label="Dama board, 8 by 8">${board.map((piece, at) => {
         const playable = (Math.floor(at / 8) + at % 8) % 2 === 1;
         const available = this.moves.some(move => move.from === at);
@@ -112,6 +114,8 @@ export class DamaGame implements ActivityControls {
         return `<button class="dama-square ${playable ? 'dark' : 'light'} ${targets.has(at) ? 'legal' : ''} ${at === this.selected || this.prefix.at(-1) === at ? 'selected' : ''} ${this.lastMove.includes(at) ? 'last-move' : ''}" data-square="${at}" aria-label="${name}, ${description}${targets.has(at) ? ', legal destination' : ''}" ${!playable ? 'disabled' : ''}>${piece ? `<span class="dama-piece ${piece > 0 ? 'gold' : 'teal'} ${available && !this.thinking ? 'movable' : ''}">${Math.abs(piece) === 2 ? '<span aria-hidden="true">♛</span>' : ''}</span>` : targets.has(at) ? '<i aria-hidden="true"></i>' : ''}${at >= 56 ? `<small>${String.fromCharCode(97 + at % 8)}</small>` : ''}</button>`;
       }).join('')}</div></div>
       <div class="dama-footer"><span><i class="piece-dot gold"></i> Gold ${counts[0]} <i class="piece-dot teal"></i> Teal ${counts[1]}</span><span id="capture-rule">${this.moves[0]?.captures.length ? `${this.moves[0].captures.length}-piece capture required` : 'Select a piece to see its moves'}</span><button id="dama-resign" class="text-button">Resign match</button><small id="dama-save">Match saved automatically on this device</small></div>`;
+    const portrait = this.element.querySelector<HTMLCanvasElement>('#dama-portrait');
+    if (portrait) { const appearance = BOT_APPEARANCES[opponent.character]; paintCharacterPreview(portrait, appearance.look, [...COLORS, '#c97969'][appearance.color]); }
     this.element.querySelectorAll<HTMLButtonElement>('[data-square]').forEach(button => {
       button.onclick = () => this.click(Number(button.dataset.square));
       button.onkeydown = event => {

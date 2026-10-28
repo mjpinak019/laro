@@ -5,7 +5,9 @@ import { DAMA_LEVELS, type DamaDifficulty } from '../client/src/games/dama-level
 import { loadProfile, STORAGE_KEY } from '../client/src/store.ts';
 import { ALLEY_WALLS, ALLEY_COVER, alleyPath, canSee, inCover, JUMP, jumpHeight, lineBlocked, tinikHeight, touchesTinik, tinikStage, touchesStage } from '../client/src/games/arcade-rules.ts';
 import { HUB_SITES, HUB_SIZE, nearbySite } from '../client/src/hub.ts';
-import { overlaps } from '../client/src/rules.ts';
+import { move, overlaps, PLAYER_RADIUS } from '../client/src/rules.ts';
+import { propFootprint, propGroundPoint, propObstacles, WORLD_PROPS } from '../client/src/world-props.ts';
+import { padDirection } from '../client/src/touch-pad.ts';
 
 function board(pieces: Record<number, Piece>): Board { const value: Board = Array<Piece>(64).fill(0); for (const [at, piece] of Object.entries(pieces)) value[Number(at)] = piece; return value; }
 function state(value: Board): DamaState { return { ...initialDama(), board: value, history: [positionKey(value, 1)] }; }
@@ -93,12 +95,32 @@ test('profile migration renames the old default while preserving coins, records,
   const storage = new Map<string, string>();
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (key: string) => storage.get(key) ?? null } });
   try {
-    assert.equal(loadProfile().name, 'Ikaw');
+    assert.equal(loadProfile().name, 'Ikaw'); assert.equal(loadProfile().gender, 'boy');
     storage.set(STORAGE_KEY, JSON.stringify({ name: 'Kaibigan', coins: 123, wins: 7, played: 9, best: 28, difficulty: 'hard', records: { dama: { wins: 2, played: 4, best: 37 } } }));
     const migrated = loadProfile(); assert.equal(migrated.name, 'Ikaw'); assert.equal(migrated.coins, 123); assert.equal(migrated.wins, 7); assert.equal(migrated.records.dama.wins, 2); assert.equal(migrated.damaDifficulty, 'hard');
-    storage.set(STORAGE_KEY, JSON.stringify({ ...migrated, name: 'Juan', damaDifficulty: 'master' }));
-    assert.equal(loadProfile().name, 'Juan'); assert.equal(loadProfile().damaDifficulty, 'master');
+    storage.set(STORAGE_KEY, JSON.stringify({ ...migrated, name: 'Juan', gender: 'girl', damaDifficulty: 'master' }));
+    assert.equal(loadProfile().name, 'Juan'); assert.equal(loadProfile().gender, 'girl'); assert.equal(loadProfile().damaDifficulty, 'master');
   } finally { Reflect.deleteProperty(globalThis, 'localStorage'); }
+});
+
+test('the circular pad has a neutral centre and normalized cardinal and diagonal movement', () => {
+  assert.deepEqual(padDirection(0, 0, 40), { x: 0, y: 0 }); assert.deepEqual(padDirection(3, 2, 40), { x: 0, y: 0 });
+  for (const [x, y] of [[30, 0], [0, -30], [30, -30], [-50, 50]]) {
+    const vector = padDirection(x, y, 40); assert.ok(Math.abs(Math.hypot(vector.x, vector.y) - 1) < 1e-9); assert.equal(Math.sign(vector.x), Math.sign(x)); assert.equal(Math.sign(vector.y), Math.sign(y));
+  }
+});
+
+test('benches, vases, and fence sections use their actual feet for depth and block crossing from both sides', () => {
+  for (const kind of ['bench', 'vase', 'fence'] as const) {
+    const prop = WORLD_PROPS.hub.find(prop => prop.kind === kind)!, footprint = propFootprint(prop), ground = propGroundPoint(prop);
+    assert.equal(footprint.y + footprint.height, ground.y); assert.ok(propObstacles('hub').some(rect => JSON.stringify(rect) === JSON.stringify(footprint)));
+    for (const side of [-1, 1]) {
+      let point = { x: footprint.x + footprint.width / 2, y: side < 0 ? footprint.y - 40 : footprint.y + footprint.height + 40 };
+      for (let step = 0; step < 60; step++) point = move(point, { x: 0, y: -side }, 160, .02, [footprint], { x: 0, y: 0, width: 1600, height: 1000 });
+      assert.equal(overlaps(point, footprint, PLAYER_RADIUS - .1), false);
+      if (side < 0) assert.ok(point.y < footprint.y); else assert.ok(point.y > footprint.y + footprint.height);
+    }
+  }
 });
 test('invalid and terminal saved boards are rejected', () => {
   assert.equal(validDamaSave(null), false); assert.equal(validDamaSave({ ...initialDama(), board: [1] }), false);
