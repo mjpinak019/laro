@@ -6,7 +6,7 @@ export const CHARACTERS = {
   sheena: 'Sheena',
   mamaShoni: 'Mama Shoni',
   tatayEfren: 'Tatay Efren',
-  weng: 'Weng',
+  weng: 'Amor',
 } as const;
 export const DEFAULT_PLAYER_NAME = 'Ikaw';
 export type AvatarGender = 'boy' | 'girl';

@@ -4,6 +4,7 @@ import { DAMA_LEVELS, type DamaDifficulty } from './dama-levels';
 import { BOT_APPEARANCES, DEFAULT_PLAYER_NAME } from '../characters';
 import { paintCharacterPreview } from '../character-art';
 import { COLORS } from '../store';
+import { botMoveFrame, damaSquareName } from './dama-playback';
 
 const KEY = 'laro.dama.match.v1';
 export function savedDama(): DamaState | null {
@@ -27,6 +28,10 @@ export class DamaGame implements ActivityControls {
   private tick: number;
   private lastMove: number[] = [];
   private difficulty: DamaDifficulty;
+  private thinkUntil = 0;
+  private animationFrame = 0;
+  private lastBotMove = '';
+  private playback?: { move: DamaMove; elapsed: number; lastTime: number; landed: number; ghost?: HTMLElement };
 
   constructor(private ui: ActivityUI, mode: 'bot' | 'local', resume = false) {
     this.state = resume ? savedDama() ?? initialDama(mode, ui.profile.damaDifficulty) : initialDama(mode, ui.profile.damaDifficulty);
@@ -37,12 +42,12 @@ export class DamaGame implements ActivityControls {
     ui.location('dama');
     try {
       this.worker = new Worker(new URL('./dama-worker.ts', import.meta.url), { type: 'module' });
-      this.worker.onmessage = event => { if (event.data.id === this.request && !this.disposed) this.pending = event.data.move; };
+      this.worker.onmessage = event => { if (event.data.id === this.request && !this.disposed && !this.finished) this.pending = event.data.move; };
       this.worker.onerror = event => { event.preventDefault(); this.worker?.terminate(); this.worker = undefined; if (this.thinking) this.pending = this.fallbackMove(); };
     } catch { /* The bounded synchronous fallback works if browser workers are unavailable. */ }
     this.tick = window.setInterval(() => {
-      if (this.disposed || this.paused || ui.blocked()) return;
-      if (this.pending) { const move = this.pending; this.pending = undefined; this.commit(move); }
+      if (this.disposed || this.finished || this.paused || ui.blocked() || this.playback) return;
+      if (this.pending && performance.now() >= this.thinkUntil) { const move = this.pending; this.pending = undefined; this.playBotMove(move); }
       else if (this.state.mode === 'bot' && this.state.turn === -1 && this.state.outcome === null && !this.thinking) this.bot();
     }, 150);
     this.render(); this.save();
@@ -55,7 +60,7 @@ export class DamaGame implements ActivityControls {
   }
 
   private bot() {
-    this.thinking = true; this.render();
+    this.thinking = true; this.thinkUntil = performance.now() + 450; this.render();
     const id = ++this.request;
     if (this.worker) this.worker.postMessage({ id, board: this.state.board, side: this.state.turn, difficulty: this.difficulty });
     else this.pending = this.fallbackMove();
@@ -63,13 +68,52 @@ export class DamaGame implements ActivityControls {
 
   private fallbackMove() { return chooseDamaMove(this.state.board, this.state.turn, this.difficulty, { nodes: 2000, milliseconds: 45 }) ?? undefined; }
 
-  private commit(move: DamaMove) {
+  private commit(move: DamaMove, soundPlayed = false) {
     try { this.state = applyDama(this.state, move); }
     catch { this.thinking = false; this.render(); return; }
     this.lastMove = [move.from, ...move.path]; this.selected = -1; this.prefix = []; this.thinking = false;
-    this.ui.sound(move.captures.length ? 'tag' : 'turn'); this.render(); this.save();
+    if (!soundPlayed) this.ui.sound(move.captures.length ? 'tag' : 'turn'); this.render(); this.save();
     if (this.state.outcome !== null) this.end();
   }
+
+  private playBotMove(move: DamaMove) {
+    try { applyDama(this.state, move); }
+    catch { this.thinking = false; this.render(); return; }
+    this.playback = { move, elapsed: 0, lastTime: performance.now(), landed: 0 };
+    this.render();
+    const source = this.element.querySelector<HTMLElement>(`[data-square="${move.from}"] .dama-piece`)!;
+    const ghost = source.cloneNode(true) as HTMLElement; ghost.classList.remove('movable'); ghost.classList.add('dama-moving-piece'); ghost.setAttribute('aria-hidden', 'true');
+    source.classList.add('bot-lifted'); this.element.querySelector('.dama-board')!.append(ghost); this.playback.ghost = ghost;
+    const step = (now: number) => {
+      const playback = this.playback;
+      if (!playback || this.disposed || this.finished) return;
+      const delta = Math.min(50, Math.max(0, now - playback.lastTime)); playback.lastTime = now;
+      if (!this.paused && !this.ui.blocked()) playback.elapsed += delta;
+      const frame = botMoveFrame(move, playback.elapsed);
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const progress = reduced ? frame.progress < .5 ? 0 : 1 : frame.progress;
+      const x = (frame.from % 8) + (frame.to % 8 - frame.from % 8) * progress;
+      const y = Math.floor(frame.from / 8) + (Math.floor(frame.to / 8) - Math.floor(frame.from / 8)) * progress;
+      ghost.style.left = `${x * 12.5 + 1.5625}%`; ghost.style.top = `${y * 12.5 + 1.5625}%`;
+      ghost.style.transform = move.captures.length && !reduced ? `translateY(${-Math.sin(progress * Math.PI) * 7}px)` : '';
+      this.element.querySelectorAll('.bot-next').forEach(square => square.classList.remove('bot-next'));
+      this.element.querySelector(`[data-square="${frame.to}"]`)!.classList.add('bot-next');
+      if (frame.landed > playback.landed) {
+        playback.landed = frame.landed; this.ui.sound(move.captures.length ? 'tag' : 'turn');
+        move.captures.slice(0, frame.landed).forEach(at => this.element.querySelector(`[data-square="${at}"]`)!.classList.add('bot-jumped'));
+      }
+      this.element.dataset.botPhase = frame.phase; this.element.dataset.botHop = String(frame.hop + 1);
+      this.element.querySelector('#dama-move-note')!.textContent = `${DAMA_LEVELS[this.difficulty].opponent}: ${damaSquareName(move.from)} → ${move.path.slice(0, frame.hop + 1).map(damaSquareName).join(' → ')}${move.path.length > 1 ? ` · jump ${frame.hop + 1}/${move.path.length}` : ''}`;
+      if (frame.phase === 'done') {
+        this.lastBotMove = `${DAMA_LEVELS[this.difficulty].opponent}: ${[move.from, ...move.path].map(damaSquareName).join(' → ')}`;
+        this.stopPlayback(); this.commit(move, true); return;
+      }
+      this.animationFrame = requestAnimationFrame(step);
+    };
+    this.animationFrame = requestAnimationFrame(step);
+  }
+
+  private stopPlayback() { cancelAnimationFrame(this.animationFrame); this.animationFrame = 0; this.playback = undefined; }
 
   private click(at: number) {
     if (this.paused || this.ui.blocked() || this.finished || this.state.mode === 'bot' && this.state.turn === -1) return;
@@ -102,18 +146,18 @@ export class DamaGame implements ActivityControls {
     }
     const player = this.state.turn === 1 ? 'Gold' : 'Teal';
     const opponent = DAMA_LEVELS[this.difficulty];
-    const turn = this.thinking ? `${opponent.opponent} is thinking…` : `${player} to move`;
+    const turn = this.playback ? `${opponent.opponent} is moving…` : this.thinking ? `${opponent.opponent} is thinking…` : `${player} to move`;
     const counts = [this.state.board.filter(piece => piece > 0).length, this.state.board.filter(piece => piece < 0).length];
     this.element.innerHTML = `
       <div class="dama-heading ${this.state.mode === 'bot' ? 'has-portrait' : ''}">${this.state.mode === 'bot' ? `<canvas id="dama-portrait" role="img" aria-label="${opponent.opponent}"></canvas>` : ''}<span class="eyebrow">${this.state.mode === 'bot' ? `${opponent.label.toUpperCase()} · ${opponent.opponent.toUpperCase()}` : 'SA TABI NG TINDAHAN'}</span><strong id="dama-turn" aria-live="polite">${turn}</strong><span>${this.state.mode === 'bot' ? `${DEFAULT_PLAYER_NAME} · Gold / ${opponent.opponent} · Teal` : 'Pass-and-play · Gold / Teal'} · Move ${Math.floor(this.state.ply / 2) + 1}</span></div>
-      <div class="dama-table"><div class="dama-board" role="group" aria-label="Dama board, 8 by 8">${board.map((piece, at) => {
+      <div class="dama-table"><div class="dama-board" role="group" aria-label="Dama board, 8 by 8" aria-busy="${this.thinking}">${board.map((piece, at) => {
         const playable = (Math.floor(at / 8) + at % 8) % 2 === 1;
         const available = this.moves.some(move => move.from === at);
         const name = `${String.fromCharCode(97 + at % 8)}${8 - Math.floor(at / 8)}`;
         const description = piece ? `${piece > 0 ? 'Gold' : 'Teal'} ${Math.abs(piece) === 2 ? 'king' : 'piece'}` : 'empty';
-        return `<button class="dama-square ${playable ? 'dark' : 'light'} ${targets.has(at) ? 'legal' : ''} ${at === this.selected || this.prefix.at(-1) === at ? 'selected' : ''} ${this.lastMove.includes(at) ? 'last-move' : ''}" data-square="${at}" aria-label="${name}, ${description}${targets.has(at) ? ', legal destination' : ''}" ${!playable ? 'disabled' : ''}>${piece ? `<span class="dama-piece ${piece > 0 ? 'gold' : 'teal'} ${available && !this.thinking ? 'movable' : ''}">${Math.abs(piece) === 2 ? '<span aria-hidden="true">♛</span>' : ''}</span>` : targets.has(at) ? '<i aria-hidden="true"></i>' : ''}${at >= 56 ? `<small>${String.fromCharCode(97 + at % 8)}</small>` : ''}</button>`;
+        return `<button class="dama-square ${playable ? 'dark' : 'light'} ${targets.has(at) ? 'legal' : ''} ${at === this.selected || this.prefix.at(-1) === at ? 'selected' : ''} ${this.lastMove.includes(at) ? 'last-move' : ''} ${this.playback?.move.from === at ? 'bot-source' : ''}" data-square="${at}" aria-label="${name}, ${description}${targets.has(at) ? ', legal destination' : ''}" ${!playable ? 'disabled' : ''}>${piece ? `<span class="dama-piece ${piece > 0 ? 'gold' : 'teal'} ${available && !this.thinking ? 'movable' : ''}">${Math.abs(piece) === 2 ? '<span aria-hidden="true">♛</span>' : ''}</span>` : targets.has(at) ? '<i aria-hidden="true"></i>' : ''}${at >= 56 ? `<small>${String.fromCharCode(97 + at % 8)}</small>` : ''}</button>`;
       }).join('')}</div></div>
-      <div class="dama-footer"><span><i class="piece-dot gold"></i> Gold ${counts[0]} <i class="piece-dot teal"></i> Teal ${counts[1]}</span><span id="capture-rule">${this.moves[0]?.captures.length ? `${this.moves[0].captures.length}-piece capture required` : 'Select a piece to see its moves'}</span><button id="dama-resign" class="text-button">Resign match</button><small id="dama-save">Match saved automatically on this device</small></div>`;
+      <div class="dama-footer"><span><i class="piece-dot gold"></i> Gold ${counts[0]} <i class="piece-dot teal"></i> Teal ${counts[1]}</span><span id="capture-rule">${this.moves[0]?.captures.length ? `${this.moves[0].captures.length}-piece capture required` : 'Select a piece to see its moves'}</span><span id="dama-move-note" ${this.playback || this.lastBotMove ? '' : 'hidden'}>${this.lastBotMove}</span><button id="dama-resign" class="text-button">Resign match</button><small id="dama-save">Match saved automatically on this device</small></div>`;
     const portrait = this.element.querySelector<HTMLCanvasElement>('#dama-portrait');
     if (portrait) { const appearance = BOT_APPEARANCES[opponent.character]; paintCharacterPreview(portrait, appearance.look, [...COLORS, '#c97969'][appearance.color]); }
     this.element.querySelectorAll<HTMLButtonElement>('[data-square]').forEach(button => {
@@ -137,11 +181,12 @@ export class DamaGame implements ActivityControls {
     game.dataset.mode = 'dama'; game.dataset.phase = this.state.outcome === null ? 'playing' : 'finished'; game.dataset.ply = String(this.state.ply);
     this.element.dataset.turn = String(this.state.turn); this.element.dataset.ply = String(this.state.ply);
     this.element.dataset.difficulty = this.difficulty;
+    this.element.dataset.botMoving = String(Boolean(this.playback)); this.element.dataset.botPhase = this.playback ? 'focus' : 'idle'; this.element.dataset.botHop = this.playback ? '1' : '0';
   }
 
   private end() {
     if (this.finished) return;
-    this.finished = true; this.worker?.terminate();
+    this.finished = true; this.thinking = false; this.stopPlayback(); this.worker?.terminate(); this.render();
     const draw = this.state.outcome === 0, won = this.state.outcome === 1;
     const local = this.state.mode === 'local';
     this.ui.result({ game: 'dama', won, draw, practice: local, record: this.state.ply,
@@ -151,7 +196,7 @@ export class DamaGame implements ActivityControls {
     });
   }
 
-  dispose() { this.disposed = true; clearInterval(this.tick); this.worker?.terminate(); this.element.remove(); }
+  dispose() { this.disposed = true; this.stopPlayback(); clearInterval(this.tick); this.worker?.terminate(); this.element.remove(); }
   setTouch() {} setSprint() {} resetInput() {} action() {} updateAvatar() {}
   setPaused(value: boolean) { this.paused = value; }
 }

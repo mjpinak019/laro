@@ -1,0 +1,8 @@
+.dama-board { position: relative; }
+.dama-square.bot-source { box-shadow: inset 0 0 0 3px #f1ce83; }
+.dama-square.bot-next { outline: 3px solid #f1ce83; outline-offset: -3px; background: #7b905d; }
+.dama-square .bot-lifted { visibility: hidden; }
+.dama-square.bot-jumped > .dama-piece { opacity: .28; filter: grayscale(.7); }
+.dama-board > .dama-moving-piece { position: absolute; z-index: 4; width: 9.375%; height: 9.375%; pointer-events: none; box-shadow: inset 0 0 0 4px #ffffff22, 0 5px 8px #102f2788; }
+#dama-move-note { flex-basis: 100%; color: #efd190; font: 12px/1.5 monospace; }
+.play-fullscreen #dama-move-note { font-size: 11px; }

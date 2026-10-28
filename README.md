@@ -2,7 +2,7 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.5 is a local game collection with a barangay hub, Patintero,
+Alpha 0.6 is a local game collection with a barangay hub, Patintero,
 Dama, Tagu-taguan, and Luksong-tinik. All four games work offline.
 
 The interface now uses larger body text, controls, instructions, and
@@ -146,8 +146,7 @@ seeker and save-sa-poste variants of Tagu-taguan are future additions.
 
 Display names and bot appearance assignments live in `client/src/characters.ts`.
 Mama Shoni is an elderly woman; Tatay Efren is an elderly man with a walking
-stick. Ferdie and MJ are boys; Audrey, Sheena, and Weng are girls. Weng replaces
-Maya. Each bot has a distinct hairstyle or outfit, and Dama shows their portrait. They are shared by the
+stick. Ferdie and MJ are boys; Audrey, Sheena, and Amor are girls. Amor was previously named Weng. Each bot has a distinct hairstyle or outfit, and Dama shows their portrait. They are shared by the
 barangay, guard labels, Tagu-taguan, Dama menus, and dialogue. The default
 player is Ikaw; old untouched Kaibigan profiles migrate without losing coins
 or records, and custom nicknames stay unchanged.
@@ -156,13 +155,24 @@ Dama has its own saved difficulty setting in the match setup and Settings;
 street games retain Easy/Normal/Hard. Each Dama tier has a different neighbor:
 Mama Shoni, Audrey, MJ, Ferdie, and Tatay Efren from Easy through Master. Resuming an existing board keeps the difficulty saved with that board.
 
+Bot turns highlight the starting square, then visibly slide the piece or
+play each capture hop in order. Captured pieces fade until the full chain
+finishes. The final route stays highlighted and is written below the board.
+Pausing or opening a menu freezes playback; leaving cancels it. Only complete
+turns are saved, so reloading during a move resumes from the preceding board.
+Promotion, turn changes, and results occur after the last landing.
+
 The fullscreen button expands the complete play panel, including pause,
 Barangay, Games, Avatar, Rules, Settings, Sound, exit, and all dialogs. Mobile
 fullscreen requests landscape orientation. If native fullscreen is unavailable
 or denied, an immersive viewport panel keeps the same controls available.
 Browsers that reject orientation locking show a prompt to rotate the phone;
 the page cannot force the device to rotate or hide browser chrome there.
-Touch controls remain available in landscape; Dama uses a compact board layout.
+Touch controls are explicitly anchored inside the game area in landscape:
+the circular pad is low left and Takbo is low right. Button colors are set
+explicitly for mobile browsers. The panel follows the visual viewport as
+browser bars expand or collapse, retains notch padding, and sizes the Dama
+board to the actual available stage height. Dama uses a compact board layout.
 
 The browser checks cover native fullscreen and simulated fullscreen/orientation
 rejection in Chrome, two-finger diagonal sprinting with the circular pad, both stronger opponents playing
@@ -271,8 +281,8 @@ modules loaded successfully without compiling it.
 
 ## Verification and dependency report
 
-Alpha 0.5 validation: production build and TypeScript checks pass; all 34
-rule tests and 27 browser scenarios pass. The world-art scenario walks
+Alpha 0.6 validation: production build and TypeScript checks pass; all 35
+rule tests and 32 browser scenarios pass. The world-art scenario walks
 behind and in front of a tree, verifies its trunk collision, and captures
 screenshots of the outlined characters and sharpened signage. Tagu-taguan
 also checks that camping in the starting bush is not a free win. New coverage

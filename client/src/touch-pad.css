@@ -7,6 +7,7 @@
 .play-fullscreen.touch-screen .touch-pad { pointer-events: auto; background-color: #2e4e36ed; }
 .play-fullscreen.touch-screen .player-chip { left: 164px; }
 .play-fullscreen.touch-screen .activity-action, .play-fullscreen.touch-screen .emote-button { right: 110px; }
-.touch-controls #touch-run { border-radius: 50%; height: 76px; width: 76px; font-size: 14px; letter-spacing: 0; touch-action: none; user-select: none; transition: none; }
+.touch-controls #touch-run { appearance: none; -webkit-appearance: none; flex: 0 0 76px; border-radius: 50%; height: 76px; width: 76px; color: #f2e4b9; font: 14px monospace; letter-spacing: 0; touch-action: none; user-select: none; transition: none; }
+.touch-controls #touch-run.held { color: #213d2a; }
 .play-fullscreen.touch-screen #touch-run { height: 76px; width: 76px; }
 @media (max-width: 600px) { .play-fullscreen.touch-screen .player-chip { left: 12px; } .play-fullscreen.touch-screen .activity-action, .play-fullscreen.touch-screen .emote-button { right: 12px; } }

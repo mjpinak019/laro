@@ -26,7 +26,7 @@
 /* Expand the complete play panel, including navigation, dialogs, and feedback. */
 body.expanded-game { overflow: hidden; overscroll-behavior: none; }
 body.expanded-game #app { height: 100dvh; overflow: hidden; }
-#game-display.play-fullscreen { position: fixed; inset: 0; z-index: 100; width: 100%; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; display: grid; grid-template-rows: 44px minmax(0, 1fr) auto 48px; background: #172b20; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+#game-display.play-fullscreen { position: fixed; inset: auto; top: var(--play-top, 0px); left: var(--play-left, 0px); z-index: 100; width: var(--play-width, 100vw); height: var(--play-height, 100dvh); max-height: var(--play-height, 100dvh); border: 0; border-radius: 0; display: grid; grid-template-rows: 44px minmax(0, 1fr) auto 48px; background: #172b20; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
 .play-fullscreen .world-toolbar { height: 44px; min-height: 0; padding: 0 12px; }
 .play-fullscreen .place { overflow: hidden; }
 .play-fullscreen .place strong { overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
@@ -47,7 +47,7 @@ body.expanded-game #app { height: 100dvh; overflow: hidden; }
 .play-fullscreen .map-label > strong { font-size: 14px; }
 .play-fullscreen .hub-map { width: 112px; top: 8px; right: 10px; }
 .play-fullscreen .round-hud { top: 8px; }
-.play-fullscreen.touch-screen .touch-controls { display: flex; height: auto; inset: auto 0 8px; padding: 0 12px; background: transparent; border: 0; pointer-events: none; }
+.play-fullscreen.touch-screen .touch-controls { position: absolute; display: flex; height: 132px; inset: auto 0 8px; padding: 0 12px; justify-content: space-between; align-items: center; gap: 16px; background: transparent; border: 0; pointer-events: none; }
 .play-fullscreen.touch-screen .touch-controls button { pointer-events: auto; background: #345c3bed; border: 1px solid #c5d39d99; box-shadow: 0 2px 3px #0b201c55; }
 .play-fullscreen .dpad button { border-radius: 5px; font-size: 22px; color: #f2e4b9; touch-action: none; user-select: none; }
 .play-fullscreen.touch-screen .touch-controls button.held { background: #b4c58c; color: #213d2a; }
@@ -57,13 +57,13 @@ body.expanded-game #app { height: 100dvh; overflow: hidden; }
 .play-fullscreen.touch-screen .player-chip div > span { display: none; }
 .play-fullscreen.touch-screen .emote-button, .play-fullscreen.touch-screen .activity-action { right: 160px; bottom: 12px; }
 .play-fullscreen[data-activity='dama'] .dama-stage { padding: 8px 16px; gap: 14px; }
-.play-fullscreen .dama-board { width: min(440px, calc(100dvh - 250px)); }
-.play-fullscreen dialog { max-height: calc(100dvh - 24px); }
+.play-fullscreen .dama-board { width: min(440px, calc(var(--play-height, 100dvh) - 250px)); }
+.play-fullscreen dialog { max-height: calc(var(--play-height, 100dvh) - 24px); }
 .play-fullscreen .toast { z-index: 110; }
 
 @media (orientation: landscape) {
   .play-fullscreen[data-activity='dama'] .dama-stage { display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(130px, 1fr); }
-  .play-fullscreen .dama-board { width: min(48vw, calc(100dvh - 145px)); }
+  .play-fullscreen .dama-board { width: min(48vw, calc(var(--play-stage-height, 300px) - 36px)); }
   .play-fullscreen .dama-heading strong { font-size: 21px; }
   .play-fullscreen .dama-heading > span:last-child { font-size: 12px; }
   .play-fullscreen .dama-heading .eyebrow { font-size: 11px; line-height: 1.5; }

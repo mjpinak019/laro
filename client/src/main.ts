@@ -4,6 +4,7 @@ import './games/games.css';
 import './play-screen.css';
 import './avatar.css';
 import './touch-pad.css';
+import './games/dama-motion.css';
 import { createGame } from './game';
 import { COLORS, loadProfile, saveProfile, storageAvailable } from './store';
 import type { Match } from './rules';
@@ -81,7 +82,7 @@ app.innerHTML = `
   <dialog id="modal" aria-labelledby="modal-title"><button id="close-modal" class="close-modal" aria-label="Close dialog">×</button><div id="modal-content"></div></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 `;
-document.querySelector('.version')!.textContent = 'ALPHA 0.5';
+document.querySelector('.version')!.textContent = 'ALPHA 0.6';
 document.querySelector('#nav-play span')!.textContent = 'Games';
 document.querySelector('.more-games')!.innerHTML = '<span>FOUR NEIGHBORHOOD CLASSICS</span><span>All playable offline · your progress stays here.</span>';
 document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${(Object.keys(GAMES) as GameId[]).map((id, index) => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${['╬', '◉', '♧', '↟'][index]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);

@@ -15,6 +15,10 @@ export class PlayScreen {
     document.addEventListener('webkitfullscreenchange', this.nativeChanged);
     window.addEventListener('resize', this.resize);
     window.visualViewport?.addEventListener('resize', this.resize);
+    window.visualViewport?.addEventListener('scroll', this.resize);
+    new ResizeObserver(() => {
+      if (this.active) this.panel.style.setProperty('--play-stage-height', `${this.panel.querySelector<HTMLElement>('.game-shell')!.clientHeight}px`);
+    }).observe(this.panel.querySelector('.game-shell')!);
   }
 
   get active() { return this.panel.classList.contains('play-fullscreen'); }
@@ -29,10 +33,15 @@ export class PlayScreen {
   };
   private resize = () => {
     if (!this.active) return;
-    const portrait = window.innerHeight > window.innerWidth;
+    const viewport = window.visualViewport;
+    const width = viewport?.width ?? window.innerWidth, height = viewport?.height ?? window.innerHeight;
+    this.panel.style.setProperty('--play-width', `${width}px`); this.panel.style.setProperty('--play-height', `${height}px`);
+    this.panel.style.setProperty('--play-top', `${viewport?.offsetTop ?? 0}px`); this.panel.style.setProperty('--play-left', `${viewport?.offsetLeft ?? 0}px`);
+    const portrait = height > width;
     this.panel.classList.toggle('portrait-screen', portrait);
     this.panel.classList.toggle('touch-screen', this.touch);
     this.panel.querySelector<HTMLElement>('#rotate-hint')!.hidden = !this.touch || !portrait;
+    this.panel.style.setProperty('--play-stage-height', `${this.panel.querySelector<HTMLElement>('.game-shell')!.clientHeight}px`);
     requestAnimationFrame(this.refresh);
   };
 

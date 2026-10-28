@@ -8,6 +8,7 @@ import { HUB_SITES, HUB_SIZE, nearbySite } from '../client/src/hub.ts';
 import { move, overlaps, PLAYER_RADIUS } from '../client/src/rules.ts';
 import { propFootprint, propGroundPoint, propObstacles, WORLD_PROPS } from '../client/src/world-props.ts';
 import { padDirection } from '../client/src/touch-pad.ts';
+import { botMoveFrame, BOT_MOVE_TIMING, damaSquareName } from '../client/src/games/dama-playback.ts';
 
 function board(pieces: Record<number, Piece>): Board { const value: Board = Array<Piece>(64).fill(0); for (const [at, piece] of Object.entries(pieces)) value[Number(at)] = piece; return value; }
 function state(value: Board): DamaState { return { ...initialDama(), board: value, history: [positionKey(value, 1)] }; }
@@ -59,6 +60,17 @@ test('threefold positions and eighty quiet plies produce draws', () => {
 test('all five bot difficulties return a legal longest capture', () => {
   const value = board({ 42: 1, 35: -1, 21: -1, 33: -1 });
   for (const difficulty of Object.keys(DAMA_LEVELS) as DamaDifficulty[]) assert.deepEqual(chooseDamaMove(value, 1, difficulty), legalMoves(value, 1)[0]);
+});
+test('bot playback shows the origin, every capture hop, and a final landing without changing the move', () => {
+  const move = { from: 21, path: [35, 49], captures: [28, 42] }, before = JSON.stringify(move);
+  const hopTime = BOT_MOVE_TIMING.slide + BOT_MOVE_TIMING.land;
+  assert.equal(botMoveFrame(move, 0).phase, 'focus');
+  const first = botMoveFrame(move, BOT_MOVE_TIMING.focus + BOT_MOVE_TIMING.slide / 2);
+  assert.equal(first.from, 21); assert.equal(first.to, 35); assert.ok(first.progress > 0 && first.progress < 1); assert.equal(first.landed, 0);
+  assert.equal(botMoveFrame(move, BOT_MOVE_TIMING.focus + BOT_MOVE_TIMING.slide + 1).landed, 1);
+  const second = botMoveFrame(move, BOT_MOVE_TIMING.focus + hopTime + 1); assert.equal(second.from, 35); assert.equal(second.to, 49); assert.equal(second.hop, 1);
+  const end = botMoveFrame(move, BOT_MOVE_TIMING.focus + hopTime * 2); assert.equal(end.phase, 'done'); assert.equal(end.landed, 2); assert.equal(end.progress, 1);
+  assert.equal(JSON.stringify(move), before); assert.equal(damaSquareName(21), 'f6'); assert.equal(damaSquareName(49), 'b2');
 });
 test('advanced Dama opponents keep the board unchanged and return legal moves within a tiny fallback budget', () => {
   const value = initialDama().board, before = [...value];
