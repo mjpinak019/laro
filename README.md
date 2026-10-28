@@ -17,6 +17,12 @@ the outline without moving the feet anchor. Jumping presenters are outlined too.
 
 ## Play
 
+Play online at **https://mjpinak019.github.io/laro/** on a computer, phone,
+or tablet. The first visit needs an internet connection to download the game.
+After the offline-ready message appears, the same browser can reload offline.
+Progress is saved separately in each browser and device; existing localhost
+progress remains in the local version and is not transferred automatically.
+
 Double-click `PLAY-LARO.cmd`. It builds the game, starts a loopback-only
 server, and opens your browser. Keep its terminal window open while playing;
 press Ctrl+C to stop the server. No internet connection is required with the
@@ -44,15 +50,18 @@ directly is not supported; use the launcher or the local server.
 ## Source control and hosting
 
 The source repository is [mjpinak019/laro](https://github.com/mjpinak019/laro),
-private during development and independent of the Tio Philo website. Authorized
-GitHub users can view or clone it from other devices. The repository URL is
-source code; it is not a hosted playable link.
+public and independent of the Tio Philo website. Anyone can view or clone
+the source. The playable game is published separately through GitHub Pages.
 Commit its source, package manifests, and lockfile; dependencies, build output,
 logs, and test screenshots are already ignored. A production build produces
 static files in `client/dist/`, suitable for a static host such as GitHub Pages.
-The parent website's existing deployment workflow builds the Tio Philo site;
-hosting LARO needs a game-specific build/deployment setup. Network multiplayer
-would also need a separate server, but the current offline games do not.
+The `Deploy LARO to GitHub Pages` workflow runs the rule tests, builds the game
+and offline cache, and publishes `client/dist/` on pushes to `main` or manual
+dispatch. GitHub Pages must use **GitHub Actions** as its publishing source.
+The workflow reads the Pages base path and passes it as `LARO_BASE_PATH`;
+local builds keep relative paths for the Windows launcher. The parent
+website has its own deployment and custom domain. Network multiplayer
+would need a separate server, but the current offline games do not.
 
 ## What is playable
 
