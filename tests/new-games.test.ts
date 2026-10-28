@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDama, chooseDamaMove, initialDama, legalMoves, positionKey, validDamaSave, type Board, type DamaState, type Piece } from '../client/src/games/dama-rules.ts';
+import { applyDama, chooseDamaMove, initialDama, legalMoves, moveBoard, positionKey, validDamaSave, type Board, type DamaState, type Piece } from '../client/src/games/dama-rules.ts';
+import { DAMA_LEVELS, type DamaDifficulty } from '../client/src/games/dama-levels.ts';
+import { loadProfile, STORAGE_KEY } from '../client/src/store.ts';
 import { ALLEY_WALLS, ALLEY_COVER, alleyPath, canSee, inCover, JUMP, jumpHeight, lineBlocked, tinikHeight, touchesTinik, tinikStage, touchesStage } from '../client/src/games/arcade-rules.ts';
 import { HUB_SITES, HUB_SIZE, nearbySite } from '../client/src/hub.ts';
 import { overlaps } from '../client/src/rules.ts';
@@ -52,9 +54,51 @@ test('threefold positions and eighty quiet plies produce draws', () => {
   assert.equal(applyDama(repeated, move).outcome, 0);
   assert.equal(applyDama({ ...game, quiet: 79 }, move).outcome, 0);
 });
-test('all three bot difficulties return a legal longest capture', () => {
+test('all five bot difficulties return a legal longest capture', () => {
   const value = board({ 42: 1, 35: -1, 21: -1, 33: -1 });
-  for (const difficulty of ['easy', 'normal', 'hard'] as const) assert.deepEqual(chooseDamaMove(value, 1, difficulty), legalMoves(value, 1)[0]);
+  for (const difficulty of Object.keys(DAMA_LEVELS) as DamaDifficulty[]) assert.deepEqual(chooseDamaMove(value, 1, difficulty), legalMoves(value, 1)[0]);
+});
+test('advanced Dama opponents keep the board unchanged and return legal moves within a tiny fallback budget', () => {
+  const value = initialDama().board, before = [...value];
+  for (const difficulty of ['expert', 'master'] as const) {
+    const selected = chooseDamaMove(value, 1, difficulty, { nodes: 1, milliseconds: 1 });
+    assert.ok(legalMoves(value, 1).some(move => JSON.stringify(move) === JSON.stringify(selected)));
+    assert.deepEqual(value, before);
+  }
+});
+test('Ferdie and Tatay Efren find a forced win that the greedy Easy opponent misses', () => {
+  const value = board({ 23: -1, 33: 1, 35: -1, 51: 2 });
+  function canForceWin(current: Board, turn: 1 | -1, remaining: number): boolean {
+    const options = legalMoves(current, turn);
+    if (!options.length) return turn === -1;
+    if (!remaining) return false;
+    const continues = (move: ReturnType<typeof legalMoves>[number]) => canForceWin(moveBoard(current, move), -turn as 1 | -1, remaining - 1);
+    return turn === 1 ? options.some(continues) : options.every(continues);
+  }
+  assert.equal(canForceWin(moveBoard(value, chooseDamaMove(value, 1, 'easy')!), -1, 6), false);
+  for (const difficulty of ['expert', 'master'] as const) {
+    const selected = chooseDamaMove(value, 1, difficulty)!;
+    assert.deepEqual(selected, { from: 51, path: [37], captures: [] });
+    assert.equal(canForceWin(moveBoard(value, selected), -1, 6), true);
+  }
+});
+test('Dama saves retain the selected opponent and still accept saves from before the five tiers', () => {
+  const saved = applyDama(initialDama('bot', 'master'), legalMoves(initialDama().board, 1)[0]);
+  assert.equal(saved.difficulty, 'master'); assert.equal(validDamaSave(saved), true);
+  const legacy = { ...saved }; delete legacy.difficulty;
+  assert.equal(validDamaSave(legacy), true);
+  assert.equal(validDamaSave({ ...saved, difficulty: 'impossible' }), false);
+});
+test('profile migration renames the old default while preserving coins, records, custom names, and difficulty', () => {
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (key: string) => storage.get(key) ?? null } });
+  try {
+    assert.equal(loadProfile().name, 'Ikaw');
+    storage.set(STORAGE_KEY, JSON.stringify({ name: 'Kaibigan', coins: 123, wins: 7, played: 9, best: 28, difficulty: 'hard', records: { dama: { wins: 2, played: 4, best: 37 } } }));
+    const migrated = loadProfile(); assert.equal(migrated.name, 'Ikaw'); assert.equal(migrated.coins, 123); assert.equal(migrated.wins, 7); assert.equal(migrated.records.dama.wins, 2); assert.equal(migrated.damaDifficulty, 'hard');
+    storage.set(STORAGE_KEY, JSON.stringify({ ...migrated, name: 'Juan', damaDifficulty: 'master' }));
+    assert.equal(loadProfile().name, 'Juan'); assert.equal(loadProfile().damaDifficulty, 'master');
+  } finally { Reflect.deleteProperty(globalThis, 'localStorage'); }
 });
 test('invalid and terminal saved boards are rejected', () => {
   assert.equal(validDamaSave(null), false); assert.equal(validDamaSave({ ...initialDama(), board: [1] }), false);

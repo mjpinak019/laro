@@ -69,7 +69,7 @@ test('mobile layout fits, touch movement works, and rulebook opens', async ({ pa
 test('corrupt saved data does not prevent playing', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('laro.offline.profile.v1', '{broken'));
   await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('#player-name')).toHaveText('Kaibigan');
+  await expect(page.locator('#player-name')).toHaveText('Ikaw');
   await page.locator('#play-button').click(); await expect(page.locator('#location-title')).toHaveText('Patintero Court');
 });
 

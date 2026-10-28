@@ -1,0 +1,87 @@
+/* Touch layout: Takbo on the left; familiar cross-shaped arrows on the right. */
+.fullscreen-nav { display: none; }
+.rotate-hint { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); z-index: 8; width: max-content; max-width: calc(100% - 20px); padding: 8px 12px; background: #243c30f2; border: 1px solid #e4bd78; border-radius: 6px; color: #f5e2b6; font-size: 12px; text-align: center; pointer-events: none; }
+.opponent-select { width: 100%; padding: 12px; color: #f3e4be; background: #1d3024; border: 1px solid #748260; border-radius: 5px; font: inherit; }
+.dpad { display: grid; grid-template-areas: '. up .' 'left . right' '. down .'; grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(3, 42px); gap: 3px; }
+.dpad [data-dir='0,-1'] { grid-area: up; }
+.dpad [data-dir='-1,0'] { grid-area: left; }
+.dpad [data-dir='1,0'] { grid-area: right; }
+.dpad [data-dir='0,1'] { grid-area: down; }
+.dpad button { width: 42px; height: 42px; }
+.dpad button.held, #touch-run.held { background: #b4c58c; color: #213d2a; }
+#touch-run { text-transform: none; }
+
+@media (max-width: 720px) {
+  .game-shell:not([data-activity='dama']):not([data-activity='tinik']) { aspect-ratio: auto; padding-bottom: 148px; }
+  .game-shell:not([data-activity='dama']):not([data-activity='tinik']) #game { position: relative; inset: auto; width: 100%; aspect-ratio: 1.6; }
+  .touch-controls { height: 148px; padding: 8px 14px; align-items: center; }
+  #touch-run { width: 80px; height: 56px; font: 15px monospace; letter-spacing: 0; }
+  .dpad button { width: 42px; height: 42px; }
+  .game-shell .player-chip, .game-shell[data-activity='taguan'] .player-chip { bottom: 162px; }
+  .game-shell .emote-button, .game-shell[data-activity='hub'] .activity-action, .game-shell[data-activity='taguan'] .activity-action { bottom: 162px; }
+  .game-shell .countdown { bottom: 148px; }
+  .game-shell[data-activity='tinik'] .player-chip { bottom: 15px; }
+}
+
+/* Expand the complete play panel, including navigation, dialogs, and feedback. */
+body.expanded-game { overflow: hidden; overscroll-behavior: none; }
+body.expanded-game #app { height: 100dvh; overflow: hidden; }
+#game-display.play-fullscreen { position: fixed; inset: 0; z-index: 100; width: 100%; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; display: grid; grid-template-rows: 44px minmax(0, 1fr) auto 48px; background: #172b20; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.play-fullscreen .world-toolbar { height: 44px; min-height: 0; padding: 0 12px; }
+.play-fullscreen .place { overflow: hidden; }
+.play-fullscreen .place strong { overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.play-fullscreen .place > span:last-child, .play-fullscreen .weather > span, .play-fullscreen .weather > svg { display: none; }
+.play-fullscreen .tiny-button { min-width: 44px; min-height: 42px; padding: 6px; }
+#game-display.play-fullscreen .game-shell { width: 100%; height: 100%; min-height: 0; padding: 0; aspect-ratio: auto; background-color: #14291f; }
+#game-display.play-fullscreen #game { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.play-fullscreen .world-bottom { min-height: 26px; height: auto; padding: 4px 12px; }
+.play-fullscreen .hint { font-size: 11px; line-height: 1.4; }
+.play-fullscreen .stamina { display: flex; }
+.play-fullscreen .fullscreen-nav { display: flex; align-items: stretch; justify-content: center; gap: 4px; border-top: 1px solid #6b7a50; padding: 3px 8px; background: #253e2e; overflow-x: auto; }
+.fullscreen-nav button { background: #304a35; color: #f0e1b9; padding: 6px 12px; border-radius: 4px; min-height: 40px; font-size: 12px; white-space: nowrap; }
+.fullscreen-nav button:hover { background: #506a43; }
+.fullscreen-nav button:last-child { color: #f0c780; margin-left: auto; }
+.play-fullscreen .player-chip, .play-fullscreen .emote-button, .play-fullscreen .activity-action { bottom: 12px; }
+.play-fullscreen .countdown { bottom: 0; }
+.play-fullscreen .map-label { top: 10px; left: 12px; }
+.play-fullscreen .map-label > strong { font-size: 14px; }
+.play-fullscreen .hub-map { width: 112px; top: 8px; right: 10px; }
+.play-fullscreen .round-hud { top: 8px; }
+.play-fullscreen.touch-screen .touch-controls { display: flex; height: auto; inset: auto 0 8px; padding: 0 12px; background: transparent; border: 0; pointer-events: none; }
+.play-fullscreen.touch-screen .touch-controls button { pointer-events: auto; background: #345c3bed; border: 1px solid #c5d39d99; box-shadow: 0 2px 3px #0b201c55; }
+.play-fullscreen .dpad button { border-radius: 5px; font-size: 22px; color: #f2e4b9; touch-action: none; user-select: none; }
+.play-fullscreen.touch-screen .touch-controls button.held { background: #b4c58c; color: #213d2a; }
+.play-fullscreen.touch-screen .dpad { gap: 3px; }
+.play-fullscreen.touch-screen #touch-run { width: 80px; height: 54px; font: 15px monospace; }
+.play-fullscreen.touch-screen .player-chip { left: 108px; bottom: 12px; padding: 5px 8px; }
+.play-fullscreen.touch-screen .player-chip div > span { display: none; }
+.play-fullscreen.touch-screen .emote-button, .play-fullscreen.touch-screen .activity-action { right: 160px; bottom: 12px; }
+.play-fullscreen[data-activity='dama'] .dama-stage { padding: 8px 16px; gap: 14px; }
+.play-fullscreen .dama-board { width: min(440px, calc(100dvh - 250px)); }
+.play-fullscreen dialog { max-height: calc(100dvh - 24px); }
+.play-fullscreen .toast { z-index: 110; }
+
+@media (orientation: landscape) {
+  .play-fullscreen[data-activity='dama'] .dama-stage { display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(130px, 1fr); }
+  .play-fullscreen .dama-board { width: min(48vw, calc(100dvh - 145px)); }
+  .play-fullscreen .dama-heading strong { font-size: 21px; }
+  .play-fullscreen .dama-heading > span:last-child { font-size: 12px; }
+  .play-fullscreen .dama-heading .eyebrow { font-size: 11px; line-height: 1.5; }
+  .play-fullscreen .dama-table { padding: 7px; }
+  .play-fullscreen .dama-footer { font-size: 12px; }
+  .play-fullscreen .dama-footer > span:first-child { flex-wrap: wrap; justify-content: center; }
+  .play-fullscreen.touch-screen .map-label { display: none; }
+  .play-fullscreen.touch-screen .round-hud { padding: 6px 10px; flex-wrap: nowrap; }
+  .play-fullscreen.touch-screen .round-hud strong { font-size: 11px; }
+  .play-fullscreen.touch-screen .round-hud > span { font-size: 14px; }
+}
+@media (max-width: 600px) {
+  .play-fullscreen .fullscreen-nav { gap: 3px; padding-inline: 4px; }
+  .fullscreen-nav button { padding-inline: 6px; font-size: 10px; }
+  .play-fullscreen .stamina { display: none; }
+  .play-fullscreen.touch-screen #game { bottom: 148px; height: calc(100% - 148px); }
+  .play-fullscreen.touch-screen .player-chip { left: 12px; bottom: 153px; }
+  .play-fullscreen.touch-screen .activity-action, .play-fullscreen.touch-screen .emote-button { right: 12px; bottom: 153px; }
+  .play-fullscreen.touch-screen[data-activity='tinik'] #game, .play-fullscreen.touch-screen[data-activity='dama'] #game { bottom: 0; height: 100%; }
+  .play-fullscreen.touch-screen[data-activity='tinik'] .player-chip, .play-fullscreen.touch-screen[data-activity='tinik'] .activity-action { bottom: 12px; }
+}

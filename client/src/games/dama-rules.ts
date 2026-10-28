@@ -1,19 +1,21 @@
+import { DAMA_LEVELS, isDamaDifficulty, type DamaDifficulty } from './dama-levels.ts';
+
 export type Side = 1 | -1;
 export type Piece = 0 | 1 | 2 | -1 | -2;
 export type Board = Piece[];
 export type DamaMove = { from: number; path: number[]; captures: number[] };
-export type DamaState = { board: Board; turn: Side; quiet: number; ply: number; history: string[]; outcome: Side | 0 | null; mode: 'bot' | 'local' };
+export type DamaState = { board: Board; turn: Side; quiet: number; ply: number; history: string[]; outcome: Side | 0 | null; mode: 'bot' | 'local'; difficulty?: DamaDifficulty };
 const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
 const inside = (r: number, c: number) => r >= 0 && r < 8 && c >= 0 && c < 8;
 const index = (r: number, c: number) => r * 8 + c;
 export const positionKey = (board: Board, turn: Side) => `${board.join(',')}:${turn}`;
 
-export function initialDama(mode: 'bot' | 'local' = 'bot'): DamaState {
+export function initialDama(mode: 'bot' | 'local' = 'bot', difficulty: DamaDifficulty = 'easy'): DamaState {
   const board: Board = Array<Piece>(64).fill(0);
   for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
     if ((r + c) % 2) board[index(r, c)] = r < 3 ? -1 : r > 4 ? 1 : 0;
   }
-  return { board, turn: 1, quiet: 0, ply: 0, history: [positionKey(board, 1)], outcome: null, mode };
+  return { board, turn: 1, quiet: 0, ply: 0, history: [positionKey(board, 1)], outcome: null, mode, difficulty };
 }
 
 function capturePaths(board: Board, origin: number): DamaMove[] {
@@ -100,27 +102,58 @@ function evaluate(board: Board, side: Side): number {
   }, 0);
 }
 
-export function chooseDamaMove(board: Board, side: Side, difficulty: 'easy' | 'normal' | 'hard'): DamaMove | null {
+export function chooseDamaMove(board: Board, side: Side, difficulty: DamaDifficulty, limits?: { nodes?: number; milliseconds?: number }): DamaMove | null {
   const moves = legalMoves(board, side);
   if (!moves.length) return null;
+  if (moves.length === 1) return moves[0];
+  const config = DAMA_LEVELS[difficulty];
+  const maxNodes = Math.min(config.nodes, limits?.nodes ?? config.nodes);
+  const deadline = performance.now() + Math.min(config.milliseconds, limits?.milliseconds ?? config.milliseconds);
+  const stopped = Symbol('search budget reached');
+  const table = new Map<string, { depth: number; score: number; flag: 'exact' | 'lower' | 'upper' }>();
   let nodes = 0;
-  function search(current: Board, turn: Side, depth: number, alpha: number, beta: number): number {
-    if (!depth || ++nodes > 4500) return evaluate(current, side);
+  function ordered(current: Board, options: DamaMove[], turn: Side) {
+    return options.map(move => ({ move, next: moveBoard(current, move) })).sort((a, b) => b.move.captures.length * 1000 + evaluate(b.next, turn) - a.move.captures.length * 1000 - evaluate(a.next, turn));
+  }
+  function search(current: Board, turn: Side, depth: number, alpha: number, beta: number, ply: number, extensions = 0): number {
+    if (++nodes > maxNodes || (nodes % 64 === 0 && performance.now() >= deadline)) throw stopped;
     const options = legalMoves(current, turn);
-    if (!options.length) return turn === side ? -100_000 - depth : 100_000 + depth;
-    let value = turn === side ? -Infinity : Infinity;
-    for (const option of options) {
-      const score = search(moveBoard(current, option), -turn as Side, depth - 1, alpha, beta);
-      value = turn === side ? Math.max(value, score) : Math.min(value, score);
-      if (turn === side) alpha = Math.max(alpha, value); else beta = Math.min(beta, value);
+    if (!options.length) return -100_000 + ply;
+    // Strong opponents finish forced capture exchanges before evaluating a leaf.
+    if (depth <= 0) {
+      if ((difficulty === 'expert' || difficulty === 'master') && options[0].captures.length && extensions < 4) { depth = 1; extensions++; }
+      else return evaluate(current, turn);
+    }
+    const key = `${positionKey(current, turn)}:${ply}:${extensions}`;
+    const cached = table.get(key), startAlpha = alpha, startBeta = beta;
+    if (cached && cached.depth >= depth) {
+      if (cached.flag === 'exact') return cached.score;
+      if (cached.flag === 'lower') alpha = Math.max(alpha, cached.score); else beta = Math.min(beta, cached.score);
+      if (alpha >= beta) return cached.score;
+    }
+    let value = -Infinity;
+    for (const option of ordered(current, options, turn)) {
+      const score = -search(option.next, -turn as Side, depth - 1, -beta, -alpha, ply + 1, extensions);
+      value = Math.max(value, score); alpha = Math.max(alpha, value);
       if (beta <= alpha) break;
     }
+    table.set(key, { depth, score: value, flag: value <= startAlpha ? 'upper' : value >= startBeta ? 'lower' : 'exact' });
     return value;
   }
-  let best = moves[0], bestScore = -Infinity;
-  for (const move of moves) {
-    const score = search(moveBoard(board, move), -side as Side, difficulty === 'hard' ? 4 : difficulty === 'normal' ? 3 : 0, -Infinity, Infinity);
-    if (score > bestScore) { bestScore = score; best = move; }
+  let roots = ordered(board, moves, side), best = roots[0].move;
+  // Keep only completed iterations, so a budget limit never favors the first
+  // few root moves over unsearched alternatives.
+  for (let depth = 1; depth <= config.depth; depth++) {
+    let candidate = best, score = -Infinity;
+    try {
+      for (const option of roots) {
+        const value = -search(option.next, -side as Side, depth - 1, -Infinity, -score, 1);
+        if (value > score) { score = value; candidate = option.move; }
+      }
+    } catch (error) { if (error === stopped) break; throw error; }
+    best = candidate;
+    roots = [...roots.filter(option => option.move === best), ...roots.filter(option => option.move !== best)];
+    if (score > 90_000 || performance.now() >= deadline) break;
   }
   return best;
 }
@@ -131,6 +164,7 @@ export function validDamaSave(value: unknown): value is DamaState {
   return Array.isArray(state.board) && state.board.length === 64 && state.board.every((piece, at) => [0, 1, 2, -1, -2].includes(piece) && (!piece || (Math.floor(at / 8) + at % 8) % 2 === 1))
     && state.board.filter(piece => piece > 0).length <= 12 && state.board.filter(piece => piece < 0).length <= 12
     && [1, -1].includes(state.turn) && state.outcome === null && ['bot', 'local'].includes(state.mode)
+    && (state.difficulty === undefined || isDamaDifficulty(state.difficulty))
     && Number.isInteger(state.ply) && state.ply >= 0 && state.ply < 10000
     && Number.isInteger(state.quiet) && state.quiet >= 0 && state.quiet < 80
     && Array.isArray(state.history) && state.history.length === state.ply + 1

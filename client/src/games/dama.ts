@@ -1,5 +1,7 @@
 import { applyDama, chooseDamaMove, initialDama, legalMoves, validDamaSave, type DamaMove, type DamaState } from './dama-rules';
 import type { ActivityControls, ActivityUI } from './types';
+import { DAMA_LEVELS, type DamaDifficulty } from './dama-levels';
+import { DEFAULT_PLAYER_NAME } from '../characters';
 
 const KEY = 'laro.dama.match.v1';
 export function savedDama(): DamaState | null {
@@ -22,16 +24,19 @@ export class DamaGame implements ActivityControls {
   private thinking = false;
   private tick: number;
   private lastMove: number[] = [];
+  private difficulty: DamaDifficulty;
 
   constructor(private ui: ActivityUI, mode: 'bot' | 'local', resume = false) {
-    this.state = resume ? savedDama() ?? initialDama(mode) : initialDama(mode);
+    this.state = resume ? savedDama() ?? initialDama(mode, ui.profile.damaDifficulty) : initialDama(mode, ui.profile.damaDifficulty);
+    this.difficulty = this.state.difficulty ?? ui.profile.damaDifficulty;
+    this.state.difficulty = this.difficulty;
     this.element = document.createElement('div'); this.element.id = 'dama-stage'; this.element.className = 'dama-stage';
     document.querySelector('#game-shell')!.append(this.element);
     ui.location('dama');
     try {
       this.worker = new Worker(new URL('./dama-worker.ts', import.meta.url), { type: 'module' });
       this.worker.onmessage = event => { if (event.data.id === this.request && !this.disposed) this.pending = event.data.move; };
-      this.worker.onerror = event => { event.preventDefault(); this.worker?.terminate(); this.worker = undefined; if (this.thinking) this.pending = chooseDamaMove(this.state.board, this.state.turn, this.ui.profile.difficulty) ?? undefined; };
+      this.worker.onerror = event => { event.preventDefault(); this.worker?.terminate(); this.worker = undefined; if (this.thinking) this.pending = this.fallbackMove(); };
     } catch { /* The bounded synchronous fallback works if browser workers are unavailable. */ }
     this.tick = window.setInterval(() => {
       if (this.disposed || this.paused || ui.blocked()) return;
@@ -50,9 +55,11 @@ export class DamaGame implements ActivityControls {
   private bot() {
     this.thinking = true; this.render();
     const id = ++this.request;
-    if (this.worker) this.worker.postMessage({ id, board: this.state.board, side: this.state.turn, difficulty: this.ui.profile.difficulty });
-    else this.pending = chooseDamaMove(this.state.board, this.state.turn, this.ui.profile.difficulty) ?? undefined;
+    if (this.worker) this.worker.postMessage({ id, board: this.state.board, side: this.state.turn, difficulty: this.difficulty });
+    else this.pending = this.fallbackMove();
   }
+
+  private fallbackMove() { return chooseDamaMove(this.state.board, this.state.turn, this.difficulty, { nodes: 2000, milliseconds: 45 }) ?? undefined; }
 
   private commit(move: DamaMove) {
     try { this.state = applyDama(this.state, move); }
@@ -92,10 +99,11 @@ export class DamaGame implements ActivityControls {
       board[this.prefix.at(-1)!] = piece;
     }
     const player = this.state.turn === 1 ? 'Gold' : 'Teal';
-    const turn = this.thinking ? 'Aling Nena is thinking…' : `${player} to move`;
+    const opponent = DAMA_LEVELS[this.difficulty];
+    const turn = this.thinking ? `${opponent.opponent} is thinking…` : `${player} to move`;
     const counts = [this.state.board.filter(piece => piece > 0).length, this.state.board.filter(piece => piece < 0).length];
     this.element.innerHTML = `
-      <div class="dama-heading"><span class="eyebrow">SA TABI NG TINDAHAN</span><strong id="dama-turn" aria-live="polite">${turn}</strong><span>${this.state.mode === 'bot' ? 'You · Gold / Aling Nena · Teal' : 'Pass-and-play · Gold / Teal'} · Move ${Math.floor(this.state.ply / 2) + 1}</span></div>
+      <div class="dama-heading"><span class="eyebrow">${this.state.mode === 'bot' ? `${opponent.label.toUpperCase()} · ${opponent.opponent.toUpperCase()}` : 'SA TABI NG TINDAHAN'}</span><strong id="dama-turn" aria-live="polite">${turn}</strong><span>${this.state.mode === 'bot' ? `${DEFAULT_PLAYER_NAME} · Gold / ${opponent.opponent} · Teal` : 'Pass-and-play · Gold / Teal'} · Move ${Math.floor(this.state.ply / 2) + 1}</span></div>
       <div class="dama-table"><div class="dama-board" role="group" aria-label="Dama board, 8 by 8">${board.map((piece, at) => {
         const playable = (Math.floor(at / 8) + at % 8) % 2 === 1;
         const available = this.moves.some(move => move.from === at);
@@ -124,6 +132,7 @@ export class DamaGame implements ActivityControls {
     const game = document.querySelector<HTMLElement>('#game')!;
     game.dataset.mode = 'dama'; game.dataset.phase = this.state.outcome === null ? 'playing' : 'finished'; game.dataset.ply = String(this.state.ply);
     this.element.dataset.turn = String(this.state.turn); this.element.dataset.ply = String(this.state.ply);
+    this.element.dataset.difficulty = this.difficulty;
   }
 
   private end() {
@@ -132,7 +141,7 @@ export class DamaGame implements ActivityControls {
     const draw = this.state.outcome === 0, won = this.state.outcome === 1;
     const local = this.state.mode === 'local';
     this.ui.result({ game: 'dama', won, draw, practice: local, record: this.state.ply,
-      title: draw ? 'A well-played draw.' : local ? `${this.state.outcome === 1 ? 'Gold' : 'Teal'} takes the table.` : won ? 'A clever finish!' : 'Aling Nena takes this one.',
+      title: draw ? 'A well-played draw.' : local ? `${this.state.outcome === 1 ? 'Gold' : 'Teal'} takes the table.` : won ? 'A clever finish!' : `${DAMA_LEVELS[this.difficulty].opponent} takes this one.`,
       summary: `${draw ? 'Threefold repetition or 40 quiet full moves ends the match.' : 'The match is complete.'} ${local ? 'Pass-and-play is a friendly match; no coins or ranked records are awarded.' : 'Try another match, or take a stroll around the barangay.'}`,
       coins: local ? 0 : draw ? 20 : won ? 60 : 10,
     });

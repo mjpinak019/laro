@@ -8,7 +8,7 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    channel: 'msedge',
+    channel: process.env.LARO_BROWSER === 'chrome' ? 'chrome' : 'msedge',
     launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
     viewport: { width: 1440, height: 1000 },
     screenshot: 'only-on-failure',

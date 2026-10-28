@@ -2,7 +2,7 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.3 is a local game collection with a barangay hub, Patintero,
+Alpha 0.4 is a local game collection with a barangay hub, Patintero,
 Dama, Tagu-taguan, and Luksong-tinik. All four games work offline.
 
 The interface now uses larger body text, controls, instructions, and
@@ -85,14 +85,20 @@ would need a separate server, but the current offline games do not.
 - Browser-local coins, wins, completed rounds, and best winning time.
   Blocked browser storage falls back to session-only progress. There is no
   online account, cloud save, network multiplayer, or cosmetic shop in this build.
-- Dama with an Easy/Normal/Hard bot, friendly two-player pass-and-play, highlighted
+- Dama with five bot difficulties: Easy, Normal, and Hard with Mama Shoni,
+  Expert with Ferdie, and Master with Tatay Efren. Also included are friendly
+  two-player pass-and-play, highlighted
   legal moves, complete capture chains, flying kings, promotion, win/loss/draw,
-  resignation, and automatic resume of an unfinished match. The normal bot
-  searches in a worker so the board remains responsive. Each ordinary piece
+  resignation, and automatic resume of an unfinished match. The bots
+  search in a worker so the board remains responsive. Expert and Master plan
+  further ahead, order tactical moves, and finish forced capture exchanges
+  before evaluating. Iterative deepening retains the last completed search
+  within each tier's time/node limit. A short synchronous fallback is used
+  only when workers are unavailable. Saved matches retain their opponent. Each ordinary piece
   can capture backward, captures must take the most pieces, captured pieces
   remain blockers until the sequence ends, and promotion occurs at the end
   of the complete move. Threefold repetition or 80 quiet plies is a draw.
-- Tagu-taguan: one human hider versus Bea, a seeker bot. Hide during a
+- Tagu-taguan: one human hider versus Audrey, a seeker bot. Hide during a
   10-second count, then survive 75 seconds. Walls block sight, shrubs provide
   cover along with laundry and bamboo. Crates and barrels add sight-blocking
   obstacles. There are seven concealment areas. E toggles crouching, and sprinting produces approximate sound clues.
@@ -112,7 +118,8 @@ would need a separate server, but the current offline games do not.
   `records.dama`, `records.taguan`, and `records.tinik` under the same profile key.
 
 Controls: WASD/arrows to move, Shift to sprint, E to interact, Space to wave,
-Escape to pause. On mobile, use the direction buttons and hold RUN.
+Escape to pause. On mobile, use the cross-shaped arrows on the right and hold Takbo on the left.
+Two fingers can hold Takbo and a direction together.
 Match rules are explained in the in-game rulebook.
 
 Choose a game in the right-hand picker and press its Play button, or use
@@ -134,6 +141,30 @@ practice do not affect records. Dama resumes from its latest completed turn;
 an unfinished capture selection is not saved as a partial turn. The human-
 seeker and save-sa-poste variants of Tagu-taguan are future additions.
 
+## Names, Dama opponents, and mobile fullscreen
+
+Display names live in `client/src/characters.ts`. They are shared by the
+barangay, guard labels, Tagu-taguan, Dama menus, and dialogue. The default
+player is Ikaw; old untouched Kaibigan profiles migrate without losing coins
+or records, and custom nicknames stay unchanged.
+
+Dama has its own saved difficulty setting in the match setup and Settings;
+street games retain Easy/Normal/Hard. Ferdie is Expert and Tatay Efren is
+Master. Resuming an existing board keeps the difficulty saved with that board.
+
+The fullscreen button expands the complete play panel, including pause,
+Barangay, Games, Avatar, Rules, Settings, Sound, exit, and all dialogs. Mobile
+fullscreen requests landscape orientation. If native fullscreen is unavailable
+or denied, an immersive viewport panel keeps the same controls available.
+Browsers that reject orientation locking show a prompt to rotate the phone;
+the page cannot force the device to rotate or hide browser chrome there.
+Touch controls remain available in landscape; Dama uses a compact board layout.
+
+The browser checks cover native fullscreen and simulated fullscreen/orientation
+rejection in Chrome, two-finger sprinting, both stronger opponents playing
+offline, and saved-opponent persistence. Actual phone/browser fullscreen
+behavior still depends on the device. PC controller input is not implemented.
+
 ## Development and checks
 
 ```powershell
@@ -143,7 +174,8 @@ npm.cmd run build
 npm.cmd run test:e2e
 ```
 
-The browser suite uses installed Microsoft Edge. It starts its own production
+The browser suite uses installed Microsoft Edge. Set `LARO_BROWSER=chrome`
+to run it with installed Google Chrome. It starts its own production
 preview when port 4173 is free, or reuses an existing preview on that port.
 Screenshots are written to ignored `artifacts/` and `test-results/` folders.
 Close the game preview before testing if you need a completely isolated run.
@@ -221,8 +253,8 @@ modules loaded successfully without compiling it.
 
 ## Verification and dependency report
 
-Alpha 0.3 validation: production build and TypeScript checks pass; all 28
-rule tests and 20 browser scenarios pass. The world-art scenario walks
+Alpha 0.4 validation: production build and TypeScript checks pass; all 32
+rule tests and 24 browser scenarios pass. The world-art scenario walks
 behind and in front of a tree, verifies its trunk collision, and captures
 screenshots of the outlined characters and sharpened signage. Tagu-taguan
 also checks that camping in the starting bush is not a free win. New coverage

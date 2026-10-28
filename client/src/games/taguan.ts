@@ -7,6 +7,7 @@ import type { ActivityUI } from './types';
 import { addWorldProps } from '../world-props';
 import { CHARACTER_ORIGIN } from '../sprite-outline';
 import type { Difficulty } from '../rules';
+import { CHARACTERS } from '../characters';
 
 const patrol: Point[] = [{ x: 100, y: 300 }, { x: 180, y: 500 }, { x: 400, y: 440 }, { x: 600, y: 480 }, { x: 820, y: 500 }, { x: 880, y: 140 }, { x: 420, y: 100 }, { x: 560, y: 280 }];
 
@@ -47,7 +48,7 @@ export class TaguanScene extends ActivityScene {
     this.keys.E.on('down', () => this.action());
     this.seekerShadow = this.add.ellipse(this.seeker.x, this.seeker.y + 2, 28, 10, 0x294e38, .22);
     this.seekerSprite = this.add.image(this.seeker.x, this.seeker.y, 'kid-4-1-0').setScale(2).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y);
-    this.seekerName = this.add.text(this.seeker.x, this.seeker.y - 64, 'Bea · TAYA', { fontFamily: 'monospace', fontSize: '15px', color: '#fff0cf', backgroundColor: '#685044', padding: { x: 7, y: 4 } }).setOrigin(.5, 1).setDepth(1000);
+    this.seekerName = this.add.text(this.seeker.x, this.seeker.y - 64, `${CHARACTERS.audrey} · TAYA`, { fontFamily: 'monospace', fontSize: '15px', color: '#fff0cf', backgroundColor: '#685044', padding: { x: 7, y: 4 } }).setOrigin(.5, 1).setDepth(1000);
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => { if (!this.blocked()) this.walkingTarget = { x: pointer.x, y: pointer.y }; });
     this.ui.location('taguan'); this.refresh();
   }
@@ -57,7 +58,7 @@ export class TaguanScene extends ActivityScene {
     const hidden = inCover(this.at) && !canSee(this.seeker, this.at, this.facingVector, this.crouched, this.sightRange);
     const status = this.countdown > 0 ? 'FIND A HIDING PLACE' : this.awareness >= 1 ? 'SPOTTED — BREAK SIGHT!' : this.awareness > .05 ? `SUSPICIOUS · ${Math.round(this.awareness * 100)}%` : hidden ? 'HIDDEN · KEEP QUIET' : this.crouched ? 'CROUCHING · STAY IN COVER' : 'STAY OUT OF SIGHT';
     this.ui.hud({ left: this.crouched ? 'CROUCH' : 'HIDER', objective: status, right: `${Math.floor(Math.ceil(this.remaining) / 60).toString().padStart(2, '0')}:${(Math.ceil(this.remaining) % 60).toString().padStart(2, '0')}` });
-    this.ui.hint(this.countdown > 0 ? `Bea is counting: ${Math.ceil(this.countdown)}. Try laundry, bamboo, hedges, or the stacks of crates.` : `${this.level.toUpperCase()} · Bea checks cover and searches more quickly as time passes. Shift sprints; E crouches.`);
+    this.ui.hint(this.countdown > 0 ? `${CHARACTERS.audrey} is counting: ${Math.ceil(this.countdown)}. Try laundry, bamboo, hedges, or the stacks of crates.` : `${this.level.toUpperCase()} · ${CHARACTERS.audrey} checks cover and searches more quickly as time passes. Shift / Takbo sprints; E crouches.`);
     document.querySelector<HTMLButtonElement>('#activity-action')!.textContent = this.crouched ? 'Stand up · E' : 'Crouch · E';
     document.querySelector('#stamina-fill')?.setAttribute('style', `width:${this.energy}%`);
     this.nameTag.setText(hidden ? `${this.ui.profile.name} · Hidden` : this.ui.profile.name);
@@ -85,7 +86,7 @@ export class TaguanScene extends ActivityScene {
     this.finished = true; this.refresh(); this.ui.sound(won ? 'win' : 'tag');
     const survived = Math.min(75, Math.round(75 - this.remaining));
     this.ui.result({ game: 'taguan', won, title: won ? 'Hindi ka nahuli!' : 'Huli ka!', coins: won ? this.level === 'hard' ? 100 : this.level === 'normal' ? 80 : 60 : 10, record: survived,
-      summary: won ? 'You survived the whole search. Bea will have to look a little harder next time.' : `Bea found you after ${survived} seconds. Try breaking sight around a wall before choosing new cover.` });
+      summary: won ? `You survived the whole search. ${CHARACTERS.audrey} will have to look a little harder next time.` : `${CHARACTERS.audrey} found you after ${survived} seconds. Try breaking sight around a wall before choosing new cover.` });
   }
 
   update(time: number, milliseconds: number) {
@@ -147,7 +148,7 @@ export class TaguanScene extends ActivityScene {
     const facing = Math.abs(this.facingVector.x) > Math.abs(this.facingVector.y) ? this.facingVector.x < 0 ? 1 : 2 : this.facingVector.y < 0 ? 3 : 0;
     this.seekerSprite.setPosition(this.seeker.x, this.seeker.y).setDepth(this.seeker.y).setTexture(`kid-4-${facing}-${this.countdown > 0 ? 0 : Math.floor(time / 130) % 4}`);
     this.seekerShadow.setPosition(this.seeker.x, this.seeker.y + 2).setDepth(this.seeker.y - 1);
-    this.seekerName.setPosition(this.seeker.x, this.seeker.y - 64).setText(this.countdown > 0 ? `Bea · ${Math.ceil(this.countdown)}` : `Bea · ${this.botState}`);
+    this.seekerName.setPosition(this.seeker.x, this.seeker.y - 64).setText(this.countdown > 0 ? `${CHARACTERS.audrey} · ${Math.ceil(this.countdown)}` : `${CHARACTERS.audrey} · ${this.botState}`);
     this.paintVision(); if (!this.finished) this.refresh();
   }
 }

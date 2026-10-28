@@ -59,7 +59,7 @@ test('Dama bot and all new games load after a disconnected reload', async ({ pag
   await ready(page);
   await page.evaluate(async () => { await navigator.serviceWorker.ready; if (!navigator.serviceWorker.controller) await new Promise<void>(resolve => navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true })); });
   await context.setOffline(true); await page.reload(); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
-  await choose(page, 'Dama'); await page.getByRole('button', { name: 'Play against Aling Nena' }).click();
+  await choose(page, 'Dama'); await page.getByRole('button', { name: 'Play against Mama Shoni' }).click();
   await page.locator('[data-square="40"]').click(); await page.locator('[data-square="33"]').click();
   await expect(page.locator('#dama-stage')).toHaveAttribute('data-ply', '2');
   await page.locator('#nav-hub').click(); await page.getByRole('button', { name: 'Return to the barangay' }).click();

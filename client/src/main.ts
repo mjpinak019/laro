@@ -1,6 +1,7 @@
 import './style.css';
 import './typography.css';
 import './games/games.css';
+import './play-screen.css';
 import { createGame } from './game';
 import { COLORS, loadProfile, saveProfile, storageAvailable } from './store';
 import type { Match } from './rules';
@@ -8,6 +9,9 @@ import { GameDirector } from './games/director';
 import { savedDama } from './games/dama';
 import { GAMES, type ActivityUI, type GameId, type NewGameId, type Result } from './games/types';
 import { HUB_SIZE, HUB_SITES } from './hub';
+import { CHARACTERS } from './characters';
+import { DAMA_LEVELS, isDamaDifficulty, type DamaDifficulty } from './games/dama-levels';
+import { PlayScreen } from './play-screen';
 
 const icons = {
   home: '<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',
@@ -46,7 +50,7 @@ app.innerHTML = `
     <main>
       <section class="welcome"><div><div class="eyebrow">MALIGAYANG PAGDATING <span> / </span> WELCOME HOME</div><h1>A little street. A lot of play<span>.</span></h1><p>Old-school games. New memories. Your barangay is waiting.</p></div><div class="daily-note">${icon('sun')}<span>A good day<br><strong>to play outside.</strong></span></div></section>
       <div class="play-layout">
-        <section class="world-card" aria-label="Playable game">
+        <section id="game-display" class="world-card" aria-label="Playable game">
           <div class="world-toolbar"><div class="place"><span class="live-dot"></span><strong id="location-title">Barangay Maligaya</strong><span id="location-subtitle">PUROK 01</span></div><div class="weather">${icon('sun')}<span>15:30 · GOLDEN HOUR</span><button id="pause-button" class="tiny-button" aria-label="Pause game" title="Pause game">Ⅱ</button><button id="fullscreen-button" class="tiny-button" aria-label="Fullscreen game" title="Fullscreen game">⛶</button></div></div>
           <div id="game-shell" class="game-shell"><div id="game" aria-label="Barangay game. Move with WASD or arrow keys. Press E to interact." tabindex="0"></div>
             <div class="map-label" id="map-label"><span>EXPLORE AT YOUR OWN PACE</span><strong>Welcome to the barangay.</strong></div>
@@ -54,9 +58,11 @@ app.innerHTML = `
             <div id="countdown" class="countdown" hidden></div>
             <div class="player-chip"><span class="mini-avatar" id="mini-avatar"></span><div><strong id="player-name"></strong><span>THAT’S YOU</span></div></div>
             <button id="emote-button" class="emote-button" aria-label="Wave to your neighbors" title="Wave · Space">☺ <span>SPACE</span></button>
-            <div class="touch-controls" aria-label="Touch movement controls"><div class="dpad"><button data-dir="0,-1" aria-label="Move up">↑</button><button data-dir="-1,0" aria-label="Move left">←</button><button data-dir="0,1" aria-label="Move down">↓</button><button data-dir="1,0" aria-label="Move right">→</button></div><button id="touch-run">RUN</button></div>
+            <div class="touch-controls" aria-label="Touch movement controls"><button id="touch-run" aria-label="Takbo · hold to run">Takbo</button><div class="dpad"><button data-dir="0,-1" aria-label="Move up">↑</button><button data-dir="-1,0" aria-label="Move left">←</button><button data-dir="0,1" aria-label="Move down">↓</button><button data-dir="1,0" aria-label="Move right">→</button></div></div>
           </div>
           <div class="world-bottom"><span class="hint" id="hint" role="status">Getting the neighborhood ready…</span><span class="stamina"><span>ENERGY</span><span class="stamina-track"><i id="stamina-fill"></i></span></span></div>
+          <nav id="fullscreen-nav" class="fullscreen-nav" aria-label="Fullscreen game navigation"><button data-screen-nav="nav-hub">Barangay</button><button data-screen-nav="nav-play">Games</button><button data-screen-nav="avatar-button">Avatar</button><button data-screen-nav="guide-button">Rules</button><button data-screen-nav="settings-button">Settings</button><button data-screen-nav="sound-button">Sound</button><button id="exit-play-screen">Exit ⛶</button></nav>
+          <span id="rotate-hint" class="rotate-hint" hidden>Turn your phone sideways for landscape play.</span>
         </section>
         <aside class="side-panel">
           <section class="game-card"><div class="card-top"><span class="eyebrow">THE CLASSICS</span><span class="number">01 / 05</span></div><div class="court-art" aria-hidden="true"><div class="chalk-court"><i></i><i></i><i></i><b></b></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="art-ball"></span><span class="art-spark">✦</span></div><div class="game-card-content"><div class="game-category"><span class="small-dot"></span> STREET GAME <span>·</span> SOLO + BOTS</div><h2>Patintero</h2><p>Quick feet. Good timing.<br>Cross the lines. Make it home.</p><div class="game-tags"><span>90-second rounds</span><span>4 bot guards</span></div><button id="play-button" class="primary-button">Play Patintero ${icon('arrow')}</button><button id="rules-button" class="text-button">New here? Learn the rules ↗</button></div></section>
@@ -71,7 +77,7 @@ app.innerHTML = `
   <dialog id="modal" aria-labelledby="modal-title"><button id="close-modal" class="close-modal" aria-label="Close dialog">×</button><div id="modal-content"></div></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 `;
-document.querySelector('.version')!.textContent = 'ALPHA 0.3';
+document.querySelector('.version')!.textContent = 'ALPHA 0.4';
 document.querySelector('#nav-play span')!.textContent = 'Games';
 document.querySelector('.more-games')!.innerHTML = '<span>FOUR NEIGHBORHOOD CLASSICS</span><span>All playable offline · your progress stays here.</span>';
 document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${(Object.keys(GAMES) as GameId[]).map((id, index) => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${['╬', '◉', '♧', '↟'][index]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);
@@ -80,9 +86,11 @@ document.querySelector('.game-picker')!.insertAdjacentHTML('beforeend', '<button
 document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', `<div id="hub-map" class="hub-map"><svg viewBox="0 0 136 85" role="img" aria-label="Barangay map with four game locations"><path d="M19 12V81M0 31H132M19 58H129M108 31V79" fill="none" stroke="#b8a780" stroke-width="5"/>${HUB_SITES.map(site => `<circle cx="${site.at.x / HUB_SIZE.width * 136}" cy="${site.at.y / HUB_SIZE.height * 85}" r="4" fill="#e7bd73"/><text x="${site.at.x / HUB_SIZE.width * 136 + 5}" y="${site.at.y / HUB_SIZE.height * 85 - 4}" fill="#f3e7bb" font-size="8">${site.game === 'dama' ? 'D' : site.game === 'tinik' ? 'L' : site.game === 'taguan' ? 'T' : 'P'}</text>`).join('')}<rect id="hub-map-view" width="81.6" height="51" fill="none" stroke="#e4efcc" stroke-opacity=".6"/><circle id="hub-map-player" r="3" fill="#fff8d7" stroke="#314a35"/></svg><span>MALIGAYA · 4 PLACES</span></div>`);
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const dialog = $<HTMLDialogElement>('#modal');
+// Keep dialogs and feedback inside the fullscreen element on every browser.
+$('#game-display').append(dialog, $('#toast'));
 function toast(message: string) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = window.setTimeout(() => { $('#toast').hidden = true; }, 4000); }
 function refreshProfile() {
-  $('#quick-settings').textContent = `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
+  $('#quick-settings').textContent = selectedGame === 'dama' ? `Dama: ${DAMA_LEVELS[profile.damaDifficulty].label} · ${DAMA_LEVELS[profile.damaDifficulty].opponent}` : `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
   $('#player-name').textContent = profile.name;
   $('#mini-avatar').style.setProperty('--shirt', COLORS[profile.color]);
   const record = selectedGame === 'patintero' ? { wins: profile.wins, best: profile.best, played: profile.played } : profile.records[selectedGame];
@@ -95,6 +103,7 @@ function refreshProfile() {
 }
 function persist() { saveProfile(profile); refreshProfile(); }
 function openModal(content: string, dismissible = true) {
+  touchDirections.clear(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
   scene.resetInput();
   game.input.keyboard!.preventDefault = false;
   lastFocus = document.activeElement as HTMLElement;
@@ -188,6 +197,7 @@ function activityLocation(mode: 'hub' | 'match' | NewGameId) {
   $('#location-title').textContent = titles[active];
   $('#location-subtitle').textContent = active === 'hub' ? 'PUROK 01' : active === 'dama' ? 'AT THE WOODEN TABLE' : 'OFFLINE PLAY';
   $('#game-shell').dataset.activity = active;
+  $('#game-display').dataset.activity = active;
   game.input.keyboard!.preventDefault = active !== 'dama';
   $('#map-label').hidden = active !== 'hub'; $('#round-hud').hidden = active === 'hub' || active === 'dama'; $('#countdown').hidden = true;
   $('#hub-map').hidden = active !== 'hub';
@@ -222,7 +232,11 @@ function updateGameCard() {
 function setupGame(id: GameId) {
   if (id === 'dama') {
     const saved = savedDama();
-    openModal(`<div class="eyebrow">TAKE A SEAT</div><h2 id="modal-title">Tara, Dama tayo.</h2><p>Gold moves first. Backward captures, flying kings, and mandatory longest capture chains.</p>${saved ? '<button id="resume-dama" class="primary-button">Resume saved match</button>' : ''}<button id="dama-bot" class="${saved ? 'secondary' : 'primary'}-button">Play against Aling Nena</button><button id="dama-local" class="secondary-button">Two players · pass-and-play</button><p class="fine-print">A new match replaces the unfinished saved match. Pass-and-play is a friendly mode with no coins or records.</p>`);
+    openModal(`<div class="eyebrow">TAKE A SEAT</div><h2 id="modal-title">Tara, Dama tayo.</h2><p>Gold moves first. Backward captures, flying kings, and mandatory longest capture chains.</p><label class="field-label" for="dama-difficulty">YOUR OPPONENT</label><select id="dama-difficulty" class="opponent-select">${damaOptions()}</select><p id="dama-opponent-hint" class="fine-print"></p>${saved ? `<button id="resume-dama" class="primary-button">Resume saved match</button>` : ''}<button id="dama-bot" class="${saved ? 'secondary' : 'primary'}-button"></button><button id="dama-local" class="secondary-button">Two players · pass-and-play</button><p class="fine-print">A new match replaces the unfinished saved match. Resuming keeps that match’s opponent. Pass-and-play is a friendly mode with no coins or records.</p>`);
+    const select = $<HTMLSelectElement>('#dama-difficulty'); select.value = profile.damaDifficulty;
+    const showOpponent = () => { $('#dama-bot').textContent = `Play against ${DAMA_LEVELS[profile.damaDifficulty].opponent}`; $('#dama-opponent-hint').textContent = DAMA_LEVELS[profile.damaDifficulty].hint; };
+    select.onchange = () => { if (isDamaDifficulty(select.value)) profile.damaDifficulty = select.value; persist(); showOpponent(); };
+    showOpponent();
     if (saved) $('#resume-dama').onclick = () => { closeModal(); scene.start('dama', { resume: true }); };
     $('#dama-bot').onclick = () => { closeModal(); scene.start('dama', { mode: 'bot' }); };
     $('#dama-local').onclick = () => { closeModal(); scene.start('dama', { mode: 'local' }); };
@@ -232,6 +246,7 @@ function setupGame(id: GameId) {
     $('#tinik-practice').onclick = () => { closeModal(); scene.start('tinik', { practice: true }); };
   } else { closeModal(); scene.start(id); sound('emote'); }
 }
+function damaOptions() { return (Object.keys(DAMA_LEVELS) as DamaDifficulty[]).map(id => `<option value="${id}">${DAMA_LEVELS[id].label} · ${DAMA_LEVELS[id].opponent}</option>`).join(''); }
 document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach(button => { button.onclick = () => { selectedGame = button.dataset.game as GameId; updateGameCard(); }; });
 $('#activity-action').onclick = () => scene.action();
 
@@ -260,8 +275,8 @@ $('#sound-button').onclick = () => { profile.muted = !profile.muted; persist(); 
 function guide() {
   if (selectedGame !== 'patintero') {
     const pages: Record<NewGameId, string> = {
-      dama: '<p>LARO’s Filipino-style preset: an 8×8 board, twelve pieces per side, and Gold moves first.</p><ol class="rules-list"><li>Ordinary pieces step diagonally forward, but can capture forward or backward.</li><li>Captures are mandatory. Choose a sequence that takes the most pieces, and finish every jump with the same piece.</li><li>Captured pieces remain blockers until the complete sequence ends. Equal-length routes are your choice.</li><li>Kings fly along clear diagonals. Each capture jumps one opponent and lands on an empty square beyond it.</li><li>A piece becomes a king only if it ends its complete turn on the far rank.</li><li>Win when the opponent has no pieces or legal moves. Threefold repetition or 40 full moves without a capture or ordinary-piece move is a draw.</li></ol><p>Play against Aling Nena or pass the device between two people. An unfinished match saves automatically. Bot wins earn 60 coins, draws 20, and losses 10. Friendly pass-and-play has no rewards.</p>',
-      taguan: '<p>Bea counts for 10 seconds. Use that time to hide, then survive a 75-second search.</p><ol class="rules-list"><li>Move with WASD, arrows, touch buttons, or by clicking the ground.</li><li>Hold Shift / RUN to sprint. Sprinting uses energy and makes noise.</li><li>Press E or Crouch to move quietly. Shrubs, laundry, and bamboo conceal you; buildings, crates, and barrels block sight. Crouching in the open does not make you invisible.</li><li>The awareness meter fills when Bea can see you. Break sight around a wall and relocate.</li><li>Bea investigates sounds and remembers where she last saw you, but cannot see through buildings. She must reach you to catch you.</li></ol><p>Easy mode shows her sight cone. Normal and Hard increase her speed, sight, and memory. Surviving earns 60 / 80 / 100 coins on Easy / Normal / Hard; a finished caught round earns 10. No transformation, disguise, or weapons.</p>',
+      dama: `<p>LARO’s Filipino-style preset: an 8×8 board, twelve pieces per side, and Gold moves first.</p><ol class="rules-list"><li>Ordinary pieces step diagonally forward, but can capture forward or backward.</li><li>Captures are mandatory. Choose a sequence that takes the most pieces, and finish every jump with the same piece.</li><li>Captured pieces remain blockers until the complete sequence ends. Equal-length routes are your choice.</li><li>Kings fly along clear diagonals. Each capture jumps one opponent and lands on an empty square beyond it.</li><li>A piece becomes a king only if it ends its complete turn on the far rank.</li><li>Win when the opponent has no pieces or legal moves. Threefold repetition or 40 full moves without a capture or ordinary-piece move is a draw.</li></ol><p>Choose Easy, Normal, or Hard with ${CHARACTERS.mamaShoni}, Expert with ${CHARACTERS.ferdie}, or Master with ${CHARACTERS.tatayEfren}. You can also pass the device between two people. An unfinished match saves automatically. Bot wins earn 60 coins, draws 20, and losses 10. Friendly pass-and-play has no rewards.</p>`,
+      taguan: `<p>${CHARACTERS.audrey} counts for 10 seconds. Use that time to hide, then survive a 75-second search.</p><ol class="rules-list"><li>Move with WASD, arrows, touch buttons, or by clicking the ground.</li><li>Hold Shift / Takbo to sprint. Sprinting uses energy and makes noise.</li><li>Press E or Crouch to move quietly. Shrubs, laundry, and bamboo conceal you; buildings, crates, and barrels block sight. Crouching in the open does not make you invisible.</li><li>The awareness meter fills when ${CHARACTERS.audrey} can see you. Break sight around a wall and relocate.</li><li>${CHARACTERS.audrey} investigates sounds and remembers where she last saw you, but cannot see through buildings. She must reach you to catch you.</li></ol><p>Easy mode shows her sight cone. Normal and Hard increase her speed, sight, and memory. Surviving earns 60 / 80 / 100 coins on Easy / Normal / Hard; a finished caught round earns 10. No transformation, disguise, or weapons.</p>`,
       tinik: '<p>Two neighborhood kids raise their hands and feet into a growing obstacle. Your run-up is automatic.</p><ol class="rules-list"><li>Watch your feet approach the takeoff zone. Speed and obstacle position change at each height.</li><li>Press Space or Jump once. Your jump follows a predictable arc.</li><li>Clear the whole obstacle and land to advance to the next height.</li><li>Touch the hands and lose a chance. Three misses end a challenge.</li><li>Clear all six heights to win. Practice gives unlimited retries without coins or records.</li></ol><p>Hard uses a small takeoff notch after height two; Practice keeps the full guide. A challenge win earns 60 / 80 / 100 coins on Easy / Normal / Hard, plus 10 per remaining chance. A finished attempt earns 10 plus 5 per cleared height. Escape pauses the run-up and jump.</p>',
     };
     openModal(`<div class="eyebrow">THE NEIGHBORHOOD RULEBOOK</div><h2 id="modal-title">Tara, ${GAMES[selectedGame].title}!</h2>${pages[selectedGame]}<button id="guide-close" class="primary-button">Got it. Let’s play.</button>`);
@@ -281,9 +296,10 @@ $('#avatar-button').onclick = () => {
   $('#nickname').oninput = () => $<HTMLInputElement>('#nickname').setCustomValidity('');
 };
 $('#settings-button').onclick = () => {
-  openModal(`<div class="eyebrow">JUST THE WAY YOU LIKE IT</div><h2 id="modal-title">A little fine-tuning.</h2><label class="setting-row" for="difficulty">Difficulty<select id="difficulty"><option value="easy">Easy · learn the rhythm</option><option value="normal">Normal · a real challenge</option><option value="hard">Hard · quick and precise</option></select></label><label class="setting-row" for="sound-enabled">Game sounds<input id="sound-enabled" type="checkbox" ${profile.muted ? '' : 'checked'} /></label><p class="fine-print">Difficulty changes take effect in the next Tagu-taguan or jumping round. Other bots use the setting on their next move. Tagu-taguan and jumping wins earn more coins at higher difficulties.</p><button id="save-settings" class="primary-button">All set</button>`);
+  openModal(`<div class="eyebrow">JUST THE WAY YOU LIKE IT</div><h2 id="modal-title">A little fine-tuning.</h2><label class="setting-row" for="difficulty">Street games<select id="difficulty"><option value="easy">Easy · learn the rhythm</option><option value="normal">Normal · a real challenge</option><option value="hard">Hard · quick and precise</option></select></label><label class="setting-row" for="settings-dama-difficulty">Dama opponent<select id="settings-dama-difficulty">${damaOptions()}</select></label><label class="setting-row" for="sound-enabled">Game sounds<input id="sound-enabled" type="checkbox" ${profile.muted ? '' : 'checked'} /></label><p class="fine-print">Dama, Tagu-taguan, and jumping difficulty changes apply to new matches. Saved Dama matches keep their opponent. Higher street-game difficulties earn more coins.</p><button id="save-settings" class="primary-button">All set</button>`);
   $<HTMLSelectElement>('#difficulty').value = profile.difficulty;
-  $('#save-settings').onclick = () => { const level = $<HTMLSelectElement>('#difficulty').value; profile.difficulty = level === 'hard' ? 'hard' : level === 'normal' ? 'normal' : 'easy'; profile.muted = !$<HTMLInputElement>('#sound-enabled').checked; persist(); closeModal(); };
+  $<HTMLSelectElement>('#settings-dama-difficulty').value = profile.damaDifficulty;
+  $('#save-settings').onclick = () => { const level = $<HTMLSelectElement>('#difficulty').value; profile.difficulty = level === 'hard' ? 'hard' : level === 'normal' ? 'normal' : 'easy'; const damaLevel = $<HTMLSelectElement>('#settings-dama-difficulty').value; if (isDamaDifficulty(damaLevel)) profile.damaDifficulty = damaLevel; profile.muted = !$<HTMLInputElement>('#sound-enabled').checked; persist(); closeModal(); };
 };
 $('#quick-settings').onclick = () => $('#settings-button').click();
 function resume() { paused = false; scene.setPaused(false); $('#pause-button').setAttribute('aria-label', 'Pause game'); closeModal(); }
@@ -296,17 +312,21 @@ function pause() {
 }
 $('#pause-button').onclick = () => paused ? resume() : pause();
 document.addEventListener('visibilitychange', () => { if (document.hidden && !dialog.open) pause(); });
-$('#fullscreen-button').onclick = async () => {
-  try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('#game-shell').requestFullscreen(); }
-  catch { toast('Fullscreen is unavailable in this browser.'); }
-};
+const playScreen = new PlayScreen($('#game-display'), $('#fullscreen-button'), () => { scene.resetInput(); game.scale.refresh(); });
+$('#fullscreen-button').onclick = () => { void playScreen.toggle(); };
+$('#exit-play-screen').onclick = () => { void playScreen.exit(); };
+document.querySelectorAll<HTMLButtonElement>('[data-screen-nav]').forEach(button => { button.onclick = () => $<HTMLButtonElement>(`#${button.dataset.screenNav}`).click(); });
+const touchDirections = new Map<number, { x: number; y: number }>();
+function syncTouchDirection() { scene.setTouch([...touchDirections.values()].reduce((sum, value) => sum + value.x, 0), [...touchDirections.values()].reduce((sum, value) => sum + value.y, 0)); }
 document.querySelectorAll<HTMLButtonElement>('[data-dir]').forEach(button => {
-  button.onpointerdown = event => { event.preventDefault(); button.setPointerCapture(event.pointerId); const [x, y] = button.dataset.dir!.split(',').map(Number); scene.setTouch(x, y); };
-  const release = () => scene.setTouch(0, 0);
+  button.onpointerdown = event => { event.preventDefault(); button.setPointerCapture(event.pointerId); const [x, y] = button.dataset.dir!.split(',').map(Number); touchDirections.set(event.pointerId, { x, y }); button.classList.add('held'); syncTouchDirection(); };
+  const release = (event: PointerEvent) => { touchDirections.delete(event.pointerId); button.classList.remove('held'); syncTouchDirection(); };
   button.onpointerup = release; button.onpointercancel = release; button.onlostpointercapture = release;
 });
-$('#touch-run').onpointerdown = event => { event.preventDefault(); $('#touch-run').setPointerCapture(event.pointerId); scene.setSprint(true); };
-$('#touch-run').onpointerup = () => scene.setSprint(false); $('#touch-run').onpointercancel = () => scene.setSprint(false); $('#touch-run').onlostpointercapture = () => scene.setSprint(false);
+$('#touch-run').onpointerdown = event => { event.preventDefault(); $('#touch-run').setPointerCapture(event.pointerId); $('#touch-run').classList.add('held'); scene.setSprint(true); };
+const stopTakbo = () => { $('#touch-run').classList.remove('held'); scene.setSprint(false); };
+$('#touch-run').onpointerup = stopTakbo; $('#touch-run').onpointercancel = stopTakbo; $('#touch-run').onlostpointercapture = stopTakbo;
+window.addEventListener('blur', () => { touchDirections.clear(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held')); scene.resetInput(); });
 refreshProfile();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

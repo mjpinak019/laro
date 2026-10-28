@@ -6,6 +6,7 @@ import { addWorldProps } from './world-props';
 import { CHARACTER_ORIGIN } from './sprite-outline';
 import { HUB_SIZE, HUB_SITES, nearbySite } from './hub';
 import type { GameId } from './games/types';
+import { CHARACTERS } from './characters';
 
 export interface GameUI {
   profile: Profile;
@@ -109,7 +110,7 @@ export class BarangayScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height).setScroll(0, 0);
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
     this.cameras.main.setScroll(Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600));
-    this.neighbors = [this.kid(227, 316, 3, 'Aling Nena'), this.kid(675, 396, 1, 'Miko'), this.kid(792, 417, 4, 'Bea'), this.kid(372, 750, 1, 'Lolo Ben'), this.kid(1250, 420, 2, 'Maya'), this.kid(1360, 420, 3, 'Jun'), this.kid(1400, 860, 4, 'Lila')];
+    this.neighbors = [this.kid(227, 316, 3, CHARACTERS.mamaShoni), this.kid(675, 396, 1, CHARACTERS.mj), this.kid(792, 417, 4, CHARACTERS.audrey), this.kid(372, 750, 1, CHARACTERS.tatayEfren), this.kid(1250, 420, 2, CHARACTERS.maya), this.kid(1360, 420, 3, CHARACTERS.ferdie), this.kid(1400, 860, 4, CHARACTERS.sheena)];
     this.ui.location('hub'); this.ui.status(null);
     this.ui.hint('Explore the larger barangay. Walk to a game marker and press E, or use Games.');
   }
@@ -125,10 +126,10 @@ export class BarangayScene extends Phaser.Scene {
     this.player.x = SPAWN.x; this.player.y = SPAWN.y; this.player.facing = 3; this.player.sprite.setAlpha(1);
     this.match = newMatch(); this.reported = false; this.sprint = 100;
     this.guards = [
-      { kid: this.kid(300, 180, 4, 'Bea'), axis: 'x', position: 180, offset: 0.4 },
-      { kid: this.kid(650, 280, 1, 'Miko'), axis: 'x', position: 280, offset: 2.1 },
-      { kid: this.kid(400, 380, 3, 'Jun'), axis: 'x', position: 380, offset: 4.3 },
-      { kid: this.kid(480, 210, 2, 'Lila'), axis: 'y', position: 480, offset: 1.3 },
+      { kid: this.kid(300, 180, 4, CHARACTERS.audrey), axis: 'x', position: 180, offset: 0.4 },
+      { kid: this.kid(650, 280, 1, CHARACTERS.mj), axis: 'x', position: 280, offset: 2.1 },
+      { kid: this.kid(400, 380, 3, CHARACTERS.ferdie), axis: 'x', position: 380, offset: 4.3 },
+      { kid: this.kid(480, 210, 2, CHARACTERS.sheena), axis: 'y', position: 480, offset: 1.3 },
     ];
     this.ui.location('match'); this.ui.status(this.match); this.ui.hint('Get ready! Cross to the far green strip, then return home.');
   }
@@ -193,7 +194,7 @@ export class BarangayScene extends Phaser.Scene {
       const site = nearbySite(this.player);
       const atStore = Math.hypot(this.player.x - 227, this.player.y - 316) < 75;
       if (time - this.lastHUD > 110) {
-        this.ui.hint(site ? `Press E or tap Play to enter ${site.name}.` : atStore ? 'Press E to say hello to Aling Nena' : 'Dama is south of the plaza · schoolyard is east · Tagu-taguan is southeast');
+        this.ui.hint(site ? `Press E or tap Play to enter ${site.name}.` : atStore ? `Press E to say hello to ${CHARACTERS.mamaShoni}` : 'Dama is south of the plaza · schoolyard is east · Tagu-taguan is southeast');
         const button = document.querySelector<HTMLButtonElement>('#activity-action')!;
         button.hidden = !site; if (site) button.textContent = `Play ${site.game === 'dama' ? 'Dama' : site.game === 'tinik' ? 'Luksong-tinik' : site.game === 'taguan' ? 'Tagu-taguan' : 'Patintero'} · E`;
         document.querySelector<HTMLButtonElement>('#emote-button')!.hidden = Boolean(site);
@@ -201,7 +202,7 @@ export class BarangayScene extends Phaser.Scene {
       if (this.interactRequested) {
         this.interactRequested = false;
         if (site) this.ui.enterGame(site.game);
-        else if (atStore) this.say('Aling Nena: Kaya mo ’yan!');
+        else if (atStore) this.say(`${CHARACTERS.mamaShoni}: Kaya mo ’yan!`);
         else this.emote();
       }
       const camera = this.cameras.main;

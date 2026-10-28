@@ -34,6 +34,6 @@ test('arrow keys move the avatar and Games navigation opens a usable game menu',
   await expect.poll(async () => Number(await page.locator('#game').getAttribute('data-y'))).toBeLessThan(y - 25);
   await page.getByRole('button', { name: 'Games', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'An afternoon of play.' })).toBeVisible();
-  await page.locator('[data-menu-game="dama"]').click(); await page.getByRole('button', { name: 'Play against Aling Nena' }).click();
+  await page.locator('[data-menu-game="dama"]').click(); await page.getByRole('button', { name: 'Play against Mama Shoni' }).click();
   await expect(page.locator('#dama-stage')).toBeVisible();
 });
