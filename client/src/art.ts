@@ -176,6 +176,11 @@ function drawHub(c: Painter) {
   label(c, 'LIKOD-BAHAY', 649, 468, '#45684b', 8);
   label(c, 'TAMBAYAN', 229, 319, '#5c704e', 8);
   pennants(c, 513, 296, 258);
+  // The circle court sits beside the schoolyard, connected to its front road.
+  rect(c, 470, 204, 57, 71, '#c6ae81');
+  c.strokeStyle = '#f4e5bd'; c.lineWidth = 2; c.beginPath(); c.arc(499, 239, 23, 0, Math.PI * 2); c.stroke();
+  for (const [x, y, color] of [[495, 236, '#83b9b2'], [502, 240, '#e7bc70'], [495, 243, '#cd8e87']] as const) { rect(c, x, y, 4, 4, '#405b43'); rect(c, x, y, 3, 3, color); rect(c, x, y, 1, 1, '#fff1c4'); }
+  rect(c, 477, 271, 45, 12, '#435f46'); label(c, 'JOLEN', 500, 280, '#f4dfaa', 8);
 }
 
 function drawHidingObject(c: Painter, kind: string, x: number, y: number, w: number, h: number) {

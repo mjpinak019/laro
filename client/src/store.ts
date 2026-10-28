@@ -3,8 +3,8 @@ import { DEFAULT_PLAYER_NAME, type AvatarGender } from './characters.ts';
 import { isDamaDifficulty, type DamaDifficulty } from './games/dama-levels.ts';
 
 export const COLORS = ['#e7b65d', '#7fafba', '#ca867b', '#a3af75'] as const;
-export type RecordBook = Record<'dama' | 'taguan' | 'tinik', { wins: number; played: number; best: number }>;
-const freshRecords = (): RecordBook => ({ dama: { wins: 0, played: 0, best: 0 }, taguan: { wins: 0, played: 0, best: 0 }, tinik: { wins: 0, played: 0, best: 0 } });
+export type RecordBook = Record<'dama' | 'taguan' | 'tinik' | 'jolen', { wins: number; played: number; best: number }>;
+const freshRecords = (): RecordBook => ({ dama: { wins: 0, played: 0, best: 0 }, taguan: { wins: 0, played: 0, best: 0 }, tinik: { wins: 0, played: 0, best: 0 }, jolen: { wins: 0, played: 0, best: 0 } });
 export interface Profile {
   name: string;
   color: number;
@@ -16,11 +16,12 @@ export interface Profile {
   muted: boolean;
   difficulty: Difficulty;
   damaDifficulty: DamaDifficulty;
+  jolenDifficulty: DamaDifficulty;
   records: RecordBook;
 }
 export const STORAGE_KEY = 'laro.offline.profile.v1';
 export let storageAvailable = true;
-const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', records: freshRecords() };
+const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', records: freshRecords() };
 const number = (value: unknown, max = 1_000_000) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(0, Math.floor(value))) : 0;
 
 export function loadProfile(): Profile {
@@ -30,9 +31,9 @@ export function loadProfile(): Profile {
     try { raw = JSON.parse(stored || '{}') ?? {}; }
     catch { return { ...defaults, records: freshRecords() }; }
     const records = freshRecords();
-    for (const id of ['dama', 'taguan', 'tinik'] as const) {
+    for (const id of ['dama', 'taguan', 'tinik', 'jolen'] as const) {
       const item = raw.records?.[id];
-      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
+      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
     }
     return {
       name: typeof raw.name === 'string' && raw.name.trim() && raw.name.trim() !== 'Kaibigan' ? raw.name.trim().slice(0, 16) : defaults.name,
@@ -41,6 +42,7 @@ export function loadProfile(): Profile {
       best: number(raw.best, 90), muted: typeof raw.muted === 'boolean' ? raw.muted : false,
       difficulty: raw.difficulty === 'hard' ? 'hard' : raw.difficulty === 'normal' ? 'normal' : 'easy',
       damaDifficulty: isDamaDifficulty(raw.damaDifficulty) ? raw.damaDifficulty : isDamaDifficulty(raw.difficulty) ? raw.difficulty : 'easy',
+      jolenDifficulty: isDamaDifficulty(raw.jolenDifficulty) ? raw.jolenDifficulty : 'easy',
       records,
     };
   } catch { storageAvailable = false; return { ...defaults, records: freshRecords() }; }

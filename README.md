@@ -2,8 +2,32 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.6 is a local game collection with a barangay hub, Patintero,
-Dama, Tagu-taguan, and Luksong-tinik. All four games work offline.
+Alpha 0.7.0 is a local game collection with a barangay hub, Jolen, Patintero,
+Dama, Tagu-taguan, and Luksong-tinik. All five games work offline.
+
+Jolen uses the circle rules: collect the most of 15 target marbles by
+knocking their entire body outside the chalk circle. Players alternate
+shots. Each shooter stays where it lands, including outside the circle;
+characters walk to their next shooting positions. Shooters can collide
+but never count as targets. Leaving the dirt court re-spots a shooter
+at its nearest playable edge. Tap/drag the court or use the direction
+slider to aim. Tap Tira (or Space) to start the power meter; tap again to
+shoot. The meter rises to full in 0.6 seconds and bounces back. Cancel
+returns to aiming. Escape, dialogs, and visibility pause freeze play.
+
+Jolen has its own five-level setting: Weng, Sheena, MJ, Ferdie, and Tatay
+Efren. Bots plan using the same collision and friction rules as the player.
+Their aims, power selections, and shots are visible. A win earns 60–100 coins
+by difficulty; a finished loss earns 10. The new court is beside the schoolyard
+and appears in the game picker, Games menu, and five-location minimap.
+Girl NPC Weng is distinct from Amor; both remain in the barangay.
+
+A pixel emblem and lowercase `tphilo games` wordmark welcome players while
+the barangay initializes. About is available in ordinary and fullscreen
+navigation and credits `tphilo games`, `developed by Sab`, and version
+`0.7.0-alpha`. The displayed version comes from `client/src/version.ts`.
+Existing coins, avatars, records, and Dama saves are preserved. Jolen adds
+`records.jolen` and `jolenDifficulty` to the existing profile key.
 
 The interface now uses larger body text, controls, instructions, and
 in-world labels on desktop and mobile. The original designs and future
@@ -68,7 +92,7 @@ would need a separate server, but the current offline games do not.
 - A pixel-art barangay with a sari-sari store, plaza, tricycle, houses,
   neighbors, and Patintero court. The scrolling 1600 by 1000 barangay connects
   the plaza to a Dama courtyard with a playable table, an eastern schoolyard,
-  and a southeast garden. A minimap tracks the player and four game locations.
+  and a southeast garden. A minimap tracks the player and five game locations.
   Walk to a marker and press E or tap Play to enter; returning preserves your
   location. All art is original, generated locally
   from canvas drawing routines in `client/src/art.ts`.
@@ -281,8 +305,8 @@ modules loaded successfully without compiling it.
 
 ## Verification and dependency report
 
-Alpha 0.6 validation: production build and TypeScript checks pass; all 35
-rule tests and 32 browser scenarios pass. The world-art scenario walks
+Alpha 0.7 validation: production build and TypeScript checks pass; all 43
+rule tests and 38 browser scenarios pass. The world-art scenario walks
 behind and in front of a tree, verifies its trunk collision, and captures
 screenshots of the outlined characters and sharpened signage. Tagu-taguan
 also checks that camping in the starting bush is not a free win. New coverage
@@ -295,10 +319,16 @@ tests and production build on pushes and pull requests.
 Rule tests cover Patintero, diagonal movement and collision, Dama longest
 captures and king landings, promotion, draws, bot legality, save validation,
 seeker visibility/pathfinding, and clearance of every jump height. Browser
-checks cover all four games, saved boards, captures and rewards, disconnected
+checks cover all five games, saved boards, captures and rewards, disconnected
 bot play, crouching/pause, a six-height winning run, missed-jump practice,
 mobile controls, and preservation of legacy progress. Run the commands above
 for the current results. Production compilation includes TypeScript checks.
+
+Jolen checks cover a full simulated match, whole-marble boundary scoring,
+collision transfer, persistent shooters, edge re-spots, power timing, and
+legacy profile migration. Browser checks enter its map court, pause the
+power meter, observe bot shots, play a complete match with one reward,
+reload offline, and verify portrait, landscape, loading, and About layouts.
 
 - Verified TypeScript, Vite, tsx, and Playwright version commands.
 - Successfully imported Colyseus, its client SDK, and its schema package.

@@ -76,6 +76,7 @@ body.expanded-game #app { height: 100dvh; overflow: hidden; }
   .play-fullscreen.touch-screen .round-hud > span { font-size: 14px; }
 }
 @media (max-width: 600px) {
+  .play-fullscreen .fullscreen-nav { justify-content: flex-start; }
   .play-fullscreen .fullscreen-nav { gap: 3px; padding-inline: 4px; }
   .fullscreen-nav button { padding-inline: 6px; font-size: 10px; }
   .play-fullscreen .stamina { display: none; }

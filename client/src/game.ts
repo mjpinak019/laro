@@ -59,7 +59,7 @@ export class BarangayScene extends Phaser.Scene {
     this.hubProps.push(this.add.image(450, 720, 'world-dama-table').setScale(2).setOrigin(.5, 44 / 48).setDepth(720));
     for (const site of HUB_SITES.filter(site => site.game !== 'patintero')) {
       const ring = this.add.ellipse(site.at.x, site.at.y, 52, 23, 0xe6c078, .25).setDepth(.5);
-      const label = this.add.text(site.at.x, site.at.y + 26, `${site.game === 'dama' ? 'DAMA TABLE' : site.game === 'tinik' ? 'LUKSONG-TINIK' : 'TAGU-TAGUAN'} · E`, { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950);
+      const label = this.add.text(site.at.x, site.at.y + 26, `${site.game === 'jolen' ? 'JOLEN' : site.game === 'dama' ? 'DAMA TABLE' : site.game === 'tinik' ? 'LUKSONG-TINIK' : 'TAGU-TAGUAN'} · E`, { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950);
       this.locationMarkers.push(ring, label);
     }
     this.marker = this.add.text(755, 213, 'PATINTERO  ↗', { ...textStyle, fontSize: '16px', color: '#fff0b7' }).setOrigin(0.5);
@@ -76,6 +76,7 @@ export class BarangayScene extends Phaser.Scene {
     this.events.once('shutdown', () => window.removeEventListener('blur', this.blur));
     this.hub();
     document.querySelector('#game')?.setAttribute('data-ready', 'true');
+    window.dispatchEvent(new Event('laro-ready'));
   }
 
   private blur = () => { this.controls = { x: 0, y: 0 }; this.target = undefined; this.touchSprint = false; this.interactRequested = false; this.keys && Object.values(this.keys).forEach(key => key.reset()); };
@@ -111,7 +112,7 @@ export class BarangayScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height).setScroll(0, 0);
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
     this.cameras.main.setScroll(Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600));
-    this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'weng'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena')];
+    this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'amor'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena'), this.bot(1030, 460, 'weng')];
     this.ui.location('hub'); this.ui.status(null);
     this.ui.hint('Explore the larger barangay. Walk to a game marker and press E, or use Games.');
   }
@@ -195,9 +196,9 @@ export class BarangayScene extends Phaser.Scene {
       const site = nearbySite(this.player);
       const atStore = Math.hypot(this.player.x - 227, this.player.y - 316) < 75;
       if (time - this.lastHUD > 110) {
-        this.ui.hint(site ? `Press E or tap Play to enter ${site.name}.` : atStore ? `Press E to say hello to ${CHARACTERS.mamaShoni}` : 'Dama is south of the plaza · schoolyard is east · Tagu-taguan is southeast');
+        this.ui.hint(site ? `Press E or tap Play to enter ${site.name}.` : atStore ? `Press E to say hello to ${CHARACTERS.mamaShoni}` : 'Jolen is beside the schoolyard · Dama is south · Tagu-taguan is southeast');
         const button = document.querySelector<HTMLButtonElement>('#activity-action')!;
-        button.hidden = !site; if (site) button.textContent = `Play ${site.game === 'dama' ? 'Dama' : site.game === 'tinik' ? 'Luksong-tinik' : site.game === 'taguan' ? 'Tagu-taguan' : 'Patintero'} · E`;
+        button.hidden = !site; if (site) button.textContent = `Play ${site.game === 'jolen' ? 'Jolen' : site.game === 'dama' ? 'Dama' : site.game === 'tinik' ? 'Luksong-tinik' : site.game === 'taguan' ? 'Tagu-taguan' : 'Patintero'} · E`;
         document.querySelector<HTMLButtonElement>('#emote-button')!.hidden = Boolean(site);
       }
       if (this.interactRequested) {

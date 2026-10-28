@@ -5,6 +5,9 @@ import './play-screen.css';
 import './avatar.css';
 import './touch-pad.css';
 import './games/dama-motion.css';
+import './games/jolen.css';
+import { GAME_VERSION } from './version';
+import { JOLEN_OPPONENTS } from './games/jolen';
 import { createGame } from './game';
 import { COLORS, loadProfile, saveProfile, storageAvailable } from './store';
 import type { Match } from './rules';
@@ -82,20 +85,25 @@ app.innerHTML = `
   <dialog id="modal" aria-labelledby="modal-title"><button id="close-modal" class="close-modal" aria-label="Close dialog">×</button><div id="modal-content"></div></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 `;
-document.querySelector('.version')!.textContent = 'ALPHA 0.6';
+document.querySelector('.version')!.textContent = 'v' + GAME_VERSION;
+document.querySelector('#boot-version')!.textContent = ' · v' + GAME_VERSION;
+const finishBoot = () => { const splash = document.querySelector<HTMLElement>('#boot-screen')!; document.querySelector('#boot-status')!.textContent = 'Tara, laro tayo!'; splash.classList.add('leaving'); window.setTimeout(() => { splash.hidden = true; }, 260); };
+window.addEventListener('laro-ready', finishBoot, { once: true });
+document.querySelector('.rail-bottom')!.insertAdjacentHTML('beforeend', '<button id="about-button" class="nav-item" aria-label="About LARO"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg><span>About</span></button>');
+document.querySelector('#exit-play-screen')!.insertAdjacentHTML('beforebegin', '<button data-screen-nav="about-button">About</button>');
 document.querySelector('#nav-play span')!.textContent = 'Games';
-document.querySelector('.more-games')!.innerHTML = '<span>FOUR NEIGHBORHOOD CLASSICS</span><span>All playable offline · your progress stays here.</span>';
-document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${(Object.keys(GAMES) as GameId[]).map((id, index) => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${['╬', '◉', '♧', '↟'][index]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);
+document.querySelector('.more-games')!.innerHTML = '<span>FIVE NEIGHBORHOOD CLASSICS</span><span>All playable offline · your progress stays here.</span>';
+document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${(Object.keys(GAMES) as GameId[]).map(id => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${({ patintero: '╬', dama: '◉', taguan: '♧', tinik: '↟', jolen: '●' })[id]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);
 document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', '<button id="activity-action" class="activity-action" hidden>Jump · Space</button>');
 document.querySelector('.game-picker')!.insertAdjacentHTML('beforeend', '<button id="quick-settings" class="quick-settings">Difficulty: Easy · Change</button>');
-document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', `<div id="hub-map" class="hub-map"><svg viewBox="0 0 136 85" role="img" aria-label="Barangay map with four game locations"><path d="M19 12V81M0 31H132M19 58H129M108 31V79" fill="none" stroke="#b8a780" stroke-width="5"/>${HUB_SITES.map(site => `<circle cx="${site.at.x / HUB_SIZE.width * 136}" cy="${site.at.y / HUB_SIZE.height * 85}" r="4" fill="#e7bd73"/><text x="${site.at.x / HUB_SIZE.width * 136 + 5}" y="${site.at.y / HUB_SIZE.height * 85 - 4}" fill="#f3e7bb" font-size="8">${site.game === 'dama' ? 'D' : site.game === 'tinik' ? 'L' : site.game === 'taguan' ? 'T' : 'P'}</text>`).join('')}<rect id="hub-map-view" width="81.6" height="51" fill="none" stroke="#e4efcc" stroke-opacity=".6"/><circle id="hub-map-player" r="3" fill="#fff8d7" stroke="#314a35"/></svg><span>MALIGAYA · 4 PLACES</span></div>`);
+document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', `<div id="hub-map" class="hub-map"><svg viewBox="0 0 136 85" role="img" aria-label="Barangay map with five game locations"><path d="M19 12V81M0 31H132M19 58H129M108 31V79" fill="none" stroke="#b8a780" stroke-width="5"/>${HUB_SITES.map(site => `<circle cx="${site.at.x / HUB_SIZE.width * 136}" cy="${site.at.y / HUB_SIZE.height * 85}" r="4" fill="#e7bd73"/><text x="${site.at.x / HUB_SIZE.width * 136 + 5}" y="${site.at.y / HUB_SIZE.height * 85 - 4}" fill="#f3e7bb" font-size="8">${site.game === 'jolen' ? 'J' : site.game === 'dama' ? 'D' : site.game === 'tinik' ? 'L' : site.game === 'taguan' ? 'T' : 'P'}</text>`).join('')}<rect id="hub-map-view" width="81.6" height="51" fill="none" stroke="#e4efcc" stroke-opacity=".6"/><circle id="hub-map-player" r="3" fill="#fff8d7" stroke="#314a35"/></svg><span>MALIGAYA · 5 PLACES</span></div>`);
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const dialog = $<HTMLDialogElement>('#modal');
 // Keep dialogs and feedback inside the fullscreen element on every browser.
 $('#game-display').append(dialog, $('#toast'));
 function toast(message: string) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = window.setTimeout(() => { $('#toast').hidden = true; }, 4000); }
 function refreshProfile() {
-  $('#quick-settings').textContent = selectedGame === 'dama' ? `Dama: ${DAMA_LEVELS[profile.damaDifficulty].label} · ${DAMA_LEVELS[profile.damaDifficulty].opponent}` : `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
+  $('#quick-settings').textContent = selectedGame === 'jolen' ? `Jolen: ${DAMA_LEVELS[profile.jolenDifficulty].label} · ${JOLEN_OPPONENTS[profile.jolenDifficulty].name}` : selectedGame === 'dama' ? `Dama: ${DAMA_LEVELS[profile.damaDifficulty].label} · ${DAMA_LEVELS[profile.damaDifficulty].opponent}` : `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
   $('#player-name').textContent = profile.name;
   $('#mini-avatar').style.setProperty('--shirt', COLORS[profile.color]);
   $('#mini-avatar').classList.add('has-portrait');
@@ -103,7 +111,7 @@ function refreshProfile() {
   $('#game').dataset.avatarGender = profile.gender;
   const record = selectedGame === 'patintero' ? { wins: profile.wins, best: profile.best, played: profile.played } : profile.records[selectedGame];
   $('#wins').textContent = String(record.wins); $('#coins').textContent = String(profile.coins);
-  $('#best').textContent = selectedGame === 'dama' ? String(record.played) : record.best ? selectedGame === 'tinik' ? `${record.best}/6` : `${record.best}s` : '—';
+  $('#best').textContent = selectedGame === 'dama' ? String(record.played) : record.best ? selectedGame === 'jolen' ? `${record.best}/15` : selectedGame === 'tinik' ? `${record.best}/6` : `${record.best}s` : '—';
   document.querySelector('.stats > div:last-child > span')!.textContent = GAMES[selectedGame].record;
   $('#sound-button').setAttribute('aria-label', profile.muted ? 'Unmute sound' : 'Mute sound');
   $('#sound-button').classList.toggle('muted', profile.muted);
@@ -118,7 +126,7 @@ function openModal(content: string, dismissible = true) {
   $('#modal-content').innerHTML = content; $('#close-modal').hidden = !dismissible;
   if (!dialog.open) dialog.showModal();
 }
-function closeModal() { scene.resetInput(); game.input.keyboard!.preventDefault = scene.active !== 'dama'; dialog.close(); resultMatch = null; lastFocus?.focus(); }
+function closeModal() { scene.resetInput(); game.input.keyboard!.preventDefault = !['dama', 'jolen'].includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
 $('#close-modal').onclick = closeModal;
 document.addEventListener('keydown', event => {
   if (!dialog.open && scene?.active === 'dama' && event.key === 'Escape') pause();
@@ -201,21 +209,21 @@ function activityLocation(mode: 'hub' | 'match' | NewGameId) {
   const active = mode === 'match' ? 'patintero' : mode;
   if (scene) scene.active = active;
   if (active !== 'hub') selectedGame = active;
-  const titles = { hub: 'Barangay Maligaya', patintero: 'Patintero Court', dama: 'Dama sa Tindahan', taguan: 'Tagu-taguan Alley', tinik: 'Luksong-tinik Schoolyard' };
+  const titles = { hub: 'Barangay Maligaya', patintero: 'Patintero Court', dama: 'Dama sa Tindahan', taguan: 'Tagu-taguan Alley', tinik: 'Luksong-tinik Schoolyard', jolen: 'Jolen Circle' };
   $('#location-title').textContent = titles[active];
   $('#location-subtitle').textContent = active === 'hub' ? 'PUROK 01' : active === 'dama' ? 'AT THE WOODEN TABLE' : 'OFFLINE PLAY';
   $('#game-shell').dataset.activity = active;
   $('#game-display').dataset.activity = active;
-  game.input.keyboard!.preventDefault = active !== 'dama';
-  $('#map-label').hidden = active !== 'hub'; $('#round-hud').hidden = active === 'hub' || active === 'dama'; $('#countdown').hidden = true;
+  game.input.keyboard!.preventDefault = !['dama', 'jolen'].includes(active);
+  $('#map-label').hidden = active !== 'hub'; $('#round-hud').hidden = active === 'hub' || active === 'dama' || active === 'jolen'; $('#countdown').hidden = true;
   $('#hub-map').hidden = active !== 'hub';
-  $('.player-chip').hidden = active === 'dama'; $('#emote-button').hidden = active !== 'hub' && active !== 'patintero';
-  $('.touch-controls').hidden = active === 'dama' || active === 'tinik';
-  $('.stamina').hidden = active === 'dama' || active === 'tinik';
+  $('.player-chip').hidden = active === 'dama' || active === 'jolen'; $('#emote-button').hidden = active !== 'hub' && active !== 'patintero';
+  $('.touch-controls').hidden = active === 'dama' || active === 'tinik' || active === 'jolen';
+  $('.stamina').hidden = active === 'dama' || active === 'tinik' || active === 'jolen';
   $('#activity-action').hidden = active !== 'tinik' && active !== 'taguan';
   $('#activity-action').textContent = active === 'tinik' ? 'Jump · Space' : 'Crouch · E';
   $('#nav-hub').classList.toggle('active', active === 'hub'); $('#nav-play').classList.toggle('active', active !== 'hub');
-  const instructions = active === 'dama' ? 'Click a piece, then its highlighted destination.' : active === 'tinik' ? 'Space or Jump to take off · Escape to pause' : active === 'taguan' ? 'WASD / arrows move · Shift sprints · E crouches' : 'WASD / arrows move · Shift runs · E interacts';
+  const instructions = active === 'jolen' ? 'Tap to aim · Tira starts power · tap again to shoot · Space also works' : active === 'dama' ? 'Click a piece, then its highlighted destination.' : active === 'tinik' ? 'Space or Jump to take off · Escape to pause' : active === 'taguan' ? 'WASD / arrows move · Shift sprints · E crouches' : 'WASD / arrows move · Shift runs · E interacts';
   $('.keyboard-guide').textContent = instructions;
   updateGameCard();
   if (active !== 'hub' && innerWidth <= 1100) requestAnimationFrame(() => $('.world-card').scrollIntoView({ block: 'start' }));
@@ -226,9 +234,10 @@ function updateGameCard() {
   $('.game-card h2').textContent = item.title; $('.game-card p').textContent = item.description;
   $('.game-category').textContent = item.category;
   $('.game-tags').innerHTML = item.tags.map(tag => `<span>${tag}</span>`).join('');
-  $('.number').textContent = `${String(Object.keys(GAMES).indexOf(selectedGame) + 1).padStart(2, '0')} / 04`;
+  $('.number').textContent = `${String(Object.keys(GAMES).indexOf(selectedGame) + 1).padStart(2, '0')} / 05`;
   const art = $('.court-art'); art.dataset.gameArt = selectedGame;
   if (selectedGame === 'patintero') art.innerHTML = '<div class="chalk-court"><i></i><i></i><i></i><b></b></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="art-spark">✦</span>';
+  else if (selectedGame === 'jolen') art.innerHTML = '<div class="preview-jolen"><i></i><i></i><i></i></div><span class="preview-caption">TUTOK. TIMING. TIRA!</span>';
   else if (selectedGame === 'dama') art.innerHTML = '<div class="preview-board">' + Array.from({ length: 16 }, (_, i) => `<i class="${(Math.floor(i / 4) + i % 4) % 2 ? 'dark' : ''}">${[1, 3, 12, 14].includes(i) ? '<b></b>' : ''}</i>`).join('') + '</div><span class="preview-caption">SA TABI NG TINDAHAN</span>';
   else if (selectedGame === 'taguan') art.innerHTML = '<div class="preview-wall"></div><div class="preview-bush"></div><span class="art-kid one"></span><span class="preview-search">⌕</span><span class="preview-caption">TAHAN… MAY TAYA.</span>';
   else art.innerHTML = '<div class="preview-hands"></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="preview-caption">ISA PANG TAAS!</span>';
@@ -238,7 +247,11 @@ function updateGameCard() {
 }
 
 function setupGame(id: GameId) {
-  if (id === 'dama') {
+  if (id === 'jolen') {
+    openModal(`<div class="eyebrow">TUTOK. TIMING. TIRA!</div><h2 id="modal-title">Tara, Jolen tayo.</h2><p>Fifteen marbles in a chalk circle. Knock them out to collect them. Most marbles wins.</p><p>Your shooter stays where it lands. Aim, tap Tira to start the fast power bar, then tap again to shoot. Turns alternate after every shot.</p><label class="field-label" for="jolen-difficulty">YOUR OPPONENT</label><select id="jolen-difficulty" class="opponent-select">${(Object.keys(JOLEN_OPPONENTS) as DamaDifficulty[]).map(level => `<option value="${level}">${DAMA_LEVELS[level].label} · ${JOLEN_OPPONENTS[level].name}</option>`).join('')}</select><button id="jolen-start" class="primary-button">Play Jolen</button>`);
+    const select = $<HTMLSelectElement>('#jolen-difficulty'); select.value = profile.jolenDifficulty;
+    $('#jolen-start').onclick = () => { if (isDamaDifficulty(select.value)) profile.jolenDifficulty = select.value; persist(); closeModal(); scene.start('jolen'); };
+  } else if (id === 'dama') {
     const saved = savedDama();
     openModal(`<div class="eyebrow">TAKE A SEAT</div><h2 id="modal-title">Tara, Dama tayo.</h2><p>Gold moves first. Backward captures, flying kings, and mandatory longest capture chains.</p><label class="field-label" for="dama-difficulty">YOUR OPPONENT</label><select id="dama-difficulty" class="opponent-select">${damaOptions()}</select><p id="dama-opponent-hint" class="fine-print"></p>${saved ? `<button id="resume-dama" class="primary-button">Resume saved match</button>` : ''}<button id="dama-bot" class="${saved ? 'secondary' : 'primary'}-button"></button><button id="dama-local" class="secondary-button">Two players · pass-and-play</button><p class="fine-print">A new match replaces the unfinished saved match. Resuming keeps that match’s opponent. Pass-and-play is a friendly mode with no coins or records.</p>`);
     const select = $<HTMLSelectElement>('#dama-difficulty'); select.value = profile.damaDifficulty;
@@ -283,6 +296,7 @@ $('#sound-button').onclick = () => { profile.muted = !profile.muted; persist(); 
 function guide() {
   if (selectedGame !== 'patintero') {
     const pages: Record<NewGameId, string> = {
+      jolen: '<p>Collect the most of the 15 target marbles by knocking them completely outside the chalk circle.</p><ol class="rules-list"><li>You and the bot alternate shots, even after scoring.</li><li>Each shooter stays where it lands. Your character walks beside it before your next shot.</li><li>Tap or drag on the court to aim, or use the direction slider. Tap Tira (or Space) to start the power meter. Tap again to lock the strength and shoot.</li><li>The meter rises to full in 0.6 seconds and bounces back. Cancel lets you aim again.</li><li>Targets must cross the whole chalk line to score. Shooter marbles never score, but can collide and move each other.</li><li>Outside the circle is playable. A shooter leaving the dirt court is placed at its nearest edge. Once all targets are collected, the higher score wins.</li></ol><p>Five opponents use the same physics. Easy shows a longer aim guide. Wins earn 60–100 coins by difficulty; a finished loss earns 10. Leaving early earns none. Escape pauses aiming, power, and motion.</p>',
       dama: `<p>LARO’s Filipino-style preset: an 8×8 board, twelve pieces per side, and Gold moves first.</p><ol class="rules-list"><li>Ordinary pieces step diagonally forward, but can capture forward or backward.</li><li>Captures are mandatory. Choose a sequence that takes the most pieces, and finish every jump with the same piece.</li><li>Captured pieces remain blockers until the complete sequence ends. Equal-length routes are your choice.</li><li>Kings fly along clear diagonals. Each capture jumps one opponent and lands on an empty square beyond it.</li><li>A piece becomes a king only if it ends its complete turn on the far rank.</li><li>Win when the opponent has no pieces or legal moves. Threefold repetition or 40 full moves without a capture or ordinary-piece move is a draw.</li></ol><p>Choose Easy with ${CHARACTERS.mamaShoni}, Normal with ${CHARACTERS.audrey}, Hard with ${CHARACTERS.mj}, Expert with ${CHARACTERS.ferdie}, or Master with ${CHARACTERS.tatayEfren}. You can also pass the device between two people. An unfinished match saves automatically. Bot wins earn 60 coins, draws 20, and losses 10. Friendly pass-and-play has no rewards.</p>`,
       taguan: `<p>${CHARACTERS.audrey} counts for 10 seconds. Use that time to hide, then survive a 75-second search.</p><ol class="rules-list"><li>Move with WASD, arrows, touch buttons, or by clicking the ground.</li><li>Hold Shift / Takbo to sprint. Sprinting uses energy and makes noise.</li><li>Press E or Crouch to move quietly. Shrubs, laundry, and bamboo conceal you; buildings, crates, and barrels block sight. Crouching in the open does not make you invisible.</li><li>The awareness meter fills when ${CHARACTERS.audrey} can see you. Break sight around a wall and relocate.</li><li>${CHARACTERS.audrey} investigates sounds and remembers where she last saw you, but cannot see through buildings. She must reach you to catch you.</li></ol><p>Easy mode shows her sight cone. Normal and Hard increase her speed, sight, and memory. Surviving earns 60 / 80 / 100 coins on Easy / Normal / Hard; a finished caught round earns 10. No transformation, disguise, or weapons.</p>`,
       tinik: '<p>Two neighborhood kids raise their hands and feet into a growing obstacle. Your run-up is automatic.</p><ol class="rules-list"><li>Watch your feet approach the takeoff zone. Speed and obstacle position change at each height.</li><li>Press Space or Jump once. Your jump follows a predictable arc.</li><li>Clear the whole obstacle and land to advance to the next height.</li><li>Touch the hands and lose a chance. Three misses end a challenge.</li><li>Clear all six heights to win. Practice gives unlimited retries without coins or records.</li></ol><p>Hard uses a small takeoff notch after height two; Practice keeps the full guide. A challenge win earns 60 / 80 / 100 coins on Easy / Normal / Hard, plus 10 per remaining chance. A finished attempt earns 10 plus 5 per cleared height. Escape pauses the run-up and jump.</p>',
@@ -315,7 +329,11 @@ $('#settings-button').onclick = () => {
   $<HTMLSelectElement>('#settings-dama-difficulty').value = profile.damaDifficulty;
   $('#save-settings').onclick = () => { const level = $<HTMLSelectElement>('#difficulty').value; profile.difficulty = level === 'hard' ? 'hard' : level === 'normal' ? 'normal' : 'easy'; const damaLevel = $<HTMLSelectElement>('#settings-dama-difficulty').value; if (isDamaDifficulty(damaLevel)) profile.damaDifficulty = damaLevel; profile.muted = !$<HTMLInputElement>('#sound-enabled').checked; persist(); closeModal(); };
 };
-$('#quick-settings').onclick = () => $('#settings-button').click();
+$('#quick-settings').onclick = () => selectedGame === 'jolen' ? setupGame('jolen') : $('#settings-button').click();
+$('#about-button').onclick = () => {
+  openModal(`<div class="eyebrow">ROOTED IN FILIPINO PLAY</div><h2 id="modal-title">About LARO</h2><div class="tphilo-logo about-logo"><img src="./tphilo-mark.svg" alt="tphilo games emblem" width="70" height="70" /><div class="tphilo-wordmark">tphilo<span>games</span></div></div><div class="about-credits"><strong>tphilo games</strong><p>developed by Sab</p><p id="about-version">Version ${GAME_VERSION}</p><p>Five neighborhood classics. Made for one more round.</p><p class="fine-print">Offline edition · Progress is saved on this device.</p></div><button id="about-close" class="primary-button">Back to playing</button>`);
+  $('#about-close').onclick = closeModal;
+};
 function resume() { paused = false; scene.setPaused(false); $('#pause-button').setAttribute('aria-label', 'Pause game'); closeModal(); }
 function pause() {
   if (dialog.open || $('#game').dataset.ready !== 'true') return;

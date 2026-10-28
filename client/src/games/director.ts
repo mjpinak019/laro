@@ -3,16 +3,18 @@ import type { BarangayScene } from '../game';
 import { DamaGame } from './dama';
 import { TaguanScene } from './taguan';
 import { TinikScene } from './tinik';
+import { JolenGame } from './jolen';
 import type { ActivityControls, ActivityUI, GameId } from './types';
 
 export class GameDirector {
   active: GameId | 'hub' = 'hub';
   private activity?: ActivityControls;
   private dama?: DamaGame;
+  private jolen?: JolenGame;
   constructor(private game: Phaser.Game, private barangay: BarangayScene, private ui: ActivityUI) {}
 
   private stop() {
-    this.activity?.resetInput(); this.activity = undefined; this.dama?.dispose(); this.dama = undefined;
+    this.activity?.resetInput(); this.activity = undefined; this.dama?.dispose(); this.dama = undefined; this.jolen?.dispose(); this.jolen = undefined;
     for (const key of ['taguan', 'tinik']) if (this.game.scene.getScene(key)) this.game.scene.remove(key);
     this.barangay.resetInput();
     document.querySelector<HTMLElement>('#game')!.style.visibility = '';
@@ -23,7 +25,10 @@ export class GameDirector {
     if (id === 'patintero') { this.startMatch(); return; }
     if (this.active === 'hub') this.barangay.rememberHubPosition();
     this.stop(); this.active = id; this.game.scene.sleep('barangay');
-    if (id === 'dama') {
+    if (id === 'jolen') {
+      document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
+      this.jolen = new JolenGame(this.ui); this.activity = this.jolen;
+    } else if (id === 'dama') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.dama = new DamaGame(this.ui, options.mode ?? 'bot', options.resume); this.activity = this.dama;
     } else {

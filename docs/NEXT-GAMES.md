@@ -1,4 +1,28 @@
-# LARO: the next three games
+# LARO: neighborhood game designs
+
+## Jolen circle game (implemented in alpha 0.7)
+
+The circle variant replaces the earlier hole-in proposal. Fifteen targets
+start inside a chalk circle. The player and bot take alternating shots with
+their own larger shooter marbles. A target scores once its entire body exits
+the circle. Shooters never score; their resting positions persist across
+turns, and either shooter may move the other through collision. Characters
+walk beside their shooter before aiming. Only leaving the rectangular dirt
+court re-spots a shooter at the nearest edge. Collect all fifteen to end the
+match; most collected wins.
+
+Aim with a pointer or direction slider, then tap Tira to start a triangular
+power meter that rises in 600 milliseconds. Tap again to lock strength and
+release. Cancel returns to aiming. Bot shots show their aim, power timing,
+rolling, and collisions. All movement pauses in dialogs or when the game is
+paused. Fixed-step physics is shared with bot planning. Jolen uses its own
+five difficulty levels and keeps the other street-game settings unchanged.
+
+The dirt circle is beside the schoolyard. Weng is a new girl character;
+Amor keeps her existing appearance and location. Cosmetic marble shops,
+additional courts, and pass-and-play are future extensions.
+
+## Earlier three-game milestone
 
 Status: the first offline milestones are implemented in alpha 0.2: Dama
 with a bot and pass-and-play, Tagu-taguan as a hider against a seeker bot,

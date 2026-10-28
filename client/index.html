@@ -4,12 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#182923" />
-    <meta name="description" content="Tara, laro! Explore a pixel-art barangay and play Patintero, Dama, Tagu-taguan, and Luksong-tinik. Four Filipino classics, all playable offline." />
+    <meta name="description" content="LARO by tphilo games. Explore a pixel-art barangay and play Jolen, Patintero, Dama, Tagu-taguan, and Luksong-tinik. Five Filipino classics, all playable offline." />
+    <link rel="stylesheet" href="/src/branding.css" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <title>LARO — Tara, laro tayo.</title>
   </head>
   <body>
+    <div id="boot-screen" role="status" aria-live="polite" aria-label="tphilo games loading">
+      <div class="tphilo-logo"><img src="./tphilo-mark.svg" alt="" width="90" height="90" /><div class="tphilo-wordmark">tphilo<span>games</span></div></div>
+      <div class="boot-kicker">A LITTLE STREET. A LOT OF PLAY.</div><div class="boot-track" aria-hidden="true"><i></i></div>
+      <p id="boot-status">Getting the barangay ready…</p><button id="boot-retry" hidden onclick="location.reload()">Reload game</button>
+      <div class="boot-credit">developed by Sab <span id="boot-version"></span></div>
+    </div>
+    <noscript><style>#boot-screen{display:none}</style><p>LARO needs JavaScript enabled to play.</p></noscript>
+    <script>setTimeout(function(){if(!document.querySelector('#boot-screen').hidden){document.querySelector('#boot-status').textContent='Loading is taking longer. Check your connection or try reloading.';document.querySelector('#boot-retry').hidden=false;}},15000);</script>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

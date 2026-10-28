@@ -191,7 +191,7 @@ test('new hiding props provide more cover while keeping cross-map paths connecte
 });
 test('the expanded barangay has a distinct, reachable interaction point for each game', () => {
   assert.ok(HUB_SIZE.width > 960 && HUB_SIZE.height > 600);
-  assert.equal(new Set(HUB_SITES.map(site => site.game)).size, 4);
+  assert.equal(new Set(HUB_SITES.map(site => site.game)).size, 5);
   for (const site of HUB_SITES) {
     assert.equal(nearbySite(site.at)?.game, site.game);
     assert.ok(site.at.x > 0 && site.at.x < HUB_SIZE.width && site.at.y > 0 && site.at.y < HUB_SIZE.height);

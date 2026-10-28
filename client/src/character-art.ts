@@ -7,7 +7,7 @@ const fill = (c: Painter, x: number, y: number, w: number, h: number, color: str
 /** All looks share the same padded frame and feet anchor, including walking frames. */
 export function drawCharacter(c: Painter, color: string, look: CharacterLook, direction = 0, frame = 0) {
   const elderlyWoman = look === 'mama-shoni', elderlyMan = look === 'tatay-efren';
-  const girl = ['girl', 'mama-shoni', 'audrey', 'sheena', 'weng'].includes(look);
+  const girl = ['girl', 'mama-shoni', 'audrey', 'sheena', 'weng', 'weng-new'].includes(look);
   const elderly = elderlyWoman || elderlyMan, bob = frame % 2;
   const stride = frame === 1 ? -2 : frame === 3 ? 2 : 0;
   const hair = elderly ? '#c9c7b5' : look === 'weng' ? '#604533' : look === 'sheena' ? '#4b3833' : '#323c34';
@@ -49,6 +49,11 @@ export function drawCharacter(c: Painter, color: string, look: CharacterLook, di
   } else if (girl) {
     fill(c, 6, 6 - bob, 2, 8, hair); fill(c, 17, 5 - bob, 2, look === 'sheena' ? 10 : 8, hair);
     if (look === 'sheena') fill(c, 6, 4 - bob, 13, 2, ribbon);
+    if (look === 'weng-new') {
+      fill(c, direction === 1 ? 18 : 3, 9 - bob, 3, 10, '#323c34');
+      fill(c, direction === 1 ? 18 : 3, 8 - bob, 3, 3, '#d6a8cc');
+      fill(c, 7, 17 - bob, 10, 2, '#f3dfbb');
+    }
     fill(c, 10, 15 - bob, 5, 2, '#f5e7cb');
   } else fill(c, 6, 8 - bob, 3, 4, hair);
 

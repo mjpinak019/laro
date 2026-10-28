@@ -7,6 +7,7 @@ export const HUB_SITES: { game: GameId; name: string; district: string; at: Poin
   { game: 'dama', name: 'Dama Table', district: 'SARI-SARI TAMBAYAN', at: { x: 450, y: 775 } },
   { game: 'tinik', name: 'Luksong-tinik Schoolyard', district: 'PAARALAN', at: { x: 1300, y: 480 } },
   { game: 'taguan', name: 'Tagu-taguan Garden', district: 'LIKOD-BAHAY', at: { x: 1300, y: 825 } },
+  { game: 'jolen', name: 'Jolen Circle', district: 'TABING PAARALAN', at: { x: 1000, y: 495 } },
 ];
 export const HUB_EXTRA_OBSTACLES: Rect[] = [
   { x: 1086, y: 84, width: 392, height: 196 },
