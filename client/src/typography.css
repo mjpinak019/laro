@@ -1,0 +1,124 @@
+/* Readable interface sizes; keep the world and character pixel scale intact. */
+:root { --text-body: 15px; --text-small: 12px; --text-label: 11px; }
+body { font-size: var(--text-body); }
+.brand-caption, .version { font-size: 11px; letter-spacing: 1px; }
+.offline-badge { font-size: 12px; letter-spacing: 1px; }
+.rail-label, .made-in { font-size: 10px; letter-spacing: 1px; }
+.nav-item { font-size: 15px; }
+.eyebrow, .card-top .eyebrow, .progress-card .eyebrow { font-size: var(--text-label); letter-spacing: 1.1px; }
+h1 { font-size: clamp(32px, 2.6vw, 44px); }
+.welcome p { font-size: var(--text-body); }
+.daily-note { font-size: 14px; }
+.play-layout { grid-template-columns: minmax(0, 1fr) 300px; }
+.place strong { font-size: 14px; }
+.place > span:last-child, .weather > span { font-size: 10px; letter-spacing: .5px; }
+.map-label > span { font-size: 10px; letter-spacing: 1px; }
+.map-label > strong { font-size: 18px; }
+.player-chip strong { font-size: 14px; }
+.player-chip div > span, .emote-button > span { font-size: 10px; letter-spacing: .8px; }
+.round-hud { gap: 16px; max-width: calc(100% - 22px); }
+.round-hud strong { font-size: 14px; letter-spacing: .5px; }
+.round-hud > span:first-child { font-size: 19px; }
+.round-hud > span:last-child { font-size: 20px; }
+.world-bottom { height: auto; min-height: 57px; padding-top: 12px; padding-bottom: 12px; }
+.hint { font-size: var(--text-small); line-height: 1.6; }
+.stamina > span:first-child { font-size: 10px; letter-spacing: .5px; }
+.number { font-size: 11px; }
+.game-category { font-size: 10px; letter-spacing: .2px; flex-wrap: wrap; }
+.game-card h2 { font-size: 34px; }
+.game-card p { font-size: var(--text-body); line-height: 1.7; }
+.game-tags { flex-wrap: wrap; }
+.game-tags > span { font-size: 11px; }
+.primary-button, dialog .primary-button { font-size: 15px; padding: 14px 15px; }
+.text-button { font-size: 12px; line-height: 1.6; }
+.stats strong { font-size: 30px; }
+.stats span { font-size: 10px; letter-spacing: .7px; }
+.progress-card p { font-size: 11px; line-height: 1.6; }
+.more-games { font-size: 13px; line-height: 1.5; }
+.more-games > span:first-child { font-size: 10px; letter-spacing: .6px; }
+.below-game { flex-wrap: wrap; row-gap: 18px; }
+.below-game strong { font-size: 14px; }
+.below-game p > span { font-size: 12px; line-height: 1.6; }
+.keyboard-guide { font-size: 12px; }
+kbd { font-size: 10px; min-width: 21px; }
+footer { font-size: 10px; line-height: 1.7; letter-spacing: .7px; }
+footer > span:last-child { font-size: 15px; }
+dialog { width: min(540px, calc(100vw - 32px)); }
+dialog h2 { font-size: 35px; }
+dialog p, .rules-list { font-size: 15px; line-height: 1.75; }
+.guide-keys { font-size: 14px; line-height: 1.5; }
+.fine-print { font-size: 13px !important; line-height: 1.7; }
+.field-label { font-size: 12px; letter-spacing: 1px; }
+input[type=text], input:not([type]) { font-size: 17px; }
+.setting-row { font-size: 15px; flex-wrap: wrap; }
+.setting-row select { font-size: 14px; max-width: 245px; }
+.secondary-button, .toast { font-size: 15px; }
+.result-reward span { font-size: 12px; letter-spacing: 1px; }
+
+@media (min-width: 1600px) {
+  .play-layout { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+@media (max-width: 1200px) {
+  .brand-caption { font-size: 10px; }
+  .play-layout { grid-template-columns: minmax(0, 1fr) 280px; }
+  .nav-item { gap: 8px; padding-left: 9px; padding-right: 9px; font-size: 14px; }
+  .world-toolbar { padding-left: 12px; padding-right: 12px; }
+}
+@media (max-width: 950px) {
+  .play-layout { grid-template-columns: minmax(0, 1fr) 260px; }
+  .welcome p { font-size: 14px; }
+  .map-label > strong { font-size: 15px; }
+  .map-label > span { font-size: 10px; }
+  .player-chip strong { font-size: 12px; }
+  .player-chip div > span { font-size: 10px; }
+  .round-hud { gap: 10px; flex-wrap: wrap; justify-content: center; padding: 9px 11px; }
+  .round-hud strong { font-size: 11px; }
+  .round-hud > span:first-child { font-size: 16px; }
+  .round-hud > span:last-child { font-size: 17px; }
+}
+@media (max-width: 720px) {
+  .offline-badge { font-size: 10px; padding: 8px; }
+  .welcome .eyebrow { font-size: 10px; line-height: 1.6; letter-spacing: .7px; }
+  h1 { font-size: 32px; }
+  .welcome p { font-size: 14px; }
+  .nav-item { font-size: 12px; }
+  .nav-item > span { font-size: 11px; }
+  .world-toolbar { min-height: 48px; }
+  .place strong { font-size: 13px; }
+  .map-label { max-width: calc(100% - 24px); }
+  .map-label > span { font-size: 9px; }
+  .map-label > strong { font-size: 14px; }
+  .player-chip strong { font-size: 12px; }
+  .player-chip div > span { font-size: 9px; }
+  .world-bottom { min-height: 61px; }
+  .hint { font-size: 12px; }
+  #touch-run { font-size: 12px; }
+  .side-panel { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .game-card-content, .progress-card { min-height: 222px; padding: 14px 12px; }
+  .game-card h2 { font-size: 28px; }
+  .game-card p { font-size: 14px; line-height: 1.65; }
+  .primary-button { font-size: 14px; padding: 12px 10px; gap: 7px; }
+  .progress-card .eyebrow { font-size: 10px; letter-spacing: .5px; }
+  .stats strong { font-size: 27px; }
+  .stats span { font-size: 9px; letter-spacing: 0; }
+  .progress-card p { font-size: 10px; }
+  .more-games > span, .more-games > span:first-child { font-size: 11px; line-height: 1.7; }
+  .below-game strong { font-size: 14px; }
+  .below-game p > span { font-size: 12px; }
+  footer { font-size: 9px; }
+  footer > span:last-child { font-size: 13px; }
+  dialog h2 { font-size: 31px; }
+  .setting-row { font-size: 14px; }
+  .setting-row select { font-size: 14px; }
+}
+@media (max-width: 370px) {
+  .header { padding-left: 12px; padding-right: 12px; }
+  .header-right { gap: 9px; }
+  .brand { font-size: 30px; }
+  .brand-pixels { margin-right: 6px; }
+  .offline-badge { font-size: 9px; padding: 7px; }
+  .side-panel { grid-template-columns: 1fr; }
+  .game-card-content, .progress-card { min-height: 0; }
+  .round-hud strong { font-size: 10px; }
+  .nav-item { width: 68px; }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@laro/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && vite build && node scripts/build-offline.mjs",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@colyseus/sdk": "0.18.8",
+    "phaser": "4.2.1"
+  },
+  "devDependencies": {
+    "vite": "8.3.5"
+  }
+}

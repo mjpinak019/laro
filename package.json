@@ -1,0 +1,32 @@
+{
+  "name": "laro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run dev --workspace @laro/client",
+    "build": "npm run build --workspace @laro/client",
+    "preview": "npm run preview --workspace @laro/client",
+    "play": "node scripts/play.mjs",
+    "typecheck": "npm run typecheck --workspace @laro/client",
+    "test": "node --test tests/rules.test.ts tests/new-games.test.ts",
+    "test:e2e": "playwright test"
+  },
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "msgpackr-extract@3.0.4": false
+  }
+}

@@ -1,0 +1,319 @@
+import './style.css';
+import './typography.css';
+import './games/games.css';
+import { createGame } from './game';
+import { COLORS, loadProfile, saveProfile, storageAvailable } from './store';
+import type { Match } from './rules';
+import { GameDirector } from './games/director';
+import { savedDama } from './games/dama';
+import { GAMES, type ActivityUI, type GameId, type NewGameId, type Result } from './games/types';
+import { HUB_SIZE, HUB_SITES } from './hub';
+
+const icons = {
+  home: '<path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-7h6v7"/>',
+  game: '<rect x="3" y="6" width="18" height="13" rx="4"/><path d="M7 10v5m-2-2h5m6-2h.01m3 4h.01"/>',
+  person: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-3a8 8 0 0 1 16 0v3"/>',
+  book: '<path d="M12 5v16M3 4h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v15h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z"/>',
+  sound: '<path d="m11 4-6 5H2v6h3l6 5zM15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
+  settings: '<path d="M12 8v8m-4-4h8"/><circle cx="12" cy="12" r="9"/>',
+  arrow: '<path d="M4 12h15m-6-6 6 6-6 6"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/>',
+  flag: '<path d="M5 22V3c6-4 8 4 15 0v10c-7 4-9-4-15 0"/>',
+};
+const icon = (name: keyof typeof icons) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
+const app = document.querySelector<HTMLDivElement>('#app')!;
+const profile = loadProfile();
+let paused = false;
+let lastFocus: HTMLElement | null = null;
+let resultMatch: Match | Result | null = null;
+let selectedGame: GameId = 'patintero';
+let scene: GameDirector;
+let audio: AudioContext | undefined;
+let toastTimer = 0;
+
+app.innerHTML = `
+  <header class="header">
+    <a class="brand" href="./" aria-label="LARO home"><span class="brand-pixels">▗</span>LARO<span class="brand-period">.</span></a>
+    <span class="brand-caption">THE NEIGHBORHOOD IS YOUR PLAYGROUND</span>
+    <div class="header-right"><span class="offline-badge"><i></i> OFFLINE EDITION</span><span class="version">ALPHA 0.1</span><button id="sound-button" class="icon-button" aria-label="Mute sound" title="Toggle sound">${icon('sound')}</button></div>
+  </header>
+  <div class="layout">
+    <aside class="rail" aria-label="Game navigation">
+      <span class="rail-label">TARA, LARO.</span>
+      <nav><button id="nav-hub" class="nav-item active">${icon('home')}<span>Barangay</span></button><button id="nav-play" class="nav-item">${icon('game')}<span>Patintero</span></button><button id="avatar-button" class="nav-item">${icon('person')}<span>My avatar</span></button></nav>
+      <div class="rail-bottom"><button id="guide-button" class="nav-item">${icon('book')}<span>How to play</span></button><button id="settings-button" class="nav-item">${icon('settings')}<span>Settings</span></button><div class="made-in"><span>✳</span> MADE OF<br>FILIPINO PLAY.</div></div>
+    </aside>
+    <main>
+      <section class="welcome"><div><div class="eyebrow">MALIGAYANG PAGDATING <span> / </span> WELCOME HOME</div><h1>A little street. A lot of play<span>.</span></h1><p>Old-school games. New memories. Your barangay is waiting.</p></div><div class="daily-note">${icon('sun')}<span>A good day<br><strong>to play outside.</strong></span></div></section>
+      <div class="play-layout">
+        <section class="world-card" aria-label="Playable game">
+          <div class="world-toolbar"><div class="place"><span class="live-dot"></span><strong id="location-title">Barangay Maligaya</strong><span id="location-subtitle">PUROK 01</span></div><div class="weather">${icon('sun')}<span>15:30 · GOLDEN HOUR</span><button id="pause-button" class="tiny-button" aria-label="Pause game" title="Pause game">Ⅱ</button><button id="fullscreen-button" class="tiny-button" aria-label="Fullscreen game" title="Fullscreen game">⛶</button></div></div>
+          <div id="game-shell" class="game-shell"><div id="game" aria-label="Barangay game. Move with WASD or arrow keys. Press E to interact." tabindex="0"></div>
+            <div class="map-label" id="map-label"><span>EXPLORE AT YOUR OWN PACE</span><strong>Welcome to the barangay.</strong></div>
+            <div class="round-hud" id="round-hud" hidden><span id="lives">♥ ♥ ♥</span><strong id="round-objective">CROSS THE COURT</strong><span id="timer">01:30</span></div>
+            <div id="countdown" class="countdown" hidden></div>
+            <div class="player-chip"><span class="mini-avatar" id="mini-avatar"></span><div><strong id="player-name"></strong><span>THAT’S YOU</span></div></div>
+            <button id="emote-button" class="emote-button" aria-label="Wave to your neighbors" title="Wave · Space">☺ <span>SPACE</span></button>
+            <div class="touch-controls" aria-label="Touch movement controls"><div class="dpad"><button data-dir="0,-1" aria-label="Move up">↑</button><button data-dir="-1,0" aria-label="Move left">←</button><button data-dir="0,1" aria-label="Move down">↓</button><button data-dir="1,0" aria-label="Move right">→</button></div><button id="touch-run">RUN</button></div>
+          </div>
+          <div class="world-bottom"><span class="hint" id="hint" role="status">Getting the neighborhood ready…</span><span class="stamina"><span>ENERGY</span><span class="stamina-track"><i id="stamina-fill"></i></span></span></div>
+        </section>
+        <aside class="side-panel">
+          <section class="game-card"><div class="card-top"><span class="eyebrow">THE CLASSICS</span><span class="number">01 / 05</span></div><div class="court-art" aria-hidden="true"><div class="chalk-court"><i></i><i></i><i></i><b></b></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="art-ball"></span><span class="art-spark">✦</span></div><div class="game-card-content"><div class="game-category"><span class="small-dot"></span> STREET GAME <span>·</span> SOLO + BOTS</div><h2>Patintero</h2><p>Quick feet. Good timing.<br>Cross the lines. Make it home.</p><div class="game-tags"><span>90-second rounds</span><span>4 bot guards</span></div><button id="play-button" class="primary-button">Play Patintero ${icon('arrow')}</button><button id="rules-button" class="text-button">New here? Learn the rules ↗</button></div></section>
+          <section class="progress-card"><div class="eyebrow">YOUR LITTLE WINS</div><div class="stats"><div><strong id="wins">0</strong><span>WINS</span></div><div><strong id="coins">0</strong><span>COINS</span></div><div><strong id="best">—</strong><span>BEST TIME</span></div></div><p><span class="save-dot"></span><span id="save-status">Progress saved on this device</span></p></section>
+          <div class="more-games"><span>MORE STREET GAMES, SOON</span><span>⌑ Tumbang Preso</span><span>⌑ Sipa</span></div>
+        </aside>
+      </div>
+      <section class="below-game"><div><span class="little-star">✳</span><p><strong>No internet. No problem.</strong><span>Just you, the neighborhood, and one more round.</span></p></div><div class="keyboard-guide"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span><kbd>SHIFT</kbd> Run</span><span><kbd>E</kbd> Interact</span></div></section>
+      <footer><span>ROOTED IN FILIPINO CHILDHOOD. BUILT FOR EVERYONE.</span><span>Isang laro pa? <span class="footer-flower">✳</span></span></footer>
+    </main>
+  </div>
+  <dialog id="modal" aria-labelledby="modal-title"><button id="close-modal" class="close-modal" aria-label="Close dialog">×</button><div id="modal-content"></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+`;
+document.querySelector('.version')!.textContent = 'ALPHA 0.3';
+document.querySelector('#nav-play span')!.textContent = 'Games';
+document.querySelector('.more-games')!.innerHTML = '<span>FOUR NEIGHBORHOOD CLASSICS</span><span>All playable offline · your progress stays here.</span>';
+document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${(Object.keys(GAMES) as GameId[]).map((id, index) => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${['╬', '◉', '♧', '↟'][index]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);
+document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', '<button id="activity-action" class="activity-action" hidden>Jump · Space</button>');
+document.querySelector('.game-picker')!.insertAdjacentHTML('beforeend', '<button id="quick-settings" class="quick-settings">Difficulty: Easy · Change</button>');
+document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', `<div id="hub-map" class="hub-map"><svg viewBox="0 0 136 85" role="img" aria-label="Barangay map with four game locations"><path d="M19 12V81M0 31H132M19 58H129M108 31V79" fill="none" stroke="#b8a780" stroke-width="5"/>${HUB_SITES.map(site => `<circle cx="${site.at.x / HUB_SIZE.width * 136}" cy="${site.at.y / HUB_SIZE.height * 85}" r="4" fill="#e7bd73"/><text x="${site.at.x / HUB_SIZE.width * 136 + 5}" y="${site.at.y / HUB_SIZE.height * 85 - 4}" fill="#f3e7bb" font-size="8">${site.game === 'dama' ? 'D' : site.game === 'tinik' ? 'L' : site.game === 'taguan' ? 'T' : 'P'}</text>`).join('')}<rect id="hub-map-view" width="81.6" height="51" fill="none" stroke="#e4efcc" stroke-opacity=".6"/><circle id="hub-map-player" r="3" fill="#fff8d7" stroke="#314a35"/></svg><span>MALIGAYA · 4 PLACES</span></div>`);
+const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
+const dialog = $<HTMLDialogElement>('#modal');
+function toast(message: string) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = window.setTimeout(() => { $('#toast').hidden = true; }, 4000); }
+function refreshProfile() {
+  $('#quick-settings').textContent = `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
+  $('#player-name').textContent = profile.name;
+  $('#mini-avatar').style.setProperty('--shirt', COLORS[profile.color]);
+  const record = selectedGame === 'patintero' ? { wins: profile.wins, best: profile.best, played: profile.played } : profile.records[selectedGame];
+  $('#wins').textContent = String(record.wins); $('#coins').textContent = String(profile.coins);
+  $('#best').textContent = selectedGame === 'dama' ? String(record.played) : record.best ? selectedGame === 'tinik' ? `${record.best}/6` : `${record.best}s` : '—';
+  document.querySelector('.stats > div:last-child > span')!.textContent = GAMES[selectedGame].record;
+  $('#sound-button').setAttribute('aria-label', profile.muted ? 'Unmute sound' : 'Mute sound');
+  $('#sound-button').classList.toggle('muted', profile.muted);
+  $('#save-status').textContent = storageAvailable ? 'Progress saved on this device' : 'Saving unavailable in this browser';
+}
+function persist() { saveProfile(profile); refreshProfile(); }
+function openModal(content: string, dismissible = true) {
+  scene.resetInput();
+  game.input.keyboard!.preventDefault = false;
+  lastFocus = document.activeElement as HTMLElement;
+  $('#modal-content').innerHTML = content; $('#close-modal').hidden = !dismissible;
+  if (!dialog.open) dialog.showModal();
+}
+function closeModal() { scene.resetInput(); game.input.keyboard!.preventDefault = scene.active !== 'dama'; dialog.close(); resultMatch = null; lastFocus?.focus(); }
+$('#close-modal').onclick = closeModal;
+document.addEventListener('keydown', event => {
+  if (!dialog.open && scene?.active === 'dama' && event.key === 'Escape') pause();
+});
+dialog.addEventListener('cancel', event => { event.preventDefault(); if (resultMatch) return; if (paused) resume(); else closeModal(); });
+dialog.addEventListener('click', event => { if (event.target === dialog && !resultMatch) { if (paused) resume(); else closeModal(); } });
+
+function sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote') {
+  if (profile.muted) return;
+  try {
+    audio ??= new AudioContext();
+    if (audio.state !== 'running') { if (kind === 'step') return; void audio.resume(); }
+    const sequence = kind === 'win' ? [523, 659, 784, 1046] : kind === 'turn' ? [659, 880] : kind === 'tag' ? [180, 120] : kind === 'emote' ? [440, 554, 659] : [100];
+    sequence.forEach((frequency, i) => {
+      const oscillator = audio!.createOscillator(); const gain = audio!.createGain();
+      const now = audio!.currentTime + i * 0.095;
+      oscillator.type = kind === 'step' ? 'sine' : 'triangle'; oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(kind === 'step' ? 0.012 : 0.045, now + 0.008); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      oscillator.connect(gain); gain.connect(audio!.destination); oscillator.start(now); oscillator.stop(now + 0.12);
+    });
+  } catch { /* Sound is optional on browsers without Web Audio. */ }
+}
+
+const { scene: barangay, game } = createGame({
+  profile, blocked: () => dialog.open,
+  enterGame(id) { selectedGame = id; updateGameCard(); setupGame(id); },
+  location(mode) {
+    activityLocation(mode);
+    $('#location-title').textContent = mode === 'hub' ? 'Barangay Maligaya' : 'Patintero Court';
+    $('#location-subtitle').textContent = mode === 'hub' ? 'PUROK 01' : 'PRACTICE ROUND';
+    $('#map-label').hidden = mode !== 'hub'; $('#round-hud').hidden = mode !== 'match';
+    $('#nav-hub').classList.toggle('active', mode === 'hub'); $('#nav-play').classList.toggle('active', mode === 'match');
+    updateGameCard();
+  },
+  status(match) {
+    if (!match) { $('#countdown').hidden = true; return; }
+    $('#lives').textContent = '♥ '.repeat(match.lives) + '♡ '.repeat(3 - match.lives);
+    $('#timer').textContent = `${Math.floor(Math.ceil(match.remaining) / 60).toString().padStart(2, '0')}:${(Math.ceil(match.remaining) % 60).toString().padStart(2, '0')}`;
+    $('#round-objective').textContent = match.returning ? 'NOW MAKE IT HOME ↓' : 'CROSS THE COURT ↑';
+    $('#countdown').hidden = match.phase !== 'ready';
+    $('#countdown').textContent = String(Math.ceil(match.countdown));
+  },
+  hint(message) { $('#hint').textContent = message; },
+  sound,
+  result(match, earned) {
+    resultMatch = match;
+    profile.played++; profile.coins += earned;
+    const seconds = Math.ceil(90 - match.remaining);
+    if (match.phase === 'won') { profile.wins++; if (!profile.best || seconds < profile.best) profile.best = seconds; }
+    persist();
+    openModal(`<div class="result-symbol">${match.phase === 'won' ? '✳' : '↻'}</div><div class="eyebrow">${match.phase === 'won' ? 'ANG GALING MO!' : 'ISA PANG LARO?'}</div><h2 id="modal-title">${match.phase === 'won' ? 'You made it home.' : 'Another round awaits.'}</h2><p>${match.phase === 'won' ? `Across the lines and back in ${seconds} seconds. The barangay is cheering for you.` : match.remaining === 0 ? 'Time’s up! Try using a sprint when the guards move away.' : 'Those guards are quick. Try changing lanes before you cross.'}</p><div class="result-reward">+${earned} <span>COINS EARNED</span></div><button id="rematch-button" class="primary-button">One more round ${icon('arrow')}</button><button id="return-button" class="secondary-button">Back to the barangay</button>`, false);
+    $('#rematch-button').onclick = () => { closeModal(); scene.startMatch(); };
+    $('#return-button').onclick = () => { closeModal(); scene.hub(); };
+  },
+});
+
+const activityUI: ActivityUI = {
+  profile, blocked: () => dialog.open,
+  location: activityLocation,
+  hud(value) {
+    $('#lives').textContent = value.left; $('#round-objective').textContent = value.objective; $('#timer').textContent = value.right;
+    $('#countdown').hidden = !value.countdown; $('#countdown').textContent = value.countdown ? String(Math.ceil(value.countdown)) : '';
+  },
+  hint(message) { $('#hint').textContent = message; }, sound,
+  result(value) {
+    resultMatch = value;
+    if (!value.practice) {
+      const record = profile.records[value.game]; record.played++; if (value.won) record.wins++;
+      record.best = Math.max(record.best, value.record); profile.coins += value.coins; persist();
+    }
+    openModal(`<div class="result-symbol">${value.won ? '✳' : '↻'}</div><div class="eyebrow">${GAMES[value.game].title.toUpperCase()} · ${value.practice ? 'FRIENDLY PRACTICE' : value.draw ? 'DRAW' : value.won ? 'ANG GALING MO!' : 'ISA PANG LARO?'}</div><h2 id="modal-title"></h2><p id="result-summary"></p><div class="result-reward">+${value.coins} <span>${value.practice ? 'PRACTICE · NO COINS OR RECORDS' : 'COINS EARNED'}</span></div><button id="rematch-button" class="primary-button">One more round ${icon('arrow')}</button><button id="return-button" class="secondary-button">Back to the barangay</button>`, false);
+    $('#modal-title').textContent = value.title; $('#result-summary').textContent = value.summary;
+    $('#rematch-button').onclick = () => { closeModal(); setupGame(value.game); };
+    $('#return-button').onclick = () => { closeModal(); scene.hub(); };
+  },
+};
+scene = new GameDirector(game, barangay, activityUI);
+
+function activityLocation(mode: 'hub' | 'match' | NewGameId) {
+  const active = mode === 'match' ? 'patintero' : mode;
+  if (scene) scene.active = active;
+  if (active !== 'hub') selectedGame = active;
+  const titles = { hub: 'Barangay Maligaya', patintero: 'Patintero Court', dama: 'Dama sa Tindahan', taguan: 'Tagu-taguan Alley', tinik: 'Luksong-tinik Schoolyard' };
+  $('#location-title').textContent = titles[active];
+  $('#location-subtitle').textContent = active === 'hub' ? 'PUROK 01' : active === 'dama' ? 'AT THE WOODEN TABLE' : 'OFFLINE PLAY';
+  $('#game-shell').dataset.activity = active;
+  game.input.keyboard!.preventDefault = active !== 'dama';
+  $('#map-label').hidden = active !== 'hub'; $('#round-hud').hidden = active === 'hub' || active === 'dama'; $('#countdown').hidden = true;
+  $('#hub-map').hidden = active !== 'hub';
+  $('.player-chip').hidden = active === 'dama'; $('#emote-button').hidden = active !== 'hub' && active !== 'patintero';
+  $('.touch-controls').hidden = active === 'dama' || active === 'tinik';
+  $('.stamina').hidden = active === 'dama' || active === 'tinik';
+  $('#activity-action').hidden = active !== 'tinik' && active !== 'taguan';
+  $('#activity-action').textContent = active === 'tinik' ? 'Jump · Space' : 'Crouch · E';
+  $('#nav-hub').classList.toggle('active', active === 'hub'); $('#nav-play').classList.toggle('active', active !== 'hub');
+  const instructions = active === 'dama' ? 'Click a piece, then its highlighted destination.' : active === 'tinik' ? 'Space or Jump to take off · Escape to pause' : active === 'taguan' ? 'WASD / arrows move · Shift sprints · E crouches' : 'WASD / arrows move · Shift runs · E interacts';
+  $('.keyboard-guide').textContent = instructions;
+  updateGameCard();
+  if (active !== 'hub' && innerWidth <= 1100) requestAnimationFrame(() => $('.world-card').scrollIntoView({ block: 'start' }));
+}
+
+function updateGameCard() {
+  const item = GAMES[selectedGame];
+  $('.game-card h2').textContent = item.title; $('.game-card p').textContent = item.description;
+  $('.game-category').textContent = item.category;
+  $('.game-tags').innerHTML = item.tags.map(tag => `<span>${tag}</span>`).join('');
+  $('.number').textContent = `${String(Object.keys(GAMES).indexOf(selectedGame) + 1).padStart(2, '0')} / 04`;
+  const art = $('.court-art'); art.dataset.gameArt = selectedGame;
+  if (selectedGame === 'patintero') art.innerHTML = '<div class="chalk-court"><i></i><i></i><i></i><b></b></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="art-spark">✦</span>';
+  else if (selectedGame === 'dama') art.innerHTML = '<div class="preview-board">' + Array.from({ length: 16 }, (_, i) => `<i class="${(Math.floor(i / 4) + i % 4) % 2 ? 'dark' : ''}">${[1, 3, 12, 14].includes(i) ? '<b></b>' : ''}</i>`).join('') + '</div><span class="preview-caption">SA TABI NG TINDAHAN</span>';
+  else if (selectedGame === 'taguan') art.innerHTML = '<div class="preview-wall"></div><div class="preview-bush"></div><span class="art-kid one"></span><span class="preview-search">⌕</span><span class="preview-caption">TAHAN… MAY TAYA.</span>';
+  else art.innerHTML = '<div class="preview-hands"></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="preview-caption">ISA PANG TAAS!</span>';
+  document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach(button => { const current = button.dataset.game === selectedGame; button.classList.toggle('selected', current); button.setAttribute('aria-pressed', String(current)); });
+  $('#play-button').innerHTML = `${scene?.active === selectedGame ? 'Restart ' : 'Play '}${item.title} ${icon('arrow')}`;
+  refreshProfile();
+}
+
+function setupGame(id: GameId) {
+  if (id === 'dama') {
+    const saved = savedDama();
+    openModal(`<div class="eyebrow">TAKE A SEAT</div><h2 id="modal-title">Tara, Dama tayo.</h2><p>Gold moves first. Backward captures, flying kings, and mandatory longest capture chains.</p>${saved ? '<button id="resume-dama" class="primary-button">Resume saved match</button>' : ''}<button id="dama-bot" class="${saved ? 'secondary' : 'primary'}-button">Play against Aling Nena</button><button id="dama-local" class="secondary-button">Two players · pass-and-play</button><p class="fine-print">A new match replaces the unfinished saved match. Pass-and-play is a friendly mode with no coins or records.</p>`);
+    if (saved) $('#resume-dama').onclick = () => { closeModal(); scene.start('dama', { resume: true }); };
+    $('#dama-bot').onclick = () => { closeModal(); scene.start('dama', { mode: 'bot' }); };
+    $('#dama-local').onclick = () => { closeModal(); scene.start('dama', { mode: 'local' }); };
+  } else if (id === 'tinik') {
+    openModal(`<div class="eyebrow">ISA PANG TAAS! · ${profile.difficulty.toUpperCase()}</div><h2 id="modal-title">Ready for a brave jump?</h2><p>Six heights, changing run-up speeds, and a different takeoff point each round. Press Space or Jump in the green zone. Hard mode uses a small notch after height two.</p><button id="tinik-challenge" class="primary-button">Challenge · three chances</button><button id="tinik-practice" class="secondary-button">Practice · unlimited retries</button><p class="fine-print">Change difficulty above the game cards. Practice keeps the full guide and awards no coins or records.</p>`);
+    $('#tinik-challenge').onclick = () => { closeModal(); scene.start('tinik'); };
+    $('#tinik-practice').onclick = () => { closeModal(); scene.start('tinik', { practice: true }); };
+  } else { closeModal(); scene.start(id); sound('emote'); }
+}
+document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach(button => { button.onclick = () => { selectedGame = button.dataset.game as GameId; updateGameCard(); }; });
+$('#activity-action').onclick = () => scene.action();
+
+function play() {
+  if ($('#game').dataset.ready !== 'true') return;
+  const active = scene.active !== 'hub' && ['ready', 'playing'].includes($('#game').dataset.phase || '');
+  if (active) {
+    openModal(`<div class="eyebrow">FRESH START</div><h2 id="modal-title">Start another game?</h2><p>${scene.active === 'dama' ? 'Your unfinished Dama match is saved. Choosing a new Dama match replaces it.' : 'Your current round will end without a reward.'}</p><button id="confirm-restart" class="primary-button">Start a new round</button><button id="cancel-restart" class="secondary-button">Keep playing</button>`);
+    $('#confirm-restart').onclick = () => { closeModal(); setupGame(selectedGame); };
+    $('#cancel-restart').onclick = closeModal;
+  } else setupGame(selectedGame);
+}
+$('#play-button').onclick = play;
+$('#nav-play').onclick = () => {
+  openModal(`<div class="eyebrow">TARA, LARO TAYO</div><h2 id="modal-title">An afternoon of play.</h2><div class="game-menu">${(Object.keys(GAMES) as GameId[]).map(id => `<button class="game-menu-card" data-menu-game="${id}"><strong>${GAMES[id].title}</strong><span>${GAMES[id].description}</span><small>Play ${GAMES[id].title} →</small></button>`).join('')}</div>`);
+  document.querySelectorAll<HTMLButtonElement>('[data-menu-game]').forEach(button => { button.onclick = () => { selectedGame = button.dataset.menuGame as GameId; closeModal(); updateGameCard(); play(); }; });
+};
+$('#nav-hub').onclick = () => {
+  if (scene.active === 'hub') return;
+  openModal(`<div class="eyebrow">TAKE A BREATHER</div><h2 id="modal-title">Head back outside?</h2><p>${scene.active === 'dama' ? 'Your unfinished Dama match is saved. Resume it from the Dama setup whenever you like.' : 'This round will end without a reward.'}</p><button id="confirm-home" class="primary-button">Return to the barangay</button><button id="cancel-home" class="secondary-button">Keep playing</button>`);
+  $('#confirm-home').onclick = () => { closeModal(); scene.hub(); }; $('#cancel-home').onclick = closeModal;
+};
+$('#emote-button').onclick = () => scene.emote();
+$('#sound-button').onclick = () => { profile.muted = !profile.muted; persist(); if (!profile.muted) sound('emote'); };
+
+function guide() {
+  if (selectedGame !== 'patintero') {
+    const pages: Record<NewGameId, string> = {
+      dama: '<p>LARO’s Filipino-style preset: an 8×8 board, twelve pieces per side, and Gold moves first.</p><ol class="rules-list"><li>Ordinary pieces step diagonally forward, but can capture forward or backward.</li><li>Captures are mandatory. Choose a sequence that takes the most pieces, and finish every jump with the same piece.</li><li>Captured pieces remain blockers until the complete sequence ends. Equal-length routes are your choice.</li><li>Kings fly along clear diagonals. Each capture jumps one opponent and lands on an empty square beyond it.</li><li>A piece becomes a king only if it ends its complete turn on the far rank.</li><li>Win when the opponent has no pieces or legal moves. Threefold repetition or 40 full moves without a capture or ordinary-piece move is a draw.</li></ol><p>Play against Aling Nena or pass the device between two people. An unfinished match saves automatically. Bot wins earn 60 coins, draws 20, and losses 10. Friendly pass-and-play has no rewards.</p>',
+      taguan: '<p>Bea counts for 10 seconds. Use that time to hide, then survive a 75-second search.</p><ol class="rules-list"><li>Move with WASD, arrows, touch buttons, or by clicking the ground.</li><li>Hold Shift / RUN to sprint. Sprinting uses energy and makes noise.</li><li>Press E or Crouch to move quietly. Shrubs, laundry, and bamboo conceal you; buildings, crates, and barrels block sight. Crouching in the open does not make you invisible.</li><li>The awareness meter fills when Bea can see you. Break sight around a wall and relocate.</li><li>Bea investigates sounds and remembers where she last saw you, but cannot see through buildings. She must reach you to catch you.</li></ol><p>Easy mode shows her sight cone. Normal and Hard increase her speed, sight, and memory. Surviving earns 60 / 80 / 100 coins on Easy / Normal / Hard; a finished caught round earns 10. No transformation, disguise, or weapons.</p>',
+      tinik: '<p>Two neighborhood kids raise their hands and feet into a growing obstacle. Your run-up is automatic.</p><ol class="rules-list"><li>Watch your feet approach the takeoff zone. Speed and obstacle position change at each height.</li><li>Press Space or Jump once. Your jump follows a predictable arc.</li><li>Clear the whole obstacle and land to advance to the next height.</li><li>Touch the hands and lose a chance. Three misses end a challenge.</li><li>Clear all six heights to win. Practice gives unlimited retries without coins or records.</li></ol><p>Hard uses a small takeoff notch after height two; Practice keeps the full guide. A challenge win earns 60 / 80 / 100 coins on Easy / Normal / Hard, plus 10 per remaining chance. A finished attempt earns 10 plus 5 per cleared height. Escape pauses the run-up and jump.</p>',
+    };
+    openModal(`<div class="eyebrow">THE NEIGHBORHOOD RULEBOOK</div><h2 id="modal-title">Tara, ${GAMES[selectedGame].title}!</h2>${pages[selectedGame]}<button id="guide-close" class="primary-button">Got it. Let’s play.</button>`);
+    $('#guide-close').onclick = closeModal;
+    return;
+  }
+  openModal(`<div class="eyebrow">THE NEIGHBORHOOD RULEBOOK</div><h2 id="modal-title">Tara, Patintero!</h2><p>A childhood classic: runners cross a chalk court while guards defend its lines. This is a solo practice adaptation.</p><ol class="rules-list"><li><strong>Get across.</strong> Reach the green strip at the top of the court.</li><li><strong>Make it home.</strong> Turn around and reach the bottom strip to win.</li><li><strong>Watch the guards.</strong> Three move across horizontal lines; one guards the center line.</li><li><strong>You have three chances.</strong> A tag sends you home and resets your crossing. The clock keeps ticking.</li></ol><div class="guide-keys"><span><kbd>WASD</kbd> / <kbd>↑ ↓ ← →</kbd> Move</span><span><kbd>SHIFT</kbd> Sprint · uses energy</span><span>Click or tap the ground to walk</span><span><kbd>SPACE</kbd> Wave · <kbd>ESC</kbd> Pause</span></div><p class="fine-print">A full trip earns 50 coins + 10 for each remaining chance. A finished practice attempt earns 10 coins. Leaving early earns none.</p><button id="guide-close" class="primary-button">Got it. Let’s play.</button>`);
+  $('#guide-close').onclick = closeModal;
+}
+$('#guide-button').onclick = guide; $('#rules-button').onclick = guide;
+$('#avatar-button').onclick = () => {
+  openModal(`<div class="eyebrow">A FAMILIAR FACE</div><h2 id="modal-title">Make yourself at home.</h2><form id="avatar-form"><label class="field-label" for="nickname">YOUR NICKNAME</label><input id="nickname" maxlength="16" required autocomplete="nickname" /><span class="field-label">YOUR FAVORITE SHIRT</span><div class="swatches">${COLORS.map((color, index) => `<button type="button" class="swatch ${profile.color === index ? 'selected' : ''}" data-color="${index}" style="--swatch:${color}" aria-label="${['Sunflower', 'Ocean', 'Guava', 'Calamansi'][index]} shirt" aria-pressed="${profile.color === index}"><span class="mini-avatar" style="--shirt:${color}"></span></button>`).join('')}</div><button class="primary-button" type="submit">Save my avatar ${icon('arrow')}</button></form>`);
+  $<HTMLInputElement>('#nickname').value = profile.name;
+  let selected = profile.color;
+  document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(button => { button.onclick = () => { selected = Number(button.dataset.color); document.querySelectorAll('[data-color]').forEach(item => { item.classList.toggle('selected', item === button); item.setAttribute('aria-pressed', String(item === button)); }); }; });
+  $('#avatar-form').onsubmit = event => { event.preventDefault(); const name = $<HTMLInputElement>('#nickname').value.trim(); if (!name) { $<HTMLInputElement>('#nickname').setCustomValidity('Please enter a nickname.'); $<HTMLInputElement>('#nickname').reportValidity(); return; } profile.name = name; profile.color = selected; persist(); scene.updateAvatar(); closeModal(); toast('Looking good! Your avatar is saved.'); };
+  $('#nickname').oninput = () => $<HTMLInputElement>('#nickname').setCustomValidity('');
+};
+$('#settings-button').onclick = () => {
+  openModal(`<div class="eyebrow">JUST THE WAY YOU LIKE IT</div><h2 id="modal-title">A little fine-tuning.</h2><label class="setting-row" for="difficulty">Difficulty<select id="difficulty"><option value="easy">Easy · learn the rhythm</option><option value="normal">Normal · a real challenge</option><option value="hard">Hard · quick and precise</option></select></label><label class="setting-row" for="sound-enabled">Game sounds<input id="sound-enabled" type="checkbox" ${profile.muted ? '' : 'checked'} /></label><p class="fine-print">Difficulty changes take effect in the next Tagu-taguan or jumping round. Other bots use the setting on their next move. Tagu-taguan and jumping wins earn more coins at higher difficulties.</p><button id="save-settings" class="primary-button">All set</button>`);
+  $<HTMLSelectElement>('#difficulty').value = profile.difficulty;
+  $('#save-settings').onclick = () => { const level = $<HTMLSelectElement>('#difficulty').value; profile.difficulty = level === 'hard' ? 'hard' : level === 'normal' ? 'normal' : 'easy'; profile.muted = !$<HTMLInputElement>('#sound-enabled').checked; persist(); closeModal(); };
+};
+$('#quick-settings').onclick = () => $('#settings-button').click();
+function resume() { paused = false; scene.setPaused(false); $('#pause-button').setAttribute('aria-label', 'Pause game'); closeModal(); }
+function pause() {
+  if (dialog.open || $('#game').dataset.ready !== 'true') return;
+  paused = true; scene.setPaused(true); $('#pause-button').setAttribute('aria-label', 'Resume game');
+  openModal('<div class="eyebrow">SANDALI LANG</div><h2 id="modal-title">Take your time.</h2><p>The neighborhood can wait. Your round is paused.</p><button id="resume-button" class="primary-button">Back to playing →</button>');
+  $('#resume-button').onclick = resume; $('#close-modal').onclick = resume;
+  dialog.addEventListener('close', () => { paused = false; scene.setPaused(false); $('#close-modal').onclick = closeModal; $('#pause-button').setAttribute('aria-label', 'Pause game'); }, { once: true });
+}
+$('#pause-button').onclick = () => paused ? resume() : pause();
+document.addEventListener('visibilitychange', () => { if (document.hidden && !dialog.open) pause(); });
+$('#fullscreen-button').onclick = async () => {
+  try { if (document.fullscreenElement) await document.exitFullscreen(); else await $('#game-shell').requestFullscreen(); }
+  catch { toast('Fullscreen is unavailable in this browser.'); }
+};
+document.querySelectorAll<HTMLButtonElement>('[data-dir]').forEach(button => {
+  button.onpointerdown = event => { event.preventDefault(); button.setPointerCapture(event.pointerId); const [x, y] = button.dataset.dir!.split(',').map(Number); scene.setTouch(x, y); };
+  const release = () => scene.setTouch(0, 0);
+  button.onpointerup = release; button.onpointercancel = release; button.onlostpointercapture = release;
+});
+$('#touch-run').onpointerdown = event => { event.preventDefault(); $('#touch-run').setPointerCapture(event.pointerId); scene.setSprint(true); };
+$('#touch-run').onpointerup = () => scene.setSprint(false); $('#touch-run').onpointercancel = () => scene.setSprint(false); $('#touch-run').onlostpointercapture = () => scene.setSprint(false);
+refreshProfile();
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('./sw.js').then(async registration => {
+      await navigator.serviceWorker.ready;
+      if (registration.active) $('#save-status').textContent = storageAvailable ? 'Saved locally · ready to play offline' : 'Offline ready · progress saving unavailable';
+    }).catch(() => { $('#save-status').textContent = 'Local play ready · offline cache unavailable'; });
+  });
+}

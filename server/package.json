@@ -1,0 +1,10 @@
+{
+  "name": "@laro/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@colyseus/schema": "5.0.42",
+    "colyseus": "0.18.10"
+  }
+}
