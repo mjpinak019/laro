@@ -2,7 +2,7 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.10.0 is a local game collection with a barangay hub, Jolen, Patintero,
+Alpha 0.10.1 is a local game collection with a barangay hub, Jolen, Patintero,
 Dama, Tagu-taguan, Luksong-tinik, and Luksong Lubid, plus two hidden phone
 games. All eight games work offline after the first complete online load.
 
@@ -102,13 +102,15 @@ cannot trigger this win. The hole does not move between shots.
 Two dogs and two cats wander, rest and occasionally chase each other around
 solid map objects. They pause with the game and never interfere with games.
 The Maligaya sign is a separate depth-sorted object with a solid post.
-Luksong-tinik shows two seated children and outlined hands and feet: one
+Luksong-tinik uses transparent PNG sprites drawn on a fixed pixel grid, with
+flat colors and simple silhouettes matching the village characters. Its two
+seated children raise outlined hands and feet: one
 through four hands, then one foot plus four hands, then two feet plus four.
 
 A pixel emblem and lowercase `tphilo games` wordmark welcome players while
 the barangay initializes. About is available in ordinary and fullscreen
 navigation and credits `tphilo games`, `developed by Sab`, and version
-`0.10.0-alpha`. The displayed version comes from `client/src/version.ts`.
+`0.10.1-alpha`. The displayed version comes from `client/src/version.ts`.
 Existing coins, avatars, records, and Dama saves are preserved. Jolen adds
 `records.jolen` and `jolenDifficulty` to the existing profile key.
 
@@ -446,3 +448,8 @@ npm.cmd audit
 
 The offline client does not import Colyseus. Live multiplayer and network
 synchronization are not implemented or tested in this alpha.
+
+The six simplified tinik poses and difficulty exports are documented in
+[the sprite guide](client/src/assets/tinik/README.md), with a
+[height preview](docs/art/tinik-heights.png). Regenerate PNGs using
+`node scripts/export-tinik-art.mjs`.

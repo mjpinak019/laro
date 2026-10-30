@@ -76,7 +76,7 @@ export function alleyPath(from: Point, goal: Point): Point[] {
   return path;
 }
 
-export const JUMP = { speed: 210, velocity: 450, gravity: 900, obstacleX: 520, halfWidth: 24 };
+export const JUMP = { speed: 210, velocity: 450, gravity: 900, obstacleX: 520, halfWidth: 14 };
 export const tinikHeight = (level: number) => 24 + level * 10;
 export function tinikStage(level: number, difficulty: Difficulty = 'easy') {
   const at = Math.max(0, Math.min(5, level - 1));
@@ -85,8 +85,9 @@ export function tinikStage(level: number, difficulty: Difficulty = 'easy') {
   const obstacleX = [520,555,490,565,510,550][at], speed = speeds[difficulty][at], height = heights[difficulty][at];
   const root = Math.sqrt(JUMP.velocity ** 2 - 2 * JUMP.gravity * (height + 3));
   const early = (JUMP.velocity - root) / JUMP.gravity, late = (JUMP.velocity + root) / JUMP.gravity;
-  return { height, speed, obstacleX, takeoffMin: obstacleX + JUMP.halfWidth + 9 - speed * late, takeoffMax: obstacleX - JUMP.halfWidth - 9 - speed * early };
+  const halfWidth = level > 4 ? 17 : 14;
+  return { height, speed, obstacleX, halfWidth, takeoffMin: obstacleX + halfWidth + 9 - speed * late, takeoffMax: obstacleX - halfWidth - 9 - speed * early };
 }
-export function touchesStage(x: number, z: number, stage: ReturnType<typeof tinikStage>) { return Math.abs(x - stage.obstacleX) < JUMP.halfWidth + 9 && z < stage.height + 3; }
+export function touchesStage(x: number, z: number, stage: ReturnType<typeof tinikStage>) { return Math.abs(x - stage.obstacleX) < stage.halfWidth + 9 && z < stage.height + 3; }
 export function jumpHeight(seconds: number): number { return Math.max(0, JUMP.velocity * seconds - .5 * JUMP.gravity * seconds * seconds); }
 export function touchesTinik(x: number, z: number, level: number): boolean { return Math.abs(x - JUMP.obstacleX) < JUMP.halfWidth + 9 && z < tinikHeight(level) + 3; }

@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { createActivityArt } from '../art';
 import { ActivityScene } from './base-scene';
-import { JUMP, jumpHeight, tinikStage, touchesStage } from './arcade-rules';
+import { jumpHeight, tinikStage, touchesStage } from './arcade-rules';
 import type { Difficulty } from '../rules';
 import type { ActivityUI } from './types';
-import { OUTLINE_COLOR } from '../sprite-outline';
+import { TINIK_SPRITE } from '../tinik-sprite-art';
 import { addWorldProps } from '../world-props';
+const PNGS = import.meta.glob<string>('../assets/tinik/*/*.png', { eager: true, query: '?url&no-inline', import: 'default' });
 
 export class TinikScene extends ActivityScene {
   private x = 165;
@@ -19,6 +20,7 @@ export class TinikScene extends ActivityScene {
   private requestedJump = false;
   private buffered = 0;
   private obstacle!: Phaser.GameObjects.Graphics;
+  private seatedPair!: Phaser.GameObjects.Image;
   private message!: Phaser.GameObjects.Text;
   private trail!: Phaser.GameObjects.Graphics;
   private feedback = 'Watch the takeoff zone. Press Jump when you reach it.';
@@ -26,9 +28,17 @@ export class TinikScene extends ActivityScene {
   private difficulty: Difficulty;
 
   constructor(ui: ActivityUI, private practice = false) { super('tinik', ui); this.difficulty = ui.profile.difficulty; }
+  preload() {
+    for (let level = 1; level <= 6; level++) {
+      const key = this.spriteKey(level);
+      if (!this.textures.exists(key)) this.load.image(key, PNGS['../assets/tinik/' + this.difficulty + '/height-' + level + '.png']);
+    }
+  }
+  private spriteKey(level = this.level) { return 'tinik-pair-' + this.difficulty + '-' + level; }
   create() {
     createActivityArt(this); this.add.image(480, 300, 'schoolyard').setScale(2); addWorldProps(this, 'schoolyard');
-    this.obstacle = this.add.graphics().setDepth(448); this.trail = this.add.graphics().setDepth(449);
+    this.seatedPair = this.add.image(520, 450, this.spriteKey()).setOrigin(.5, TINIK_SPRITE.ground / TINIK_SPRITE.height).setScale(TINIK_SPRITE.scale).setDepth(448);
+    this.obstacle = this.add.graphics().setDepth(447); this.trail = this.add.graphics().setDepth(449);
     this.playerSetup(this.x, 450); this.inputSetup(); this.facing = 2;
     this.keys.SPACE.on('down', () => this.action());
     this.message = this.add.text(480, 110, 'Ready for your first jump?', { fontFamily: 'monospace', fontSize: '21px', color: '#fcf0cd', backgroundColor: '#37513e', padding: { x: 16, y: 10 } }).setOrigin(.5);
@@ -37,48 +47,11 @@ export class TinikScene extends ActivityScene {
 
   private paintObstacle() {
     const config = tinikStage(this.level, this.difficulty), center = config.obstacleX;
-    const g = this.obstacle, height = config.height; g.clear();
-    const hands = Math.min(4, this.level), feet = Math.max(0, this.level - 4), footHeight = feet * 13;
-    const handHeight = (height - footHeight) / hands;
-    // Side views: bent knees, two extended legs, and four arms available to build the stack.
-    const seated = (x: number, right: boolean, shirt: number) => {
-      const d = right ? 1 : -1, skin = right ? 0xe1ae80 : 0xc58c68;
-      const box = (xx: number, yy: number, w: number, h: number, color: number) => { g.fillStyle(OUTLINE_COLOR).fillRect(xx - 2, yy - 2, w + 4, h + 4); g.fillStyle(color).fillRect(xx, yy, w, h); };
-      const limb = (ax: number, ay: number, bx: number, by: number, color: number, width: number) => { g.lineStyle(width + 4, OUTLINE_COLOR).lineBetween(ax, ay, bx, by); g.lineStyle(width, color).lineBetween(ax, ay, bx, by); };
-      g.fillStyle(0x294d38, .18).fillEllipse(x + d * 20, 454, 95, 14);
-      limb(x, 434, x + d * 30, 410, 0x3b5952, 15);
-      limb(x + d * 30, 410, center - d * 17, 444, skin, 10);
-      limb(x + d * 7, 442, center - d * 18, 447, skin, 10);
-      box(x - 17, 397, 33, 42, shirt); box(x - 13, 366, 27, 29, skin);
-      box(x - 15, 361, 30, 10, 0x354337);
-      g.fillStyle(OUTLINE_COLOR).fillRect(x + d * 7 - 1, 378, 3, 4).fillRect(x + d * 10 - 3, 388, 7, 2);
-      g.fillStyle(0xf6cf9d).fillRect(x + d * 12, 382, 3, 3);
-      for (let arm = 0; arm < 2; arm++) {
-        const stackIndex = (right ? 0 : 1) + arm * 2, active = stackIndex < hands;
-        const endY = active ? 450 - footHeight - stackIndex * handHeight - handHeight * .45 : 432;
-        const endX = active ? center + (right ? -5 : 5) : x + d * 35;
-        limb(x + d * 12, 403 + arm * 11, x + d * 42, endY + 10, skin, 7);
-        limb(x + d * 42, endY + 10, endX, endY, skin, 7);
-      }
-    };
-    seated(center - 105, true, 0x7da8ac); seated(center + 105, false, 0xc67e6f);
-    for (let foot = 0; foot < feet; foot++) {
-      const y = 450 - (foot + 1) * 13;
-      g.fillStyle(OUTLINE_COLOR).fillRect(center - 23, y, 46, 13);
-      g.fillStyle(foot ? 0xc58c68 : 0xe1ae80).fillRect(center - 21, y + 2, 42, 9);
-      for (let toe = 0; toe < 4; toe++) g.fillStyle(OUTLINE_COLOR).fillRect(center + (foot ? -19 + toe * 4 : 6 + toe * 4), y + 2, 1, 4);
-    }
-    for (let i = 0; i < hands; i++) {
-      const bottom = Math.round(450 - footHeight - i * handHeight), top = Math.round(450 - footHeight - (i + 1) * handHeight);
-      g.fillStyle(OUTLINE_COLOR).fillRect(center - 16, top + 5, 32, bottom - top - 5);
-      g.fillStyle(i % 2 ? 0xc58c68 : 0xe1ae80).fillRect(center - 14, top + 7, 28, Math.max(2, bottom - top - 9));
-      for (let finger = 0; finger < 4; finger++) {
-        const x = center - 15 + finger * 8, offset = finger === 0 || finger === 3 ? 3 : 0;
-        g.fillStyle(OUTLINE_COLOR).fillRect(x, top + offset, 7, 12);
-        g.fillStyle(i % 2 ? 0xd7a17a : 0xefbf91).fillRect(x + 2, top + offset + 2, 3, 9);
-      }
-    }
-    const game = document.querySelector<HTMLElement>('#game')!; game.dataset.tinikHands = String(hands); game.dataset.tinikFeet = String(feet);
+    const g = this.obstacle; g.clear();
+    this.seatedPair.setPosition(center, 450).setTexture(this.spriteKey());
+    g.fillStyle(0x294d38, .15).fillEllipse(center - 74, 452, 58, 10).fillEllipse(center + 74, 452, 58, 10);
+    const game = document.querySelector<HTMLElement>('#game')!;
+    game.dataset.tinikHands = String(Math.min(4, this.level)); game.dataset.tinikFeet = String(Math.max(0, this.level - 4)); game.dataset.tinikArt = 'pixel-png';
     // Small guide rails show the hand collision boundary and a generous takeoff zone.
     const showGuide = this.practice || this.difficulty !== 'hard' || this.level <= 2;
     const guideCenter = (config.takeoffMin + config.takeoffMax) / 2;
@@ -139,7 +112,7 @@ export class TinikScene extends ActivityScene {
       if (this.stage === 'air') { this.airborne += dt; z = jumpHeight(this.airborne); }
       if (touchesStage(this.x, z, config)) this.fail();
       else if (this.stage === 'air' && this.airborne >= 1) {
-        if (this.x > config.obstacleX + JUMP.halfWidth + 9) {
+        if (this.x > config.obstacleX + config.halfWidth + 9) {
           this.stage = 'celebrate'; this.delay = 1.3; this.cleared = this.level; this.ui.sound('turn'); this.message.setText('Cleared! Isa pang taas.');
           if (this.level === 6) this.end(true);
         } else this.fail();
