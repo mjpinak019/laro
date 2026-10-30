@@ -8,7 +8,7 @@ import { HUB_SIZE, HUB_SITES, nearbySite } from './hub';
 import type { GameId } from './games/types';
 import { BOT_APPEARANCES, CHARACTERS, characterTexture, type CharacterId, type CharacterLook } from './characters';
 import { createPlayerArt, playerTexture } from './avatar-art';
-import { phoneSpotForPage } from './phone-spots';
+import { phoneSpotForPage, relocatePhone } from './phone-spots';
 import { GAMES } from './games/types';
 
 export interface GameUI {
@@ -21,6 +21,7 @@ export interface GameUI {
   sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote'): void;
   enterGame(game: GameId): void;
   foundPhone(): void;
+  failure?(kind?: 'mistake' | 'hit' | 'loss'): void;
 }
 type Kid = { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; name: Phaser.GameObjects.Text; facing: number; color: number; look: CharacterLook; x: number; y: number };
 type Guard = { kid: Kid; axis: 'x' | 'y'; position: number; offset: number };
@@ -55,6 +56,25 @@ export class BarangayScene extends Phaser.Scene {
   private phone!: Phaser.GameObjects.Container;
   private phoneSpot = phoneSpotForPage();
   private phoneFound = false;
+  resizeView() {
+    if (!this.cameras?.main || !this.player) return;
+    const camera = this.cameras.main, { width, height } = this.game.scale.gameSize;
+    camera.setSize(width, height);
+    if (this.mode !== 'hub') { camera.setZoom(1).removeBounds().setScroll((960 - width) / 2, (600 - height) / 2); return; }
+    camera.setZoom(Math.max(1, width / HUB_SIZE.width, height / HUB_SIZE.height)); camera.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height);
+    const vw = width / camera.zoom, vh = height / camera.zoom;
+    camera.setScroll(Phaser.Math.Clamp(this.player.x - vw / 2, 0, Math.max(0, HUB_SIZE.width - vw)), Phaser.Math.Clamp(this.player.y - vh / 2, 0, Math.max(0, HUB_SIZE.height - vh)));
+    const mini = document.querySelector('#hub-map-view'); mini?.setAttribute('width', String(vw / HUB_SIZE.width * 136)); mini?.setAttribute('height', String(vh / HUB_SIZE.height * 85));
+  }
+  respawnPhone() {
+    this.phoneSpot = relocatePhone(); this.phoneFound = false;
+    this.phone.setPosition(this.phoneSpot.x, this.phoneSpot.y).setDepth(this.phoneSpot.y).setVisible(this.mode === 'hub');
+    this.snapshotPhone();
+  }
+  private snapshotPhone() {
+    const element = document.querySelector<HTMLElement>('#game')!;
+    element.dataset.phoneSpot = this.phoneSpot.id; element.dataset.phoneX = String(this.phoneSpot.x); element.dataset.phoneY = String(this.phoneSpot.y); element.dataset.phoneFound = String(this.phoneFound);
+  }
 
   constructor(ui: GameUI) { super('barangay'); this.ui = ui; }
 
@@ -87,6 +107,7 @@ export class BarangayScene extends Phaser.Scene {
     this.events.once('shutdown', () => window.removeEventListener('blur', this.blur));
     this.hub();
     document.querySelector('#game')?.setAttribute('data-ready', 'true');
+    this.resizeView();
     window.dispatchEvent(new Event('laro-ready'));
   }
 
@@ -127,6 +148,7 @@ export class BarangayScene extends Phaser.Scene {
     this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'amor'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena'), this.bot(1030, 460, 'weng')];
     this.ui.location('hub'); this.ui.status(null);
     this.ui.hint('Explore the larger barangay. Walk to a game marker and press E, or use Games.');
+    this.resizeView();
   }
 
   startMatch() {
@@ -147,6 +169,7 @@ export class BarangayScene extends Phaser.Scene {
       { kid: this.bot(480, 210, 'sheena'), axis: 'y', position: 480, offset: 1.3 },
     ];
     this.ui.location('match'); this.ui.status(this.match); this.ui.hint('Get ready! Cross to the far green strip, then return home.');
+    this.resizeView();
   }
 
   setTouch(x: number, y: number) { this.controls = { x, y }; this.target = undefined; }
@@ -223,8 +246,9 @@ export class BarangayScene extends Phaser.Scene {
         else this.emote();
       }
       const camera = this.cameras.main;
-      camera.scrollX = Math.round(Phaser.Math.Linear(camera.scrollX, Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), .12));
-      camera.scrollY = Math.round(Phaser.Math.Linear(camera.scrollY, Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600), .12));
+      const vw = camera.width / camera.zoom, vh = camera.height / camera.zoom;
+      camera.scrollX = Math.round(Phaser.Math.Linear(camera.scrollX, Phaser.Math.Clamp(this.player.x - vw / 2, 0, Math.max(0, HUB_SIZE.width - vw)), .12));
+      camera.scrollY = Math.round(Phaser.Math.Linear(camera.scrollY, Phaser.Math.Clamp(this.player.y - vh / 2, 0, Math.max(0, HUB_SIZE.height - vh)), .12));
       const miniPlayer = document.querySelector('#hub-map-player'); miniPlayer?.setAttribute('cx', String(this.player.x / HUB_SIZE.width * 136)); miniPlayer?.setAttribute('cy', String(this.player.y / HUB_SIZE.height * 85));
       const miniView = document.querySelector('#hub-map-view'); miniView?.setAttribute('x', String(camera.scrollX / HUB_SIZE.width * 136)); miniView?.setAttribute('y', String(camera.scrollY / HUB_SIZE.height * 85));
       const gameElement = document.querySelector<HTMLElement>('#game')!;
@@ -248,7 +272,7 @@ export class BarangayScene extends Phaser.Scene {
           const distance = segmentDistance({ x: 0, y: 0 }, { x: previous.x - last.x, y: previous.y - last.y }, { x: this.player.x - guard.kid.x, y: this.player.y - guard.kid.y });
           if (distance < 22 && tag(this.match!)) {
             this.player.x = SPAWN.x; this.player.y = SPAWN.y; this.target = undefined;
-            this.ui.sound('tag'); this.cameras.main.shake(120, 0.003); this.say('Tagged! Try another way.');
+            this.ui.sound('tag'); this.ui.failure?.('hit'); this.cameras.main.shake(120, 0.003); this.say('Tagged! Try another way.');
           }
         });
         const result = checkpoint(this.match, this.player);

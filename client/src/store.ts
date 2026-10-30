@@ -22,10 +22,11 @@ export interface Profile {
   records: RecordBook;
   wardrobe: Wardrobe;
   phoneFinds: number;
+  vibration: boolean;
 }
 export const STORAGE_KEY = 'laro.offline.profile.v1';
 export let storageAvailable = true;
-const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', records: freshRecords(), wardrobe: freshWardrobe(), phoneFinds: 0 };
+const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', records: freshRecords(), wardrobe: freshWardrobe(), phoneFinds: 0, vibration: true };
 const freshProfile = (): Profile => ({ ...defaults, records: freshRecords(), wardrobe: freshWardrobe() });
 const number = (value: unknown, max = 1_000_000) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(0, Math.floor(value))) : 0;
 
@@ -34,7 +35,7 @@ export function normalizeProfile(value: unknown): Profile {
     const records = freshRecords();
     for (const id of RECORD_IDS) {
       const item = raw.records?.[id];
-      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'lubid' ? 30 : id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
+      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'lubid' ? Number.MAX_SAFE_INTEGER : id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
     }
     return {
       name: typeof raw.name === 'string' && raw.name.trim() && raw.name.trim() !== 'Kaibigan' ? raw.name.trim().slice(0, 16) : defaults.name,
@@ -46,6 +47,7 @@ export function normalizeProfile(value: unknown): Profile {
       jolenDifficulty: isDamaDifficulty(raw.jolenDifficulty) ? raw.jolenDifficulty : 'easy',
       records,
       wardrobe: normalizeWardrobe(raw.wardrobe), phoneFinds: number(raw.phoneFinds),
+      vibration: typeof raw.vibration === 'boolean' ? raw.vibration : true,
     };
 }
 export function loadProfile(): Profile {

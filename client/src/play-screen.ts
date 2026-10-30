@@ -8,9 +8,12 @@ export class PlayScreen {
   private lockedOrientation = false;
   private busy = false;
   private scrollY = 0;
+  private hintTimer = 0;
+  private hintPortrait = false;
+  menuOpen = false;
   private readonly doc = document as FullscreenDocument;
 
-  constructor(private panel: HTMLElement, private button: HTMLElement, private refresh: () => void) {
+  constructor(private panel: HTMLElement, private button: HTMLElement, private refresh: () => void, private menuChanged: (open: boolean) => void = () => {}) {
     document.addEventListener('fullscreenchange', this.nativeChanged);
     document.addEventListener('webkitfullscreenchange', this.nativeChanged);
     window.addEventListener('resize', this.resize);
@@ -18,10 +21,19 @@ export class PlayScreen {
     window.visualViewport?.addEventListener('scroll', this.resize);
     new ResizeObserver(() => {
       if (this.active) this.panel.style.setProperty('--play-stage-height', `${this.panel.querySelector<HTMLElement>('.game-shell')!.clientHeight}px`);
+      if (this.active) requestAnimationFrame(this.refresh);
     }).observe(this.panel.querySelector('.game-shell')!);
   }
 
   get active() { return this.panel.classList.contains('play-fullscreen'); }
+  toggleMenu() { if (this.active) this.setMenu(!this.menuOpen); }
+  closeMenu() { this.setMenu(false); }
+  private setMenu(value: boolean) {
+    this.menuOpen = value; this.panel.classList.toggle('nav-open', value);
+    this.panel.querySelector('#play-menu')!.setAttribute('aria-expanded', String(value));
+    (this.panel.querySelector('#fullscreen-nav') as HTMLElement).hidden = this.active && this.panel.classList.contains('landscape-screen') && !value;
+    this.menuChanged(value);
+  }
   private get nativeElement() { return this.doc.fullscreenElement ?? this.doc.webkitFullscreenElement; }
   private get touch() { return navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || window.innerWidth <= 720; }
   private nativeChanged = () => {
@@ -39,8 +51,16 @@ export class PlayScreen {
     this.panel.style.setProperty('--play-top', `${viewport?.offsetTop ?? 0}px`); this.panel.style.setProperty('--play-left', `${viewport?.offsetLeft ?? 0}px`);
     const portrait = height > width;
     this.panel.classList.toggle('portrait-screen', portrait);
+    this.panel.classList.toggle('landscape-screen', !portrait);
     this.panel.classList.toggle('touch-screen', this.touch);
-    this.panel.querySelector<HTMLElement>('#rotate-hint')!.hidden = !this.touch || !portrait;
+    const hint = this.panel.querySelector<HTMLElement>('#rotate-hint')!;
+    if (this.touch && portrait && !this.hintPortrait) {
+      this.hintPortrait = true; hint.hidden = false; clearTimeout(this.hintTimer);
+      this.hintTimer = window.setTimeout(() => { hint.hidden = true; }, 3000);
+    } else if (!this.touch || !portrait) { clearTimeout(this.hintTimer); hint.hidden = true; this.hintPortrait = false; }
+    (this.panel.querySelector('#play-menu') as HTMLElement).hidden = portrait;
+    (this.panel.querySelector('#fullscreen-nav') as HTMLElement).hidden = !portrait && !this.menuOpen;
+    if (portrait && this.menuOpen) this.closeMenu();
     this.panel.style.setProperty('--play-stage-height', `${this.panel.querySelector<HTMLElement>('.game-shell')!.clientHeight}px`);
     requestAnimationFrame(this.refresh);
   };
@@ -87,7 +107,10 @@ export class PlayScreen {
   private cleanup() {
     if (this.lockedOrientation) { screen.orientation?.unlock?.(); this.lockedOrientation = false; }
     this.nativeEntered = false;
-    this.panel.classList.remove('play-fullscreen', 'portrait-screen', 'touch-screen');
+    clearTimeout(this.hintTimer); this.hintPortrait = false; this.closeMenu();
+    this.panel.classList.remove('play-fullscreen', 'portrait-screen', 'landscape-screen', 'touch-screen', 'nav-open');
+    (this.panel.querySelector('#play-menu') as HTMLElement).hidden = true;
+    (this.panel.querySelector('#fullscreen-nav') as HTMLElement).hidden = false;
     document.body.classList.remove('expanded-game');
     delete this.panel.dataset.displayMode;
     this.panel.querySelector<HTMLElement>('#rotate-hint')!.hidden = true;

@@ -1,0 +1,26 @@
+/* Navigation becomes an optional drawer; gameplay receives the full remaining viewport. */
+#game-display.play-fullscreen.landscape-screen{grid-template-rows:36px minmax(0,1fr)}
+.play-fullscreen.landscape-screen .world-toolbar{height:36px;min-height:0;padding-inline:10px}
+.play-fullscreen.landscape-screen .tiny-button{min-height:36px;min-width:40px;font-size:17px}
+.play-fullscreen.landscape-screen #play-menu{font:12px monospace;min-width:52px;border:1px solid #8ca371;border-radius:4px;padding:6px 9px}
+.play-fullscreen.landscape-screen .world-bottom{position:absolute;right:108px;bottom:10px;z-index:5;height:12px;min-height:0;padding:0;pointer-events:none;background:transparent}
+.play-fullscreen.landscape-screen .world-bottom .hint,.play-fullscreen.landscape-screen .player-chip{display:none}
+.play-fullscreen.landscape-screen .fullscreen-nav{position:absolute;inset:auto env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);height:54px;z-index:20;background:#213d2bf5;box-shadow:0 -5px 20px #0a211b55;justify-content:flex-start}
+.play-fullscreen.landscape-screen .fullscreen-nav[hidden]{display:none!important}
+.play-fullscreen.landscape-screen.nav-open .world-bottom{display:none}
+#finish-lubid{position:absolute;left:12px;bottom:12px;z-index:6;background:#294932eb;border:1px solid #cfc28b;color:#efddad;padding:12px 15px;border-radius:5px;font:13px monospace;min-height:44px;touch-action:manipulation}
+#finish-lubid:disabled{opacity:.6}
+.dama-square:disabled{pointer-events:none}
+.game-shell[data-activity=lubid] .player-chip{display:none}
+@media(orientation:landscape){
+ .play-fullscreen .jolen-stage{display:grid;grid-template-columns:minmax(105px,1fr) minmax(0,auto) minmax(145px,1fr);grid-template-rows:minmax(0,1fr);gap:10px;padding:8px 12px}
+ .play-fullscreen .jolen-scoreboard{flex-direction:column;justify-content:center;align-items:center;gap:22px;min-width:0}
+ .play-fullscreen .jolen-scoreboard>span{order:0;width:auto;line-height:1.7}
+ .play-fullscreen .jolen-court{height:100%;width:calc((var(--play-stage-height,300px) - 16px)*900/560);max-width:calc(var(--play-width,100vw) - 294px);grid-column:2}
+ .play-fullscreen .jolen-controls{flex-direction:column;justify-content:center;align-items:stretch;gap:18px;min-width:0}
+ .play-fullscreen .jolen-controls>label{flex:none;flex-direction:column;align-items:stretch;gap:10px;min-width:0}
+ .play-fullscreen .jolen-power-group{flex:none;min-width:0}.play-fullscreen .jolen-power-group>span{line-height:1.5;font-size:9px}
+ .play-fullscreen .jolen-controls button{min-height:44px;font-size:15px}
+ .play-fullscreen .retro-phone{width:min(62vw,calc((var(--play-stage-height,300px) - 100px)*1.75 + 60px));max-width:620px}
+ .play-fullscreen .retro-console{min-width:221px}
+}

@@ -116,7 +116,8 @@ export class DamaGame implements ActivityControls {
   private stopPlayback() { cancelAnimationFrame(this.animationFrame); this.animationFrame = 0; this.playback = undefined; }
 
   private click(at: number) {
-    if (this.paused || this.ui.blocked() || this.finished || this.state.mode === 'bot' && this.state.turn === -1) return;
+    if (this.paused || this.ui.blocked() || this.finished) return;
+    if (this.state.mode === 'bot' && this.state.turn === -1) { this.ui.failure?.('mistake'); return; }
     if (this.selected >= 0) {
       const candidates = this.moves.filter(move => move.from === this.selected && this.prefix.every((step, i) => move.path[i] === step) && move.path[this.prefix.length] === at);
       if (candidates.length) {
@@ -127,10 +128,10 @@ export class DamaGame implements ActivityControls {
         return;
       }
     }
-    if (this.prefix.length) { this.ui.hint('Finish this capture chain: choose a highlighted square.'); return; }
+    if (this.prefix.length) { this.ui.failure?.('mistake'); this.ui.hint('Finish this capture chain: choose a highlighted square.'); return; }
     if (Math.sign(this.state.board[at]) === this.state.turn && this.moves.some(move => move.from === at)) {
       this.selected = at; this.render();
-    } else this.ui.hint(this.moves[0]?.captures.length ? 'A capture is required. Choose a glowing piece and follow the longest chain.' : 'Select one of your pieces, then a highlighted destination.');
+    } else { this.ui.failure?.('mistake'); this.ui.hint(this.moves[0]?.captures.length ? 'A capture is required. Choose a glowing piece and follow the longest chain.' : 'Select one of your pieces, then a highlighted destination.'); }
   }
 
   private render() {
@@ -159,6 +160,12 @@ export class DamaGame implements ActivityControls {
       }).join('')}</div></div>
       <div class="dama-footer"><span><i class="piece-dot gold"></i> Gold ${counts[0]} <i class="piece-dot teal"></i> Teal ${counts[1]}</span><span id="capture-rule">${this.moves[0]?.captures.length ? `${this.moves[0].captures.length}-piece capture required` : 'Select a piece to see its moves'}</span><span id="dama-move-note" ${this.playback || this.lastBotMove ? '' : 'hidden'}>${this.lastBotMove}</span><button id="dama-resign" class="text-button">Resign match</button><small id="dama-save">Match saved automatically on this device</small></div>`;
     const portrait = this.element.querySelector<HTMLCanvasElement>('#dama-portrait');
+    const boardElement = this.element.querySelector<HTMLElement>('.dama-board')!;
+    boardElement.onpointerdown = event => {
+      if (this.paused || this.ui.blocked() || this.finished) return;
+      const box = boardElement.getBoundingClientRect(), row = Math.floor((event.clientY - box.top) / box.height * 8), column = Math.floor((event.clientX - box.left) / box.width * 8);
+      if (row >= 0 && row < 8 && column >= 0 && column < 8 && (row + column) % 2 === 0) { this.ui.failure?.('mistake'); this.ui.hint('Dama pieces move on the dark squares.'); }
+    };
     if (portrait) { const appearance = BOT_APPEARANCES[opponent.character]; paintCharacterPreview(portrait, appearance.look, [...COLORS, '#c97969'][appearance.color]); }
     this.element.querySelectorAll<HTMLButtonElement>('[data-square]').forEach(button => {
       button.onclick = () => this.click(Number(button.dataset.square));

@@ -18,3 +18,8 @@ export function phoneSpotForPage() {
   try { sessionStorage.setItem('laro.phone.last-spot', pageSpot.id); } catch { /* No persistent location is required. */ }
   return pageSpot;
 }
+export function relocatePhone() {
+  pageSpot = choosePhoneSpot(Math.random, pageSpot?.id);
+  try { sessionStorage.setItem('laro.phone.last-spot', pageSpot.id); } catch { /* Relocation works without storage. */ }
+  return pageSpot;
+}

@@ -1,3 +1,4 @@
+import { screenNav } from '../helpers/screen-nav';
 import { test, expect, type Page } from '@playwright/test';
 import { initialJolen, chooseJolenShot, shootJolen, stepJolen, marblesMoving, nextJolenTurn, jolenFinished } from '../../client/src/games/jolen-rules';
 test.use({ hasTouch: true });
@@ -34,7 +35,7 @@ test('the themed loading screen appears before the game and About has the credit
   await page.unroute('**/assets/*.js');
   await page.locator('#about-button').click(); await expect(page.getByRole('heading', { name: 'About LARO' })).toBeVisible();
   await expect(page.locator('.about-credits')).toContainText('tphilo games'); await expect(page.locator('.about-credits')).toContainText('developed by Sab');
-  await expect(page.locator('#about-version')).toHaveText('Version 0.8.0-alpha'); await page.locator('#about-close').click();
+  await expect(page.locator('#about-version')).toHaveText('Version 0.9.0-alpha'); await page.locator('#about-close').click();
   await expect(page.locator('#hub-map')).toContainText('6 PLACES'); await expect(page.locator('[data-game]')).toHaveCount(6);
 });
 test('Jolen has fast timed power, persistent shooters, visible bot motion, and no early-leave rewards', async ({ page }) => {
@@ -65,12 +66,12 @@ test('Jolen landscape fallback keeps court, aiming controls, and About inside th
   await page.addInitScript(() => { HTMLElement.prototype.requestFullscreen = () => Promise.reject(new Error('Mobile fallback')); });
   await openJolen(page, 'master'); await expect(page.locator('#jolen-bot')).toContainText('Tatay Efren');
   await page.locator('#fullscreen-button').click(); await expect(page.locator('#game-display')).toHaveClass(/play-fullscreen/);
-  for (const selector of ['#jolen-canvas', '#jolen-angle', '#jolen-shoot', '#fullscreen-nav']) {
+  for (const selector of ['#jolen-canvas', '#jolen-angle', '#jolen-shoot']) {
     const box = (await page.locator(selector).boundingBox())!; expect(box.x).toBeGreaterThanOrEqual(0); expect(box.y).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(933); expect(box.y + box.height).toBeLessThanOrEqual(431); expect(box.height).toBeGreaterThan(10);
   }
   await expect(page.locator('.touch-controls')).toBeHidden(); await page.screenshot({ path: 'artifacts/jolen-mobile-landscape.png' });
-  await page.locator('[data-screen-nav="about-button"]').click(); await expect(page.locator('#about-version')).toBeVisible(); await page.locator('#about-close').click();
-  await page.locator('#exit-play-screen').click(); await page.setViewportSize({ width: 390, height: 844 });
+  await screenNav(page, 'about-button'); await expect(page.locator('#about-version')).toBeVisible(); await page.locator('#about-close').click();
+  await page.locator('#fullscreen-button').click(); await page.setViewportSize({ width: 390, height: 844 });
   const shell = (await page.locator('#game-shell').boundingBox())!, content = (await page.locator('#jolen-stage').boundingBox())!; expect(content.y - shell.y).toBeLessThan(5);
   await page.screenshot({ path: 'artifacts/jolen-mobile-portrait.png', fullPage: true });
   await expect(page.locator('#about-button')).toBeVisible();

@@ -1,3 +1,4 @@
+import { screenNav } from '../helpers/screen-nav';
 import { test, expect, type Page } from '@playwright/test';
 
 test.use({ hasTouch: true });
@@ -49,10 +50,10 @@ test('native fullscreen includes navigation and dialogs and can be exited cleanl
   await expect(page.locator('html')).toHaveAttribute('data-orientation-request', 'landscape');
   expect(await page.evaluate(() => document.fullscreenElement?.contains(document.querySelector('#fullscreen-nav')))).toBe(true);
   await expect(page.locator('#touch-pad')).toBeVisible(); await expect(page.locator('#touch-run')).toBeVisible();
-  await page.locator('[data-screen-nav="nav-play"]').click(); await page.locator('[data-menu-game="tinik"]').click(); await page.locator('#tinik-practice').click();
+  await screenNav(page, 'nav-play'); await page.locator('[data-menu-game="tinik"]').click(); await page.locator('#tinik-practice').click();
   await expect(page.locator('#game')).toHaveAttribute('data-mode', 'tinik');
   await expect(page.locator('#game')).toHaveAttribute('data-jump-state', 'run'); await page.locator('#activity-action').click(); await expect(page.locator('#game')).toHaveAttribute('data-jump-state', 'air');
-  await page.locator('[data-screen-nav="guide-button"]').click(); await expect(page.getByRole('dialog')).toBeVisible();
+  await screenNav(page, 'guide-button'); await expect(page.getByRole('dialog')).toBeVisible();
   expect(await page.evaluate(() => document.fullscreenElement?.contains(document.querySelector('#modal')))).toBe(true);
   await page.locator('#close-modal').click(); await page.screenshot({ path: 'artifacts/laro-native-landscape.png' });
   await page.evaluate(() => document.exitFullscreen()); await expect(page.locator('#game-display')).not.toHaveClass(/play-fullscreen/);
@@ -69,15 +70,15 @@ test('denied fullscreen and orientation still provide a working mobile landscape
   await ready(page); await page.locator('#fullscreen-button').click();
   await expect(page.locator('#game-display')).toHaveAttribute('data-display-mode', 'immersive'); await expect(page.locator('#rotate-hint')).toBeVisible();
   await page.setViewportSize({ width: 844, height: 390 }); await expect(page.locator('#rotate-hint')).toBeHidden();
-  await page.locator('[data-screen-nav="nav-play"]').click(); await page.locator('[data-menu-game="dama"]').click();
+  await screenNav(page, 'nav-play'); await page.locator('[data-menu-game="dama"]').click();
   await page.locator('#dama-difficulty').selectOption('master'); await page.locator('#dama-bot').click();
-  const board = (await page.locator('.dama-board').boundingBox())!, nav = (await page.locator('#fullscreen-nav').boundingBox())!;
-  expect(board.y).toBeGreaterThanOrEqual(44); expect(board.y + board.height).toBeLessThan(nav.y); expect(board.width).toBeGreaterThan(200);
+  const board = (await page.locator('.dama-board').boundingBox())!, nav = (await page.locator('#game-shell').boundingBox())!;
+  expect(board.y).toBeGreaterThanOrEqual(nav.y); expect(board.y + board.height).toBeLessThanOrEqual(nav.y + nav.height); expect(board.width).toBeGreaterThan(200);
   const heading = (await page.locator('.dama-heading').boundingBox())!, footer = (await page.locator('.dama-footer').boundingBox())!;
-  expect(heading.y).toBeGreaterThanOrEqual(44); expect(heading.x + heading.width).toBeLessThan(board.x);
-  expect(footer.x).toBeGreaterThan(board.x + board.width); expect(footer.y + footer.height).toBeLessThan(nav.y);
+  expect(heading.y).toBeGreaterThanOrEqual(nav.y); expect(heading.x + heading.width).toBeLessThan(board.x);
+  expect(footer.x).toBeGreaterThan(board.x + board.width); expect(footer.y + footer.height).toBeLessThanOrEqual(nav.y + nav.height);
   await page.locator('[data-square="40"]').click(); await page.locator('[data-square="33"]').click(); await expect(page.locator('#dama-stage')).toHaveAttribute('data-ply', '2');
-  await page.locator('[data-screen-nav="settings-button"]').click(); await expect(page.locator('#settings-dama-difficulty')).toHaveValue('master'); await page.locator('#save-settings').click();
+  await screenNav(page, 'settings-button'); await expect(page.locator('#settings-dama-difficulty')).toHaveValue('master'); await page.locator('#save-settings').click();
   await page.screenshot({ path: 'artifacts/laro-fallback-landscape-dama.png' });
-  await page.locator('#exit-play-screen').click(); await expect(page.locator('#game-display')).not.toHaveClass(/play-fullscreen/); expect(errors).toEqual([]);
+  await page.locator('#fullscreen-button').click(); await expect(page.locator('#game-display')).not.toHaveClass(/play-fullscreen/); expect(errors).toEqual([]);
 });

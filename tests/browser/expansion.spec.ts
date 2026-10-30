@@ -49,16 +49,16 @@ test('rope taps react on pointer down, holding does not repeat, and pause freeze
   await page.locator('#game canvas').click({ position: { x: 100, y: 120 } }); await expect(game).toHaveAttribute('data-jumps', '2');
   await page.screenshot({ path: 'artifacts/luksong-lubid.png', fullPage: true });
 });
-test('thirty timed rope jumps win once, increase speed, and save coins and the clearance record', async ({ page }) => {
-  test.setTimeout(120000); await ready(page); await lubid(page); const game = page.locator('#game');
+test('endless rope passes 100, saves the record during play, and banks the reward only once', async ({ page }) => {
+  test.setTimeout(180000); await ready(page); await lubid(page); const game = page.locator('#game');
   const initial = Number(await game.getAttribute('data-rope-period'));
-  for (let cleared = 1; cleared <= 30; cleared++) {
+  for (let cleared = 1; cleared <= 105; cleared++) {
     await expect.poll(async () => Number(await game.getAttribute('data-rope-in')), { intervals: [15] }).toBeLessThan(.26);
     await page.locator('#activity-action').click(); await expect(game).toHaveAttribute('data-cleared', String(cleared));
   }
-  await expect(page.getByRole('heading', { name: 'Thirty jumps. Ang galing!' })).toBeVisible(); expect(Number(await game.getAttribute('data-rope-period'))).toBeLessThan(initial); await expect(page.locator('#coins')).toHaveText('90');
-  const record = await page.evaluate(key => JSON.parse(localStorage.getItem(key)!).records.lubid, profileKey); expect(record).toEqual({ wins: 1, played: 1, best: 30 });
-  await page.locator('#return-button').click(); await page.reload(); await expect(page.locator('#coins')).toHaveText('90');
+  await expect(game).toHaveAttribute('data-phase', 'playing'); expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!).records.lubid.best, profileKey)).toBe(105); await expect(page.locator('#coins')).toHaveText('0'); await page.locator('#finish-lubid').click(); await expect(page.getByRole('heading', { name: '105 jumps. A run to remember.' })).toBeVisible(); expect(Number(await game.getAttribute('data-rope-period'))).toBeLessThan(initial); await expect(page.locator('#coins')).toHaveText('52');
+  const record = await page.evaluate(key => JSON.parse(localStorage.getItem(key)!).records.lubid, profileKey); expect(record).toEqual({ wins: 1, played: 1, best: 105 });
+  await page.locator('#return-button').click(); await page.reload(); await expect(page.locator('#coins')).toHaveText('52');
 });
 test('the phone re-rolls on reload, can be found by walking, and both retro games work in its simulator', async ({ page }) => {
   test.setTimeout(100000); await ready(page); const game = page.locator('#game'), originalSpot = await game.getAttribute('data-phone-spot'); await page.reload(); await expect(game).toHaveAttribute('data-ready', 'true');
@@ -69,7 +69,7 @@ test('the phone re-rolls on reload, can be found by walking, and both retro game
   await page.screenshot({ path: 'artifacts/secret-phone-snake.png', fullPage: true });
   await expect(page.getByRole('heading', { name: 'Game over. One more?' })).toBeVisible({ timeout: 10000 });
   expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)!).records.snake.played, profileKey)).toBe(1);
-  await page.locator('#return-button').click(); await page.locator('#pocket-phone').click(); await page.locator('#phone-impact').click(); await page.locator('#retro-start').click();
+  const lastSpot = await game.getAttribute('data-phone-spot'); await page.locator('#return-button').click(); await expect(page.locator('#pocket-phone')).toBeHidden(); await findPhone(page); await page.locator('#phone-impact').click(); await page.locator('#retro-start').click();
   await page.keyboard.down('Space'); await expect.poll(async () => Number(await page.locator('#retro-stage').getAttribute('data-bullets'))).toBeGreaterThan(0); await page.keyboard.up('Space');
   await page.locator('#retro-help').click(); const helpFrozen = await page.locator('#retro-stage').getAttribute('data-time'); await page.waitForTimeout(200); expect(await page.locator('#retro-stage').getAttribute('data-time')).toBe(helpFrozen); await expect(page.locator('#retro-status')).toContainText('Paused'); await page.keyboard.press('Escape'); await expect(page.locator('#retro-help')).toHaveText('Controls');
   await page.locator('#pause-button').click(); const frozen = await page.locator('#retro-stage').getAttribute('data-time'); await page.waitForTimeout(200); expect(await page.locator('#retro-stage').getAttribute('data-time')).toBe(frozen); await page.locator('#resume-button').click();
@@ -98,9 +98,9 @@ test('the retro phone works offline with two touch controls and fits short lands
   await expect.poll(async () => JSON.parse((await page.locator('#retro-stage').getAttribute('data-player'))!).x).toBeGreaterThan(initial.x + 5); await expect.poll(async () => Number(await page.locator('#retro-stage').getAttribute('data-bullets'))).toBeGreaterThan(0);
   await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.locator('#pause-button').click(); const frozen = await page.locator('#retro-stage').getAttribute('data-player'); await page.waitForTimeout(150); expect(await page.locator('#retro-stage').getAttribute('data-player')).toBe(frozen); await page.locator('#resume-button').click();
   await page.locator('#pause-button').click(); await page.setViewportSize({ width: 932, height: 330 }); await page.locator('#resume-button').click();
-  for (const selector of ['#retro-canvas', '#retro-start', '.retro-controller', '#fullscreen-nav']) {
+  for (const selector of ['#retro-canvas', '#retro-start', '.retro-controller']) {
     const box = (await page.locator(selector).boundingBox())!; expect(box.y).toBeGreaterThanOrEqual(0); expect(box.y + box.height).toBeLessThanOrEqual(331); expect(box.height).toBeGreaterThan(15);
   }
-  await page.screenshot({ path: 'artifacts/secret-phone-landscape.png' }); await page.locator('#exit-play-screen').click();
-  await page.locator('#nav-hub').click(); await page.locator('#confirm-home').click(); await page.locator('#pocket-phone').click(); await page.locator('#phone-snake').click(); await expect(page.locator('#retro-stage')).toHaveAttribute('data-game', 'snake'); await context.setOffline(false);
+  await page.screenshot({ path: 'artifacts/secret-phone-landscape.png' }); await page.locator('#fullscreen-button').click();
+  await page.locator('#nav-hub').click(); await page.locator('#confirm-home').click(); await page.setViewportSize({ width: 1440, height: 1000 }); await findPhone(page); await page.locator('#phone-snake').click(); await expect(page.locator('#retro-stage')).toHaveAttribute('data-game', 'snake'); await context.setOffline(false);
 });

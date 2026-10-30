@@ -14,11 +14,13 @@ export class GameDirector {
   private dama?: DamaGame;
   private jolen?: JolenGame;
   private retro?: RetroGame;
+  private phoneSession = false;
+  private returnPhone() { if (!this.phoneSession) return; this.phoneSession = false; this.barangay.respawnPhone(); this.ui.phoneReturned?.(); }
   constructor(private game: Phaser.Game, private barangay: BarangayScene, private ui: ActivityUI) {}
 
   private stop() {
     this.activity?.resetInput(); this.activity = undefined; this.dama?.dispose(); this.dama = undefined; this.jolen?.dispose(); this.jolen = undefined;
-    this.retro?.dispose(); this.retro = undefined;
+    this.returnPhone(); this.retro?.dispose(); this.retro = undefined;
     for (const key of ['taguan', 'tinik', 'lubid']) if (this.game.scene.getScene(key)) this.game.scene.remove(key);
     this.barangay.resetInput();
     document.querySelector<HTMLElement>('#game')!.style.visibility = '';
@@ -31,7 +33,8 @@ export class GameDirector {
     this.stop(); this.active = id; this.game.scene.sleep('barangay');
     if (id === 'snake' || id === 'impact') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
-      this.retro = new RetroGame(this.ui, id); this.activity = this.retro;
+      this.phoneSession = true;
+      this.retro = new RetroGame({ ...this.ui, result: result => { this.returnPhone(); this.ui.result(result); } }, id); this.activity = this.retro;
     } else if (id === 'jolen') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.jolen = new JolenGame(this.ui); this.activity = this.jolen;
@@ -49,5 +52,6 @@ export class GameDirector {
   resetInput() { this.activity?.resetInput(); this.barangay.resetInput(); }
   updateAvatar() { this.barangay.updateAvatar(); this.activity?.updateAvatar(); }
   action() { if (this.activity) this.activity.action(); else if (this.active === 'hub') this.barangay.interact(); }
+  finishRun() { this.activity?.finishRun?.(); }
   emote() { if (this.active === 'hub' || this.active === 'patintero') this.barangay.emote(); }
 }

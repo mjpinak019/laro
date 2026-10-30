@@ -4,7 +4,8 @@ export type GameId = 'patintero' | 'dama' | 'taguan' | 'tinik' | 'jolen' | 'lubi
 export const PUBLIC_GAMES: GameId[] = ['jolen', 'patintero', 'dama', 'taguan', 'tinik', 'lubid'];
 export type NewGameId = Exclude<GameId, 'patintero'>;
 export type Sound = 'step' | 'tag' | 'turn' | 'win' | 'emote';
-export type Result = { game: NewGameId; won: boolean; draw?: boolean; title: string; summary: string; coins: number; record: number; practice?: boolean };
+export type FailureKind = 'mistake' | 'hit' | 'loss';
+export type Result = { game: NewGameId; won: boolean; draw?: boolean; title: string; summary: string; coins: number; record: number; practice?: boolean; failure?: boolean };
 export type HUD = { left: string; objective: string; right: string; countdown?: number };
 export interface ActivityUI {
   profile: Profile;
@@ -14,6 +15,9 @@ export interface ActivityUI {
   hint(text: string): void;
   sound(kind: Sound): void;
   result(value: Result): void;
+  failure?(kind?: FailureKind): void;
+  progress?(game: NewGameId, best: number): void;
+  phoneReturned?(): void;
 }
 export interface ActivityControls {
   setTouch(x: number, y: number): void;
@@ -22,9 +26,10 @@ export interface ActivityControls {
   resetInput(): void;
   action(): void;
   updateAvatar(): void;
+  finishRun?(): void;
 }
 export const GAMES: Record<GameId, { title: string; description: string; tags: string[]; category: string; record: string }> = {
-  lubid: { title: 'Luksong Lubid', description: 'Two friends turn the rope. Tap to jump, find the rhythm, and keep up as it gets faster.', tags: ['30 faster jumps', 'Tap · Jump · Space'], category: 'JUMP ROPE · SOLO + FRIENDS', record: 'MOST CLEARED' },
+  lubid: { title: 'Luksong Lubid', description: 'Keep jumping for a new record. Speed is capped, then the rope smoothly changes rhythm. How far beyond 100 can you go?', tags: ['Endless record run', '100 coins max / run'], category: 'JUMP ROPE · SOLO + FRIENDS', record: 'BEST JUMPS' },
   snake: { title: 'Snake', description: 'A secret pocket classic. Eat, grow, and avoid the walls on your little monochrome phone.', tags: ['Secret phone game', 'Swipe or keypad'], category: 'HIDDEN RETRO GAME', record: 'HIGH SCORE' },
   impact: { title: 'Orbit Patrol', description: 'Pilot a tiny spacecraft through incoming waves on your secret pocket phone.', tags: ['Secret phone game', 'Move + hold Fire'], category: 'HIDDEN RETRO GAME', record: 'HIGH SCORE' },
   jolen: { title: 'Jolen', description: 'Aim from where your marble lands. Time the fast power bar and knock targets out of the chalk circle.', tags: ['15 target marbles', '5 bot opponents'], category: 'AIMING GAME · SOLO + BOT', record: 'MOST MARBLES' },

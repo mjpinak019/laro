@@ -16,8 +16,10 @@ export abstract class ActivityScene extends Phaser.Scene implements ActivityCont
   protected facing = 0;
   protected finished = false;
   constructor(key: string, protected ui: ActivityUI) { super(key); }
+  resizeView() { if (!this.cameras?.main) return; const { width, height } = this.game.scale.gameSize; this.cameras.main.setSize(width, height).setZoom(1).removeBounds().setScroll((960 - width) / 2, (600 - height) / 2); }
 
   protected inputSetup() {
+    this.events.once('create', () => this.resizeView());
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT,E,SPACE,ESC', false) as Record<string, Phaser.Input.Keyboard.Key>;
     this.keys.ESC.on('down', () => { if (!this.blocked()) document.querySelector<HTMLButtonElement>('#pause-button')?.click(); });
     window.addEventListener('blur', this.resetInput);

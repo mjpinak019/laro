@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { ActivityScene } from './base-scene';
 import type { ActivityUI } from './types';
-import { initialLubid, jumpLubid, LUBID, lubidJumpHeight, lubidPeriod, tickLubid } from './lubid-rules';
+import { initialLubid, jumpLubid, LUBID, lubidJumpHeight, lubidCoins, finishLubid, tickLubid } from './lubid-rules';
 import { characterTexture, CHARACTERS } from '../characters';
 import { CHARACTER_ORIGIN } from '../sprite-outline';
 
@@ -39,15 +39,31 @@ export class LubidScene extends ActivityScene {
     this.snapshot('lubid', this.run.phase === 'ready' ? 'ready' : this.finished ? 'finished' : 'playing');
     const el = document.querySelector<HTMLElement>('#game')!;
     el.dataset.cleared = String(this.run.cleared); el.dataset.ropeIn = (this.run.nextPass - this.run.time).toFixed(3); el.dataset.jumpAt = String(this.run.jumpAt); el.dataset.jumps = String(this.run.jumps); el.dataset.jumpHeight = lubidJumpHeight(this.run).toFixed(2);
-    el.dataset.ropePeriod = lubidPeriod(this.run.cleared, this.run.difficulty).toFixed(3);
+    el.dataset.ropePeriod = (1 / this.run.rate).toFixed(3); el.dataset.ropeRate = this.run.rate.toFixed(5);
+    el.dataset.pendingCoins = String(lubidCoins(this.run.cleared));
   }
-  private status() { this.ui.hud({ left: '♥ '.repeat(this.run.lives), objective: `${this.run.cleared} / ${LUBID.target} CLEAR`, right: `${(60 / lubidPeriod(this.run.cleared, this.run.difficulty)).toFixed(0)} RPM`, countdown: this.run.phase === 'ready' ? this.run.ready : undefined }); }
+  private status() {
+    this.ui.hud({ left: '♥ '.repeat(this.run.lives), objective: `${this.run.cleared} JUMPS · BEST ${Math.max(this.run.cleared, this.ui.profile.records.lubid.best)}`, right: `${(60 * this.run.rate).toFixed(0)} RPM`, countdown: this.run.phase === 'ready' ? this.run.ready : undefined });
+    const finish = document.querySelector<HTMLButtonElement>('#finish-lubid');
+    if (finish) { finish.disabled = this.run.phase !== 'playing'; finish.textContent = `Finish · ${lubidCoins(this.run.cleared)}/${LUBID.coinCap} coins`; }
+  }
+  finishRun() { if (!this.blocked() && finishLubid(this.run)) this.finish(); }
+  private finish() {
+    if (this.finished) return;
+    this.finished = true; this.snapshotRun(); const won = this.run.cleared >= LUBID.milestone;
+    this.ui.sound(won ? 'win' : this.run.lives === 0 ? 'tag' : 'emote');
+    this.ui.result({ game: 'lubid', won, failure: this.run.lives === 0, title: `${this.run.cleared} jumps. A run to remember.`, summary: `Best: ${this.ui.profile.records.lubid.best} jumps. Endless play has no final jump. Earn 1 coin per 2 clearances, capped at ${LUBID.coinCap} coins per run.`, coins: lubidCoins(this.run.cleared), record: this.run.cleared });
+  }
   update(time: number, milliseconds: number) {
     if (this.checkPause()) return;
     const result = tickLubid(this.run, milliseconds / 1000);
-    if (result) { this.feedback = result === 'clear' ? 'NICE JUMP!' : 'ROPE HIT · TRY AGAIN'; this.feedbackUntil = this.run.time + .65; this.ui.sound(result === 'clear' ? 'turn' : 'tag'); }
-    const until = this.run.nextPass - this.run.time, period = lubidPeriod(this.run.cleared, this.run.difficulty);
-    const angle = Math.PI - until / period * Math.PI * 2, middleY = 340 - 95 * Math.cos(angle);
+    if (result) {
+      this.feedback = result === 'clear' ? this.run.cleared === LUBID.milestone ? '100! KEEP GOING!' : 'NICE JUMP!' : 'ROPE HIT · TRY AGAIN';
+      this.feedbackUntil = this.run.time + .65; this.ui.sound(result === 'clear' ? 'turn' : 'tag');
+      if (result === 'clear') this.ui.progress?.('lubid', this.run.cleared); else this.ui.failure?.('hit');
+    }
+    const until = this.run.nextPass - this.run.time;
+    const angle = Math.PI + this.run.rotation * Math.PI * 2, middleY = 340 - 95 * Math.cos(angle);
     this.rope.clear().lineStyle(5, 0x705538); this.rope.setDepth(middleY > 404 ? 436 : 430);
     for (let index = 0; index < 48; index++) {
       const a = index / 48, b = (index + 1) / 48;
@@ -57,11 +73,8 @@ export class LubidScene extends ActivityScene {
     this.drawPlayer({ x: 480, y: 435 }, time, false, { x: 0, y: 0 }, lubidJumpHeight(this.run));
     this.guide.setText(this.run.phase === 'ready' ? 'GET READY' : this.run.time < this.feedbackUntil ? this.feedback : until < .26 ? 'JUMP!' : 'WATCH THE ROPE');
     this.guide.setColor(until < .26 ? '#f4d080' : '#f8edce');
-    this.info.setText(`Speed ${Math.round(60 / period)} RPM · ${this.run.difficulty.toUpperCase()} · Tap when the rope comes down`);
+    this.info.setText(`${Math.round(60 * this.run.rate)} RPM · ${this.run.cleared >= LUBID.variationAt ? 'CHANGING RHYTHM' : this.run.difficulty.toUpperCase()} · ENDLESS`);
     this.status(); this.snapshotRun();
-    if (this.run.phase === 'won' || this.run.phase === 'lost') {
-      this.finished = true; const won = this.run.phase === 'won'; this.snapshotRun(); this.ui.sound(won ? 'win' : 'tag');
-      this.ui.result({ game: 'lubid', won, title: won ? 'Thirty jumps. Ang galing!' : 'One more jump?', summary: `${this.run.cleared} ropes cleared. The rope speeds up after every successful jump.`, coins: won ? (this.run.difficulty === 'hard' ? 100 : this.run.difficulty === 'normal' ? 80 : 60) + this.run.lives * 10 : 5 + this.run.cleared * 2, record: this.run.cleared });
-    }
+    if (this.run.phase === 'finished') this.finish();
   }
 }

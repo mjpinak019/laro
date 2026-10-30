@@ -82,7 +82,7 @@ export class TinikScene extends ActivityScene {
 
   private fail() {
     if (!this.practice) this.lives--;
-    this.stage = 'stumble'; this.delay = 1.5; this.ui.sound('tag');
+    this.stage = 'stumble'; this.delay = 1.5; this.ui.sound('tag'); this.ui.failure?.('hit');
     const config = tinikStage(this.level, this.difficulty);
     this.feedback = this.lastTakeoff && this.lastTakeoff < config.takeoffMin ? 'A little later! You came down before clearing the hands.' : 'A little earlier! Watch the new run-up speed and takeoff marker.';
     this.message.setText('Oops! ' + (this.practice ? 'Try that height again.' : `${this.lives} chance${this.lives === 1 ? '' : 's'} left.`));

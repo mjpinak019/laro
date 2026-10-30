@@ -49,7 +49,7 @@ export class TaguanScene extends ActivityScene {
     this.seekerShadow = this.add.ellipse(this.seeker.x, this.seeker.y + 2, 28, 10, 0x294e38, .22);
     this.seekerSprite = this.add.image(this.seeker.x, this.seeker.y, characterTexture('audrey', BOT_APPEARANCES.audrey.color, 1)).setScale(2).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y);
     this.seekerName = this.add.text(this.seeker.x, this.seeker.y - 64, `${CHARACTERS.audrey} · TAYA`, { fontFamily: 'monospace', fontSize: '15px', color: '#fff0cf', backgroundColor: '#685044', padding: { x: 7, y: 4 } }).setOrigin(.5, 1).setDepth(1000);
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => { if (!this.blocked()) this.walkingTarget = { x: pointer.x, y: pointer.y }; });
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => { if (!this.blocked()) this.walkingTarget = this.cameras.main.getWorldPoint(pointer.x, pointer.y); });
     this.ui.location('taguan'); this.refresh();
   }
   action() { if (!this.blocked()) { this.crouched = !this.crouched; this.refresh(); } }

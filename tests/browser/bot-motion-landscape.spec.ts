@@ -1,3 +1,4 @@
+import { screenNav } from '../helpers/screen-nav';
 import { test, expect, type Page } from '@playwright/test';
 import { initialDama, positionKey, type Piece } from '../../client/src/games/dama-rules';
 
@@ -67,9 +68,9 @@ test('the mobile panel follows the visible viewport when browser bars change its
   });
   await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true'); await page.locator('#fullscreen-button').click();
   const panel = (await page.locator('#game-display').boundingBox())!; expect(panel.y).toBe(28); expect(panel.height).toBe(330);
-  const nav = (await page.locator('#fullscreen-nav').boundingBox())!; expect(nav.y + nav.height).toBeLessThanOrEqual(358);
+  await page.locator('#play-menu').click(); const nav = (await page.locator('#fullscreen-nav').boundingBox())!; expect(nav.y + nav.height).toBeLessThanOrEqual(358); await page.locator('#play-menu').click();
   await page.evaluate(() => { Object.assign(window.visualViewport!, { height: 360, offsetTop: 0 }); window.visualViewport!.dispatchEvent(new Event('resize')); });
   await expect.poll(async () => (await page.locator('#game-display').boundingBox())!.height).toBe(360);
-  await page.locator('[data-screen-nav="nav-play"]').click(); await page.locator('[data-menu-game="dama"]').click(); await page.locator('#dama-bot').click();
+  await screenNav(page, 'nav-play'); await page.locator('[data-menu-game="dama"]').click(); await page.locator('#dama-bot').click();
   const board = (await page.locator('.dama-table').boundingBox())!, stage = (await page.locator('#game-shell').boundingBox())!; expect(board.y).toBeGreaterThanOrEqual(stage.y); expect(board.y + board.height).toBeLessThanOrEqual(stage.y + stage.height + 1);
 });

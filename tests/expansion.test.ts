@@ -4,7 +4,7 @@ import { COSMETICS, buyCosmetic, equipCosmetic, freshWardrobe, normalizeWardrobe
 import { normalizeProfile } from '../client/src/store.ts';
 import { makeBackup, readBackup } from '../client/src/save-backup.ts';
 import { initialDama } from '../client/src/games/dama-rules.ts';
-import { initialLubid, jumpLubid, LUBID, lubidJumpHeight, lubidPeriod, tickLubid } from '../client/src/games/lubid-rules.ts';
+import { initialLubid, jumpLubid, LUBID, lubidJumpHeight, lubidPeriod, lubidCapPeriod, lubidCoins, finishLubid, tickLubid } from '../client/src/games/lubid-rules.ts';
 import { initialSnake, steerSnake, stepSnake, initialOrbit, tickOrbit } from '../client/src/games/retro-rules.ts';
 import { PHONE_SPOTS, choosePhoneSpot } from '../client/src/phone-spots.ts';
 import { HUB_OBSTACLES } from '../client/src/hub-obstacles.ts';
@@ -35,21 +35,32 @@ test('save files round-trip coins, purchases, clothes, records and an unfinished
 test('rope jumps start on input, ignore midair spam, and buffer a tap just before landing', () => {
   const state = initialLubid(); state.phase = 'playing'; assert.equal(jumpLubid(state), true); assert.equal(state.jumpAt, 0); state.time = .1; assert.equal(jumpLubid(state), false); assert.equal(state.buffered, false);
   assert.ok(lubidJumpHeight(state) > 30); state.time = LUBID.jumpDuration - .04; assert.equal(jumpLubid(state), false); assert.equal(state.buffered, true);
-  tickLubid(state, .05); assert.equal(state.jumps, 2); assert.equal(state.buffered, false); assert.equal(state.jumpAt, state.time);
+  tickLubid(state, .05); assert.equal(state.jumps, 2); assert.equal(state.buffered, false); assert.equal(state.jumpAt, LUBID.jumpDuration);
 });
-test('all rope difficulty levels remain clearable as the speed rises through thirty passes', () => {
+test('all rope difficulties remain clearable beyond 100 with capped, smoothly varying speed', () => {
   for (const difficulty of ['easy', 'normal', 'hard'] as const) {
     const state = initialLubid(difficulty); state.phase = 'playing';
-    for (let frame = 0; frame < 10000 && state.phase === 'playing'; frame++) {
+    let minimum = Infinity, maximum = 0;
+    for (let frame = 0; frame < 100000 && state.cleared < 500 && state.phase === 'playing'; frame++) {
       if (state.nextPass - state.time <= .24 && (state.jumpAt === null || state.time - state.jumpAt >= LUBID.jumpDuration)) jumpLubid(state);
+      const rate = state.rate;
       tickLubid(state, 1 / 120);
+      assert.ok(state.rate <= 1 / lubidCapPeriod(difficulty) + .000001); assert.ok(Math.abs(state.rate - rate) < .03);
+      if (state.cleared > 60) { minimum = Math.min(minimum, state.rate); maximum = Math.max(maximum, state.rate); }
     }
-    assert.equal(state.phase, 'won'); assert.equal(state.cleared, 30); assert.equal(state.lives, 3); assert.ok(lubidPeriod(29, difficulty) < lubidPeriod(0, difficulty)); assert.ok(lubidPeriod(29, difficulty) > LUBID.jumpDuration);
+    assert.equal(state.phase, 'playing'); assert.equal(state.cleared, 500); assert.equal(state.lives, 3); assert.ok(maximum - minimum > .25); assert.ok(lubidCapPeriod(difficulty) > LUBID.jumpDuration);
+    assert.equal(finishLubid(state), true); const ended = structuredClone(state); tickLubid(state, .05); assert.deepEqual(state, ended); assert.equal(finishLubid(state), false);
   }
 });
 test('no jumps loses three chances and finished rope results cannot advance again', () => {
   const state = initialLubid(); for (let n = 0; n < 1500; n++) tickLubid(state, 1 / 120);
-  assert.equal(state.phase, 'lost'); assert.equal(state.lives, 0); assert.equal(state.cleared, 0); const done = structuredClone(state); for (let n = 0; n < 200; n++) tickLubid(state, 1 / 120); assert.deepEqual(state, done); assert.equal(jumpLubid(state), false);
+  assert.equal(state.phase, 'finished'); assert.equal(state.lives, 0); assert.equal(state.cleared, 0); const done = structuredClone(state); for (let n = 0; n < 200; n++) tickLubid(state, 1 / 120); assert.deepEqual(state, done); assert.equal(jumpLubid(state), false);
+});
+test('rope rewards cap at 100 coins and extended records survive profile and backup normalization', () => {
+  assert.equal(lubidCoins(0), 0); assert.equal(lubidCoins(100), 50); assert.equal(lubidCoins(200), 100); assert.equal(lubidCoins(10000), 100);
+  const profile = normalizeProfile({ records: { lubid: { wins: 2, played: 3, best: 12345 } } });
+  assert.equal(profile.records.lubid.best, 12345); assert.equal(readBackup(JSON.stringify(makeBackup(profile))).profile.records.lubid.best, 12345);
+  assert.equal(profile.vibration, true); assert.equal(normalizeProfile({ vibration: false }).vibration, false);
 });
 test('Snake handles queued corner turns, food growth, no reversing, and terminal wall collisions', () => {
   const game = initialSnake(() => 0); game.food = { x: 9, y: 5 }; assert.equal(steerSnake(game, 'left'), false); stepSnake(game, () => 0); assert.equal(game.score, 10); assert.equal(game.body.length, 4);

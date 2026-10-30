@@ -79,7 +79,7 @@ export class RetroGame implements ActivityControls {
         while (this.accumulator >= snakeInterval(this.snake.score) && !this.snake.over) { this.accumulator -= snakeInterval(this.snake.score); const before = this.snake.score; stepSnake(this.snake); if (this.snake.score > before) this.ui.sound('turn'); }
         if (this.snake.over) this.finish();
       } else {
-        while (this.accumulator >= 1 / 120 && !this.orbit.over) { tickOrbit(this.orbit, 1 / 120, { x: Number(this.held.has('right')) - Number(this.held.has('left')), y: Number(this.held.has('down')) - Number(this.held.has('up')), firing: this.held.has('fire') }); this.accumulator -= 1 / 120; }
+        while (this.accumulator >= 1 / 120 && !this.orbit.over) { const lives = this.orbit.lives; tickOrbit(this.orbit, 1 / 120, { x: Number(this.held.has('right')) - Number(this.held.has('left')), y: Number(this.held.has('down')) - Number(this.held.has('up')), firing: this.held.has('fire') }); if (this.orbit.lives < lives) this.ui.failure?.('hit'); this.accumulator -= 1 / 120; }
         if (this.orbit.over) this.finish();
       }
       this.status();
