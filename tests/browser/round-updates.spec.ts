@@ -30,7 +30,7 @@ test('landscape canvas fills the stage, keeps pointer coordinates correct, and p
 
 test('phone relocates once after a finished game and again after leaving a second game early', async ({ page }) => {
   test.setTimeout(75000); await ready(page); const game = page.locator('#game'); await findPhone(page); const first = await game.getAttribute('data-phone-spot');
-  await page.locator('#phone-snake').click(); await page.locator('#retro-start').click(); await expect(page.getByRole('heading', { name: 'Game over. One more?' })).toBeVisible();
+  await page.locator('#phone-impact').click(); await page.locator('#retro-start').click(); await expect(page.getByRole('heading', { name: 'Game over. One more?' })).toBeVisible({ timeout: 20000 });
   const second = await game.getAttribute('data-phone-spot'); expect(second).not.toBe(first); await expect(page.locator('#pocket-phone')).toBeHidden();
   await page.locator('#return-button').click(); expect(await game.getAttribute('data-phone-spot')).toBe(second); await expect(game).toHaveAttribute('data-phone-found', 'false');
   await findPhone(page); await page.locator('#phone-impact').click(); await page.locator('#retro-start').click(); await page.locator('#nav-hub').click(); await page.locator('#confirm-home').click();

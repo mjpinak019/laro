@@ -24,8 +24,11 @@ and after finishing or leaving a phone-game session. Finding it unlocks
 the next Snake or Orbit Patrol session, with
 monochrome graphics, phone-key controls, high scores, and modest coin rewards.
 The two secrets stay out of the normal game picker. Snake supports swipes
-and buffered perpendicular turns. Orbit Patrol supports simultaneous movement
-and held fire, incoming waves, three lives, and a 60-second survival goal.
+and buffered perpendicular turns, with wraparound on every edge. Orbit Patrol
+supports simultaneous left-side movement and right-side held fire, fast scout
+ships, three lives, and a firing boss after each 24-second wave. Boss defeats
+restore one life (up to three) and loop into the next wave; difficulty caps
+keep late loops playable. The phone LCD always retains its 168:96 ratio.
 
 Progress saves locally. Downloadable, validated save backups transfer coins,
 owned/equipped clothes, avatar choices, records, and an unfinished Dama match.
@@ -50,7 +53,14 @@ rolling, and collisions. All movement pauses in dialogs or when the game is
 paused. Fixed-step physics is shared with bot planning. Jolen uses its own
 five difficulty levels and keeps the other street-game settings unchanged.
 
-The dirt circle is beside the schoolyard. Weng is a new girl character;
+Normal adds a fixed hole outside the circle; Hard through Extreme place
+one safe random hole at match start. It never moves mid-match. A direct
+shooter collision followed by the opponent falling into the hole is an
+instant win, even with fewer collected marbles. Easy has no hole. Hard and
+higher hide target/shooter guide rings.
+
+The dirt circle is beside the schoolyard. Pom is its new boy NPC and Easy
+opponent. Weng is now one of the Luksong Lubid rope holders;
 Amor keeps her existing appearance and location. Cosmetic marble shops,
 additional courts, and pass-and-play are future extensions.
 

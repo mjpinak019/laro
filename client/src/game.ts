@@ -10,6 +10,7 @@ import { BOT_APPEARANCES, CHARACTERS, characterTexture, type CharacterId, type C
 import { createPlayerArt, playerTexture } from './avatar-art';
 import { phoneSpotForPage, relocatePhone } from './phone-spots';
 import { GAMES } from './games/types';
+import { BarangayAnimals } from './wildlife';
 
 export interface GameUI {
   profile: Profile;
@@ -56,6 +57,7 @@ export class BarangayScene extends Phaser.Scene {
   private phone!: Phaser.GameObjects.Container;
   private phoneSpot = phoneSpotForPage();
   private phoneFound = false;
+  private animals!: BarangayAnimals;
   resizeView() {
     if (!this.cameras?.main || !this.player) return;
     const camera = this.cameras.main, { width, height } = this.game.scale.gameSize;
@@ -83,6 +85,7 @@ export class BarangayScene extends Phaser.Scene {
     createPlayerArt(this, this.ui.profile);
     this.background = this.add.image(0, 0, 'hub').setOrigin(0).setScale(2);
     this.hubProps = addWorldProps(this, 'hub');
+    this.animals = new BarangayAnimals(this);
     this.courtProps = addWorldProps(this, 'court').map(prop => prop.setVisible(false));
     this.hubProps.push(this.add.image(450, 720, 'world-dama-table').setScale(2).setOrigin(.5, 44 / 48).setDepth(720));
     for (const site of HUB_SITES.filter(site => site.game !== 'patintero')) {
@@ -145,7 +148,8 @@ export class BarangayScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height).setScroll(0, 0);
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
     this.cameras.main.setScroll(Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600));
-    this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'amor'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena'), this.bot(1030, 460, 'weng')];
+    this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'amor'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena'), this.bot(1030, 460, 'pom'), this.bot(530, 938, 'weng')];
+    this.animals.setVisible(true);
     this.ui.location('hub'); this.ui.status(null);
     this.ui.hint('Explore the larger barangay. Walk to a game marker and press E, or use Games.');
     this.resizeView();
@@ -156,6 +160,7 @@ export class BarangayScene extends Phaser.Scene {
     if (this.mode === 'hub') this.rememberHubPosition();
     this.blur(); this.clearKids(); this.mode = 'match'; this.pausedByUser = false;
     this.background.setTexture('court'); this.marker.setVisible(false);
+    this.animals.setVisible(false);
     this.hubProps.forEach(prop => prop.setVisible(false)); this.courtProps.forEach(prop => prop.setVisible(true));
     this.locationMarkers.forEach(marker => (marker as Phaser.GameObjects.Image).setVisible(false));
     this.phone.setVisible(false);
@@ -225,6 +230,7 @@ export class BarangayScene extends Phaser.Scene {
     if (running && time - this.lastStep > (fast ? 230 : 360)) { this.ui.sound('step'); this.lastStep = time; }
     this.bubble?.setPosition(this.player.x, this.player.y - 96);
     if (this.mode === 'hub') {
+      this.animals.update(dt, time);
       this.neighbors.forEach((kid, index) => {
         if (index > 0) { const dx = Math.cos(this.elapsed * 0.45 + index) * 9 * dt; kid.x += dx; this.drawKid(kid, time, Math.abs(dx) > 0.04, { x: dx, y: 0 }); }
         else this.drawKid(kid, time);

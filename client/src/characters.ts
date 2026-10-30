@@ -8,10 +8,11 @@ export const CHARACTERS = {
   tatayEfren: 'Tatay Efren',
   amor: 'Amor',
   weng: 'Weng',
+  pom: 'Pom',
 } as const;
 export const DEFAULT_PLAYER_NAME = 'Ikaw';
 export type AvatarGender = 'boy' | 'girl';
-export type CharacterLook = AvatarGender | 'mama-shoni' | 'tatay-efren' | 'ferdie' | 'mj' | 'audrey' | 'sheena' | 'weng' | 'weng-new';
+export type CharacterLook = AvatarGender | 'mama-shoni' | 'tatay-efren' | 'ferdie' | 'mj' | 'audrey' | 'sheena' | 'weng' | 'weng-new' | 'pom';
 export type CharacterId = keyof typeof CHARACTERS;
 export const BOT_APPEARANCES: Record<CharacterId, { look: CharacterLook; color: number; gender: AvatarGender; elderly: boolean }> = {
   mamaShoni: { look: 'mama-shoni', color: 4, gender: 'girl', elderly: true },
@@ -22,5 +23,6 @@ export const BOT_APPEARANCES: Record<CharacterId, { look: CharacterLook; color: 
   audrey: { look: 'audrey', color: 0, gender: 'girl', elderly: false },
   amor: { look: 'weng', color: 3, gender: 'girl', elderly: false },
   weng: { look: 'weng-new', color: 2, gender: 'girl', elderly: false },
+  pom: { look: 'pom', color: 0, gender: 'boy', elderly: false },
 };
 export const characterTexture = (look: CharacterLook, color: number, direction = 0, frame = 0) => `person-${look}-${color}-${direction}-${frame}`;

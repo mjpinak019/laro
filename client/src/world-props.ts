@@ -2,9 +2,10 @@ import type Phaser from 'phaser';
 import type { Rect } from './rules';
 
 export type WorldMap = 'hub' | 'court' | 'alley' | 'schoolyard';
-export type WorldPlacement = { id: string; kind: 'tree' | 'palm' | 'bench' | 'vase' | 'fence'; x: number; y: number; scale?: number; width?: number };
+export type WorldPlacement = { id: string; kind: 'tree' | 'palm' | 'bench' | 'vase' | 'fence' | 'sign'; x: number; y: number; scale?: number; width?: number };
 export const WORLD_PROPS: Record<WorldMap, WorldPlacement[]> = {
   hub: [
+    { id: 'maligaya-sign', kind: 'sign', x: 115, y: 275 },
     { id: 'plaza-tree', kind: 'tree', x: 220, y: 178, scale: .72 },
     { id: 'northwest-tree', kind: 'tree', x: 35, y: 42 },
     { id: 'north-tree', kind: 'tree', x: 74, y: 57, scale: .8 },
@@ -86,6 +87,7 @@ export const WORLD_PROPS: Record<WorldMap, WorldPlacement[]> = {
 
 export function propGroundPoint(prop: WorldPlacement) {
   const scale = prop.scale ?? 1;
+  if (prop.kind === 'sign') return { x: prop.x * 2, y: prop.y * 2 };
   if (prop.kind === 'tree') return { x: prop.x * 2, y: (prop.y + 8 * scale) * 2 };
   if (prop.kind === 'palm') return { x: (prop.x + 3 * scale) * 2, y: (prop.y + 5 * scale) * 2 };
   if (prop.kind === 'bench') return { x: (prop.x + 15) * 2, y: (prop.y + 13) * 2 };
@@ -94,6 +96,7 @@ export function propGroundPoint(prop: WorldPlacement) {
 }
 
 export function propFootprint(prop: WorldPlacement): Rect {
+  if (prop.kind === 'sign') return { x: prop.x * 2 - 5, y: prop.y * 2 - 7, width: 10, height: 10 };
   if (prop.kind === 'bench') return { x: prop.x * 2, y: (prop.y + 3) * 2, width: 60, height: 20 };
   if (prop.kind === 'vase') return { x: (prop.x - 4) * 2, y: (prop.y - 1) * 2, width: 16, height: 16 };
   if (prop.kind === 'fence') return { x: prop.x * 2, y: (prop.y + 12) * 2, width: (prop.width ?? 64) * 2, height: 10 };

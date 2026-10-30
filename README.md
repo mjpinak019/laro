@@ -2,7 +2,7 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.9.0 is a local game collection with a barangay hub, Jolen, Patintero,
+Alpha 0.10.0 is a local game collection with a barangay hub, Jolen, Patintero,
 Dama, Tagu-taguan, Luksong-tinik, and Luksong Lubid, plus two hidden phone
 games. All eight games work offline after the first complete online load.
 
@@ -18,7 +18,7 @@ An active signature suit covers the separate top and bottoms; select My
 own mix to show them. All designs are cosmetic and use the same collision
 size. The current player's sixteen walking/facing textures refresh in place.
 
-Luksong Lubid is south of the Dama table. Sheena and Ferdie hold the rope.
+Luksong Lubid is south of the Dama table. Weng and Ferdie hold the rope.
 Tap the screen, press Jump, or press Space to start a jump. Touch buttons
 react on pointer down, holding does not repeat, and a 75 ms landing buffer
 accepts closely timed taps. Play continues indefinitely, including beyond
@@ -54,9 +54,14 @@ browsers. A short throttle prevents overlapping signals on the same failure.
 
 Snake uses arrows/WASD, swipes, or phone keys 2/4/6/8. Food earns 10 points,
 the snake speeds up, and a finished run earns 2 coins per food up to 30.
+All four edges wrap; only self-collisions end a normal run.
 Orbit Patrol is an original side-scrolling monochrome shooter. Move with
-arrows/WASD or the pad and hold Fire/Space/5. Stop incoming ships and survive
-60 seconds with three lives. Escaped ships and collisions cost lives.
+arrows/WASD or the left pad and hold the right Fire button / Space / 5.
+Fast scouts mix with ordinary enemies. After 24 seconds a moving boss
+arrives and fires aimed spreads. Defeating it awards bonus points, restores
+one life (up to three), and starts the next, harder wave. Enemy speed,
+boss health and firing cadence are bounded. Escaped ships, collisions and
+hostile shots cost lives; the run loops until all three lives are lost.
 Finished runs earn 1 coin per 25 points up to 40. Both have pause, touch
 controls, recorded high scores, and a phone-style simulator without a real
 phone manufacturer's branding. Leaving any of these games early earns none.
@@ -79,17 +84,31 @@ slider to aim. Tap Tira (or Space) to start the power meter; tap again to
 shoot. The meter rises to full in 0.6 seconds and bounces back. Cancel
 returns to aiming. Escape, dialogs, and visibility pause freeze play.
 
-Jolen has its own five-level setting: Weng, Sheena, MJ, Ferdie, and Tatay
+Jolen has its own five-level setting: Pom, Sheena, MJ, Ferdie, and Tatay
 Efren. Bots plan using the same collision and friction rules as the player.
 Their aims, power selections, and shots are visible. A win earns 60–100 coins
 by difficulty; a finished loss earns 10. The new court is beside the schoolyard
 and appears in the game picker, Games menu, and six-location minimap.
-Girl NPC Weng is distinct from Amor; both remain in the barangay.
+Girl NPC Weng is distinct from Amor and now turns the rope in Luksong Lubid.
+Pom is a new boy character at the Jolen circle and its Easy opponent.
+
+The enlarged Jolen scoreboard stays readable on mobile. Easy has no hole;
+Normal uses a fixed hole outside the circle. Hard, Expert and Extreme
+randomize a safe hole once per match and remove the marble guide rings.
+After a direct shooter collision in the current shot, sinking the opposing
+shooter wins immediately regardless of score. Self entry and target marbles
+cannot trigger this win. The hole does not move between shots.
+
+Two dogs and two cats wander, rest and occasionally chase each other around
+solid map objects. They pause with the game and never interfere with games.
+The Maligaya sign is a separate depth-sorted object with a solid post.
+Luksong-tinik shows two seated children and outlined hands and feet: one
+through four hands, then one foot plus four hands, then two feet plus four.
 
 A pixel emblem and lowercase `tphilo games` wordmark welcome players while
 the barangay initializes. About is available in ordinary and fullscreen
 navigation and credits `tphilo games`, `developed by Sab`, and version
-`0.9.0-alpha`. The displayed version comes from `client/src/version.ts`.
+`0.10.0-alpha`. The displayed version comes from `client/src/version.ts`.
 Existing coins, avatars, records, and Dama saves are preserved. Jolen adds
 `records.jolen` and `jolenDifficulty` to the existing profile key.
 

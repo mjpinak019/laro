@@ -62,10 +62,10 @@ test('rope rewards cap at 100 coins and extended records survive profile and bac
   assert.equal(profile.records.lubid.best, 12345); assert.equal(readBackup(JSON.stringify(makeBackup(profile))).profile.records.lubid.best, 12345);
   assert.equal(profile.vibration, true); assert.equal(normalizeProfile({ vibration: false }).vibration, false);
 });
-test('Snake handles queued corner turns, food growth, no reversing, and terminal wall collisions', () => {
+test('Snake handles queued corner turns, food growth, no reversing, edge wrapping and self collisions', () => {
   const game = initialSnake(() => 0); game.food = { x: 9, y: 5 }; assert.equal(steerSnake(game, 'left'), false); stepSnake(game, () => 0); assert.equal(game.score, 10); assert.equal(game.body.length, 4);
   assert.equal(steerSnake(game, 'up'), true); assert.equal(steerSnake(game, 'left'), true); stepSnake(game); assert.deepEqual(game.body[0], { x: 9, y: 4 }); stepSnake(game); assert.deepEqual(game.body[0], { x: 8, y: 4 });
-  for (let n = 0; n < 30; n++) stepSnake(game); assert.equal(game.over, true); const final = structuredClone(game); stepSnake(game); assert.deepEqual(game, final);
+  for (let n = 0; n < 30; n++) stepSnake(game); assert.equal(game.over, false); game.body = [{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 2, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 2 }]; game.direction = 'right'; game.queue = []; stepSnake(game); assert.equal(game.over, true); const final = structuredClone(game); stepSnake(game); assert.deepEqual(game, final);
 });
 test('Snake permits moving into its vacated tail and wins when the board is filled', () => {
   const game = initialSnake(); game.body = [{ x: 1, y: 1 }, { x: 1, y: 2 }, { x: 0, y: 2 }, { x: 0, y: 1 }]; game.direction = 'left'; game.food = { x: 10, y: 5 }; stepSnake(game); assert.equal(game.over, false); assert.deepEqual(game.body[0], { x: 0, y: 1 });
@@ -78,9 +78,39 @@ test('Orbit controls move immediately, held fire has a cadence, hits score, and 
   game.nextEnemy = 100; game.enemies = [{ id: 0, x: 50, y: 50, baseY: 50, age: 0, hp: 1 }]; game.bullets = [{ x: 48, y: 50 }]; tickOrbit(game, 1 / 120, { x: 0, y: 0, firing: false }); assert.equal(game.score, 20);
   game.enemies = [0, 1, 2].map(id => ({ id, x: -10, y: 40, baseY: 40, age: 0, hp: 1 })); tickOrbit(game, 1 / 120, { x: 0, y: 0, firing: false }); assert.equal(game.over, true); assert.equal(game.lives, 0); const done = structuredClone(game); tickOrbit(game, .03, { x: 1, y: 0, firing: true }); assert.deepEqual(game, done);
 });
-test('Orbit survivors win at sixty seconds exactly once', () => {
-  const game = initialOrbit(); game.nextEnemy = 1000; for (let n = 0; n < 7300; n++) tickOrbit(game, 1 / 120, { x: 0, y: 0, firing: false });
-  assert.equal(game.won, true); assert.equal(game.over, true); assert.equal(game.score, 100);
+
+test('Snake wraps all four edges while preserving body collision checks', () => {
+  for (const [direction, from, expected] of [
+    ['left', { x: 0, y: 5 }, { x: 20, y: 5 }], ['right', { x: 20, y: 5 }, { x: 0, y: 5 }],
+    ['up', { x: 8, y: 0 }, { x: 8, y: 9 }], ['down', { x: 8, y: 9 }, { x: 8, y: 0 }],
+  ] as const) {
+    const state = initialSnake(); state.body = [{ ...from }]; state.direction = direction; state.food = { x: 1, y: 1 };
+    stepSnake(state); assert.deepEqual(state.body[0], expected); assert.equal(state.over, false);
+  }
+});
+
+test('Orbit bosses fire aimed projectiles, award once, and loop into progressively harder waves', () => {
+  const state = initialOrbit(); state.waveTime = 24; state.nextEnemy = 1000;
+  tickOrbit(state, 1 / 120, { x: 0, y: 0, firing: false }); assert.ok(state.boss); assert.equal(state.over, false);
+  state.boss.nextFire = 0; tickOrbit(state, 1 / 120, { x: 0, y: 0, firing: false }); assert.equal(state.hostile.length, 3); assert.ok(state.hostile.every(b => b.vx < 0));
+  const lives = state.lives; state.hostile = [{ ...state.player, vx: 0, vy: 0 }]; tickOrbit(state, 1 / 120, { x: 0, y: 0, firing: false }); assert.equal(state.lives, lives - 1);
+  state.boss!.hp = 1; state.bullets = [{ x: state.boss!.x - 1, y: state.boss!.y }]; tickOrbit(state, 1 / 120, { x: 0, y: 0, firing: false });
+  assert.equal(state.wave, 2); assert.equal(state.boss, null); assert.equal(state.score, 200); assert.equal(state.hostile.length, 0); assert.equal(state.over, false);
+  tickOrbit(state, 1 / 120, { x: 0, y: 0, firing: false }); assert.equal(state.score, 200);
+  state.waveTime = 24; tickOrbit(state, 1 / 120, { x: 0, y: 0, firing: false }); assert.equal(state.boss!.hp, 30);
+});
+
+test('Orbit scouts move faster and enemy speed and boss health remain bounded in late loops', () => {
+  const state = initialOrbit(); state.nextEnemy = 1000;
+  state.enemies = [false, true].map((fast, id) => ({ id, x: 150, y: 40, baseY: 40, age: 0, hp: 1, fast }));
+  tickOrbit(state, 1 / 30, { x: 0, y: 0, firing: false }); assert.ok(state.enemies[1].x < state.enemies[0].x);
+  state.wave = 10000; const x = state.enemies[1].x; tickOrbit(state, 1 / 30, { x: 0, y: 0, firing: false }); assert.ok(x - state.enemies[1].x <= 85 / 30 + 1e-9);
+  state.waveTime = 24; tickOrbit(state, 1 / 120, { x: 0, y: 0, firing: false }); assert.equal(state.boss!.maxHp, 48); assert.equal(state.over, false);
+});
+
+test('endless Orbit records above the former score limit survive profile and backup normalization', () => {
+  const profile = normalizeProfile({ coins: 720, records: { impact: { wins: 0, played: 3, best: 54320 } } });
+  assert.equal(profile.records.impact.best, 54320); assert.equal(readBackup(JSON.stringify(makeBackup(profile))).profile.records.impact.best, 54320); assert.equal(profile.coins, 720);
 });
 test('phone re-rolls exclude the previous spot and all possible spots are reachable through the actual village geometry', () => {
   for (const spot of PHONE_SPOTS) { assert.notEqual(choosePhoneSpot(() => .5, spot.id).id, spot.id); assert.equal(HUB_OBSTACLES.some(rect => overlaps(spot, rect, 13)), false, spot.id); }

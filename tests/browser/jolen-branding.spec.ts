@@ -1,6 +1,6 @@
 import { screenNav } from '../helpers/screen-nav';
 import { test, expect, type Page } from '@playwright/test';
-import { initialJolen, chooseJolenShot, shootJolen, stepJolen, marblesMoving, nextJolenTurn, jolenFinished } from '../../client/src/games/jolen-rules';
+import { initialJolen, chooseJolenShot } from '../../client/src/games/jolen-rules';
 test.use({ hasTouch: true });
 
 async function openJolen(page: Page, difficulty = 'easy') {
@@ -35,13 +35,13 @@ test('the themed loading screen appears before the game and About has the credit
   await page.unroute('**/assets/*.js');
   await page.locator('#about-button').click(); await expect(page.getByRole('heading', { name: 'About LARO' })).toBeVisible();
   await expect(page.locator('.about-credits')).toContainText('tphilo games'); await expect(page.locator('.about-credits')).toContainText('developed by Sab');
-  await expect(page.locator('#about-version')).toHaveText('Version 0.9.0-alpha'); await page.locator('#about-close').click();
+  await expect(page.locator('#about-version')).toHaveText('Version 0.10.0-alpha'); await page.locator('#about-close').click();
   await expect(page.locator('#hub-map')).toContainText('6 PLACES'); await expect(page.locator('[data-game]')).toHaveCount(6);
 });
 test('Jolen has fast timed power, persistent shooters, visible bot motion, and no early-leave rewards', async ({ page }) => {
   await openJolen(page);
   const stage = page.locator('#jolen-stage'), initial = JSON.parse((await stage.getAttribute('data-shooters'))!);
-  await expect(page.locator('#jolen-bot')).toContainText('Weng'); await expect(page.locator('.touch-controls')).toBeHidden();
+  await expect(page.locator('#jolen-bot')).toContainText('Pom'); await expect(page.locator('.touch-controls')).toBeHidden();
   await page.locator('#jolen-angle').fill('180'); await page.locator('#jolen-shoot').click();
   await expect(stage).toHaveAttribute('data-phase', 'power'); await expect.poll(async () => Number(await page.locator('#jolen-power').getAttribute('aria-valuenow'))).toBeGreaterThan(50);
   await page.locator('#pause-button').click(); const frozen = await page.locator('#jolen-power').getAttribute('aria-valuenow');
@@ -90,24 +90,22 @@ test('Jolen reloads offline and its separate difficulty survives without changin
 test('a complete Jolen match awards one result and preserves its collection record after reload', async ({ page }) => {
   test.setTimeout(120000);
   await openJolen(page, 'master'); await page.evaluate(() => { Math.random = () => .5; });
-  const simulation = initialJolen();
-  const settle = () => { for (let n = 0; n < 2000 && marblesMoving(simulation); n++) stepJolen(simulation); for (let n = 0; n < 56; n++) stepJolen(simulation); };
-  for (let turn = 0; turn < 12 && !jolenFinished(simulation); turn++) {
-    await expect(page.locator('#jolen-stage')).toHaveAttribute('data-turn', '0'); await expect(page.locator('#jolen-stage')).toHaveAttribute('data-phase', 'aim');
-    const shot = chooseJolenShot(simulation, 4, () => .5), degrees = (Math.round(shot.angle * 180 / Math.PI) + 360) % 360;
+  const stage = page.locator('#jolen-stage');
+  for (let turn = 0; turn < 12; turn++) {
+    if (await stage.getAttribute('data-phase') === 'finished') break;
+    await expect(stage).toHaveAttribute('data-turn', '0'); await expect(stage).toHaveAttribute('data-phase', 'aim');
+    const board = initialJolen(4); board.hole = JSON.parse((await stage.getAttribute('data-hole'))!); board.marbles = JSON.parse((await stage.getAttribute('data-marbles'))!); board.scores = JSON.parse((await stage.getAttribute('data-scores'))!);
+    const shot = chooseJolenShot(board, 4, () => .5), degrees = (Math.round(shot.angle * 180 / Math.PI) + 360) % 360;
     await page.locator('#jolen-angle').fill(String(degrees)); await page.locator('#jolen-shoot').click();
-    await page.waitForTimeout(Math.round(600 * (shot.power - .08) / .92));
-    const actualPower = await page.evaluate(() => { const power = parseFloat((document.querySelector('#jolen-power i') as HTMLElement).style.width) / 100; (document.querySelector('#jolen-shoot') as HTMLButtonElement).click(); return power; });
-    shootJolen(simulation, degrees * Math.PI / 180, actualPower); settle();
-    if (!jolenFinished(simulation)) { nextJolenTurn(simulation); const bot = chooseJolenShot(simulation, 4, () => .5); shootJolen(simulation, bot.angle, bot.power); settle(); nextJolenTurn(simulation); }
+    await page.waitForTimeout(Math.round(600 * (shot.power - .08) / .92)); await page.locator('#jolen-shoot').click();
     await expect.poll(async () => {
-      const phase = await page.locator('#jolen-stage').getAttribute('data-phase');
-      return phase === 'finished' || phase === 'aim' && await page.locator('#jolen-stage').getAttribute('data-turn') === '0';
+      const phase = await stage.getAttribute('data-phase');
+      return phase === 'finished' || phase === 'aim' && await stage.getAttribute('data-turn') === '0';
     }, { timeout: 25000, intervals: [100] }).toBe(true);
   }
   await expect(page.locator('#jolen-stage')).toHaveAttribute('data-phase', 'finished');
-  const scores = JSON.parse((await page.locator('#jolen-stage').getAttribute('data-scores'))!) as number[]; expect(scores[0] + scores[1]).toBe(15);
-  const won = scores[0] > scores[1]; await expect(page.locator('#coins')).toHaveText(won ? '100' : '10');
+  const scores = JSON.parse((await page.locator('#jolen-stage').getAttribute('data-scores'))!) as number[]; const pocket = await page.locator('#jolen-stage').getAttribute('data-pocket-winner'); if (pocket === 'null') expect(scores[0] + scores[1]).toBe(15); else expect(scores[0] + scores[1]).toBeLessThanOrEqual(15);
+  const won = pocket !== 'null' ? pocket === '0' : scores[0] > scores[1]; await expect(page.locator('#coins')).toHaveText(won ? '100' : '10');
   const record = await page.evaluate(() => JSON.parse(localStorage.getItem('laro.offline.profile.v1')!).records.jolen);
   expect(record).toEqual({ wins: won ? 1 : 0, played: 1, best: scores[0] });
   await page.screenshot({ path: 'artifacts/jolen-finished-match.png', fullPage: true });

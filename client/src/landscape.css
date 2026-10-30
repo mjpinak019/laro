@@ -21,6 +21,4 @@
  .play-fullscreen .jolen-controls>label{flex:none;flex-direction:column;align-items:stretch;gap:10px;min-width:0}
  .play-fullscreen .jolen-power-group{flex:none;min-width:0}.play-fullscreen .jolen-power-group>span{line-height:1.5;font-size:9px}
  .play-fullscreen .jolen-controls button{min-height:44px;font-size:15px}
- .play-fullscreen .retro-phone{width:min(62vw,calc((var(--play-stage-height,300px) - 100px)*1.75 + 60px));max-width:620px}
- .play-fullscreen .retro-console{min-width:221px}
 }

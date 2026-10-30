@@ -44,6 +44,9 @@ export function drawCharacter(c: Painter, color: string, look: CharacterLook, di
   } else if (look === 'ferdie') {
     fill(c, 6, 3 - bob, 13, 4, '#64734a'); fill(c, direction === 1 ? 3 : 8, 6 - bob, 13, 2, '#e0c777');
     fill(c, 11, 4 - bob, 3, 2, '#d3dab7');
+  } else if (look === 'pom') {
+    fill(c, 6, 2 - bob, 13, 3, '#684a36'); fill(c, 8, 1 - bob, 8, 2, '#684a36');
+    fill(c, 6, 5 - bob, 4, 3, '#684a36'); fill(c, 9, 17 - bob, 6, 3, '#f3e3ad');
   } else if (look === 'mj') {
     fill(c, 7, 2 - bob, 3, 4, hair); fill(c, 12, 2 - bob, 3, 4, hair);
     fill(c, 6, 18 - bob, 12, 2, '#e4ded0');

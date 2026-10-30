@@ -30,7 +30,7 @@ export interface ActivityControls {
 }
 export const GAMES: Record<GameId, { title: string; description: string; tags: string[]; category: string; record: string }> = {
   lubid: { title: 'Luksong Lubid', description: 'Keep jumping for a new record. Speed is capped, then the rope smoothly changes rhythm. How far beyond 100 can you go?', tags: ['Endless record run', '100 coins max / run'], category: 'JUMP ROPE · SOLO + FRIENDS', record: 'BEST JUMPS' },
-  snake: { title: 'Snake', description: 'A secret pocket classic. Eat, grow, and avoid the walls on your little monochrome phone.', tags: ['Secret phone game', 'Swipe or keypad'], category: 'HIDDEN RETRO GAME', record: 'HIGH SCORE' },
+  snake: { title: 'Snake', description: 'A secret pocket classic. Eat, grow, wrap through the edges and avoid your own tail.', tags: ['Secret phone game', 'Swipe or keypad'], category: 'HIDDEN RETRO GAME', record: 'HIGH SCORE' },
   impact: { title: 'Orbit Patrol', description: 'Pilot a tiny spacecraft through incoming waves on your secret pocket phone.', tags: ['Secret phone game', 'Move + hold Fire'], category: 'HIDDEN RETRO GAME', record: 'HIGH SCORE' },
   jolen: { title: 'Jolen', description: 'Aim from where your marble lands. Time the fast power bar and knock targets out of the chalk circle.', tags: ['15 target marbles', '5 bot opponents'], category: 'AIMING GAME · SOLO + BOT', record: 'MOST MARBLES' },
   patintero: { title: 'Patintero', description: 'Quick feet. Good timing. Cross the lines. Make it home.', tags: ['90-second rounds', '4 bot guards'], category: 'STREET GAME · SOLO + BOTS', record: 'BEST TIME' },

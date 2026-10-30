@@ -35,7 +35,7 @@ export function normalizeProfile(value: unknown): Profile {
     const records = freshRecords();
     for (const id of RECORD_IDS) {
       const item = raw.records?.[id];
-      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'lubid' ? Number.MAX_SAFE_INTEGER : id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
+      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'lubid' || id === 'impact' ? Number.MAX_SAFE_INTEGER : id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
     }
     return {
       name: typeof raw.name === 'string' && raw.name.trim() && raw.name.trim() !== 'Kaibigan' ? raw.name.trim().slice(0, 16) : defaults.name,

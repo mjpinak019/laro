@@ -88,6 +88,9 @@ test('Luksong-tinik is winnable through six timed keyboard jumps and saves its r
   await ready(page); await choose(page, 'Luksong-tinik'); await page.getByRole('button', { name: 'Challenge · three chances' }).click();
   for (let level = 1; level <= 6; level++) {
     await expect(page.locator('#game')).toHaveAttribute('data-level', String(level), { timeout: 10000 });
+    await expect(page.locator('#game')).toHaveAttribute('data-tinik-hands', String(Math.min(4, level)));
+    await expect(page.locator('#game')).toHaveAttribute('data-tinik-feet', String(Math.max(0, level - 4)));
+    await page.screenshot({ path: `artifacts/tinik-height-${level}.png` });
     await expect(page.locator('#game')).toHaveAttribute('data-jump-state', 'run');
     const stage = tinikStage(level, 'easy'), takeoff = (stage.takeoffMin + stage.takeoffMax) / 2 - 4;
     await expect.poll(async () => Number(await page.locator('#game').getAttribute('data-x')), { intervals: [15] }).toBeGreaterThanOrEqual(takeoff);

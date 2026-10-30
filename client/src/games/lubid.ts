@@ -19,7 +19,7 @@ export class LubidScene extends ActivityScene {
     const g = this.add.graphics(); g.fillStyle(0xc8b48c); g.fillRect(100, 160, 760, 370); g.lineStyle(3, 0xf2e1ba); g.strokeRect(150, 200, 660, 300);
     for (let n = 0; n < 180; n++) { g.fillStyle(n % 2 ? 0xd5c49b : 0xbba47e); g.fillRect(112 + n * 67 % 735, 180 + n * 97 % 335, 2, 2); }
     this.add.text(480, 105, 'LUKSONG LUBID', { fontFamily: 'monospace', fontSize: '29px', color: '#f5e3b9', backgroundColor: '#35583d', padding: { x: 20, y: 12 } }).setOrigin(.5);
-    for (const [x, look, color, name] of [[250, 'sheena', 2, CHARACTERS.sheena], [710, 'ferdie', 3, CHARACTERS.ferdie]] as const) {
+    for (const [x, look, color, name] of [[250, 'weng-new', 2, CHARACTERS.weng], [710, 'ferdie', 3, CHARACTERS.ferdie]] as const) {
       this.add.ellipse(x, 438, 30, 10, 0x294e38, .25);
       this.add.image(x, 435, characterTexture(look, color, x < 480 ? 2 : 1)).setScale(2).setOrigin(CHARACTER_ORIGIN.x, CHARACTER_ORIGIN.y).setDepth(435);
       this.add.text(x, 360, name, { fontFamily: 'monospace', fontSize: '16px', color: '#f3e5be', backgroundColor: '#34583e', padding: { x: 7, y: 4 } }).setOrigin(.5);

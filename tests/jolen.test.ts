@@ -57,3 +57,31 @@ test('legacy profiles keep progress and get separate empty Jolen records and dif
 test('Amor and Weng are separate girl characters with different appearances', () => {
   assert.equal(CHARACTERS.amor, 'Amor'); assert.equal(CHARACTERS.weng, 'Weng'); assert.equal(BOT_APPEARANCES.weng.gender, 'girl'); assert.notEqual(BOT_APPEARANCES.amor.look, BOT_APPEARANCES.weng.look);
 });
+
+test('hole difficulty placement is outside the circle, clear of starters and stable during turns', () => {
+  assert.equal(initialJolen(0).hole, null); assert.deepEqual(initialJolen(1, () => .8).hole, initialJolen(1, () => .2).hole);
+  const positions = new Set<string>();
+  for (let n = 0; n < 100; n++) {
+    const state = initialJolen(4, () => n / 100), h = state.hole!; positions.add(JSON.stringify(h));
+    assert.ok(Math.hypot(h.x - COURT.x, h.y - COURT.y) > COURT.radius + h.radius);
+    assert.ok(state.marbles.every(m => Math.hypot(m.x - h.x, m.y - h.y) > m.radius + 45));
+    const before = structuredClone(h); nextJolenTurn(state); assert.deepEqual(state.hole, before);
+  }
+  assert.ok(positions.size > 80);
+});
+
+test('a real hit sinking the opposing shooter wins immediately, freezes physics and rejects further shots', () => {
+  const state = initialJolen(1); state.marbles.filter(m => m.owner === null).forEach(m => m.collected = true);
+  const one = shooter(state, 0), two = shooter(state, 1); one.x = 630; one.y = 280; two.x = 680; two.y = 280;
+  shootJolen(state, 0, .4); settle(state);
+  assert.equal(state.pocketWinner, 0); assert.equal(two.collected, true); assert.equal(jolenFinished(state), true); assert.deepEqual(state.scores, [0, 0]);
+  const done = structuredClone(state); stepJolen(state); assert.deepEqual(state, done); assert.equal(shootJolen(state, 0, 1), false); assert.equal(nextJolenTurn(state), false);
+});
+
+test('self entry, unhit opponents, and target marbles cannot trigger a hole-in win', () => {
+  const state = initialJolen(1), h = state.hole!; shooter(state, 1).x = h.x; shooter(state, 1).y = h.y;
+  stepJolen(state); assert.equal(state.pocketWinner, null);
+  shooter(state, 0).x = h.x - 90; shooter(state, 0).y = h.y + 50; shootJolen(state, 0, .2); settle(state); assert.equal(state.pocketWinner, null);
+  const target = state.marbles[0]; target.x = h.x; target.y = h.y; stepJolen(state); assert.equal(state.pocketWinner, null); assert.equal(target.collected, true);
+  state.opponentHit = true; nextJolenTurn(state); shootJolen(state, Math.PI, .1); assert.equal(state.opponentHit, false);
+});

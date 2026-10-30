@@ -148,9 +148,6 @@ function drawHub(c: Painter) {
     rect(c, x, y, 2, 3, '#ebd795'); rect(c, x + 5, y + 2, 2, 2, '#dfac92');
   }
   pennants(c, 93, 116, 215); pennants(c, 296, 101, 159);
-  rect(c, 112, 249, 4, 26, '#77654e');
-  rect(c, 83, 240, 64, 16, '#3e5947'); rect(c, 84, 241, 62, 14, '#5c7960');
-  label(c, 'MALIGAYA', 115, 252, '#fff0c2', 7);
   // Roads connect the original plaza to three additional, walkable districts.
   rect(c, 456, 163, 344, 43, '#cdb994');
   rect(c, 106, 285, 39, 215, '#cdb994'); rect(c, 106, 329, 656, 43, '#cdb994');
@@ -234,6 +231,10 @@ export function createArt(scene: Phaser.Scene) {
     const image = canvas(key === 'hub' ? HUB_SIZE.width / 2 : WIDTH, key === 'hub' ? HUB_SIZE.height / 2 : HEIGHT); painter(image.getContext('2d')!); scene.textures.addCanvas(key, image);
   }
   const treeImage = canvas(64, 56); tree(treeImage.getContext('2d')!, 32, 48, 1, false); scene.textures.addCanvas('world-tree', treeImage);
+  const signImage = canvas(68, 40), sign = signImage.getContext('2d')!;
+  rect(sign, 31, 13, 5, 27, '#374d3b'); rect(sign, 32, 14, 3, 26, '#8d7453');
+  rect(sign, 1, 4, 66, 18, '#294833'); rect(sign, 2, 5, 64, 16, '#5c7960');
+  label(sign, 'MALIGAYA', 34, 17, '#fff0c2', 7); scene.textures.addCanvas('world-sign', signImage);
   const palmImage = canvas(80, 60); palm(palmImage.getContext('2d')!, 36, 55, false); scene.textures.addCanvas('world-palm', palmImage);
   const benchImage = canvas(36, 24); bench(benchImage.getContext('2d')!, 3, 11); scene.textures.addCanvas('world-bench', benchImage);
   const vaseImage = canvas(20, 24), vase = vaseImage.getContext('2d')!; pot(vase, 10, 17);

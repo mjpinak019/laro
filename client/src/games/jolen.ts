@@ -6,7 +6,7 @@ import { COURT, chooseJolenShot, initialJolen, jolenFinished, JOLEN_STEP, marble
 import type { DamaDifficulty } from './dama-levels';
 
 export const JOLEN_OPPONENTS: Record<DamaDifficulty, { name: string; look: CharacterLook; level: number; color: number }> = {
-  easy: { name: CHARACTERS.weng, look: 'weng-new', level: 0, color: 2 },
+  easy: { name: CHARACTERS.pom, look: 'pom', level: 0, color: 0 },
   normal: { name: CHARACTERS.sheena, look: 'sheena', level: 1, color: 2 },
   hard: { name: CHARACTERS.mj, look: 'mj', level: 2, color: 1 },
   expert: { name: CHARACTERS.ferdie, look: 'ferdie', level: 3, color: 3 },
@@ -40,7 +40,7 @@ export class JolenGame implements ActivityControls {
   private dragPointer?: number;
 
   constructor(ui: ActivityUI) {
-    this.ui = ui; this.opponent = JOLEN_OPPONENTS[ui.profile.jolenDifficulty];
+    this.ui = ui; this.opponent = JOLEN_OPPONENTS[ui.profile.jolenDifficulty]; this.state = initialJolen(this.opponent.level);
     this.root = document.createElement('div'); this.root.id = 'jolen-stage'; this.root.className = 'jolen-stage';
     this.root.innerHTML = `<div class="jolen-scoreboard"><strong id="jolen-you"></strong><span id="jolen-turn" role="status" aria-live="polite"></span><strong id="jolen-bot"></strong></div><div class="jolen-court"><canvas id="jolen-canvas" width="900" height="560" tabindex="0" role="img" aria-label="Jolen dirt court. Aim by tapping the court, or use the direction slider below."></canvas><span class="jolen-remaining"></span></div><div class="jolen-controls"><label for="jolen-angle">Aim <input id="jolen-angle" type="range" min="0" max="359" value="270" aria-label="Shot direction in degrees" /></label><div class="jolen-power-group"><span id="jolen-power-label">POWER · TAP TIRA TO START</span><div id="jolen-power" class="jolen-power" role="meter" aria-label="Shot power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8"><i></i></div></div><button id="jolen-shoot" class="primary-button">Tira</button><button id="jolen-cancel" class="secondary-button" hidden>Cancel</button></div><p class="jolen-instructions">Aim from where your shooter landed. Tira starts the fast meter; tap again to shoot. Space also works.</p>`;
     document.querySelector('#game-shell')!.append(this.root);
@@ -92,7 +92,7 @@ export class JolenGame implements ActivityControls {
     const turn = this.state.turn === 0 ? this.ui.profile.name : this.opponent.name;
     this.get('#jolen-you').textContent = `${this.ui.profile.name} · ${this.state.scores[0]}`;
     this.get('#jolen-bot').textContent = `${this.opponent.name} · ${this.state.scores[1]}`;
-    this.get('#jolen-turn').textContent = this.phase === 'finished' ? 'Collection complete' : `${turn}: ${this.phase === 'walk' ? 'walking to shooter…' : this.phase === 'rolling' ? 'marbles rolling…' : this.phase === 'power' ? 'timing the shot…' : 'aiming…'}`;
+    this.get('#jolen-turn').textContent = this.phase === 'finished' ? this.state.pocketWinner !== null ? 'HOLE-IN WIN!' : 'Collection complete' : `${turn}: ${this.phase === 'walk' ? 'walking to shooter…' : this.phase === 'rolling' ? 'marbles rolling…' : this.phase === 'power' ? 'timing the shot…' : 'aiming…'}`;
     this.get('.jolen-remaining').textContent = `${15 - this.state.scores[0] - this.state.scores[1]} marbles left`;
     const shoot = this.get<HTMLButtonElement>('#jolen-shoot'); shoot.disabled = this.state.turn !== 0 || !['aim', 'power'].includes(this.phase); shoot.textContent = this.phase === 'power' ? 'Tira!' : 'Tira';
     this.get<HTMLButtonElement>('#jolen-cancel').hidden = this.state.turn !== 0 || this.phase !== 'power';
@@ -100,6 +100,10 @@ export class JolenGame implements ActivityControls {
     this.get('#jolen-power-label').textContent = this.phase === 'power' ? 'TAP AGAIN TO LOCK & SHOOT' : this.phase === 'rolling' ? 'SHOT RELEASED' : this.state.turn ? 'BOT TURN' : 'POWER · TAP TIRA TO START';
     const el = document.querySelector<HTMLElement>('#game')!; el.dataset.mode = 'jolen'; el.dataset.phase = this.phase === 'finished' ? 'finished' : 'playing';
     this.root.dataset.phase = this.phase; this.root.dataset.turn = String(this.state.turn); this.root.dataset.shots = String(this.state.shots); this.root.dataset.scores = JSON.stringify(this.state.scores);
+    this.root.dataset.hole = JSON.stringify(this.state.hole); this.root.dataset.aimRings = String(this.opponent.level < 2);
+    this.root.dataset.pocketWinner = String(this.state.pocketWinner);
+    // Snapshot only on turn/phase changes; browser checks can plan from the actual resting board.
+    this.root.dataset.marbles = JSON.stringify(this.state.marbles);
   }
   private tick = (now: number) => {
     if (this.disposed) return;
@@ -123,9 +127,10 @@ export class JolenGame implements ActivityControls {
           const before = this.state.marbles.filter(m => !m.collected && m.owner === null);
           if (stepJolen(this.state)) { for (const m of before.filter(m => m.collected)) this.pickups.push({ x: m.x, y: m.y, age: 0 }); this.ui.sound('tag'); this.refresh(); }
           this.accumulator -= JOLEN_STEP;
+          if (this.state.pocketWinner !== null) { this.finish(); break; }
         }
         this.settled = marblesMoving(this.state) ? 0 : this.settled + dt;
-        if (this.settled > .45) {
+        if (!this.reported && this.settled > .45) {
           if (jolenFinished(this.state)) this.finish();
           else { nextJolenTurn(this.state); this.startWalk(); }
         }
@@ -144,6 +149,12 @@ export class JolenGame implements ActivityControls {
   }
   private draw() {
     const c = this.c; c.drawImage(this.preview, 0, 0);
+    if (this.state.hole) {
+      const h = this.state.hole;
+      c.fillStyle = '#8d7049'; c.beginPath(); c.ellipse(h.x, h.y + 2, h.radius + 5, h.radius + 3, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = '#25372a'; c.beginPath(); c.arc(h.x, h.y, h.radius, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = '#e9cd91'; c.lineWidth = 2; c.stroke(); c.fillStyle = '#fff0c4'; c.font = 'bold 12px monospace'; c.textAlign = 'center'; c.fillText('HOLE-IN', h.x, h.y - 23);
+    }
     for (let index = 0; index < 2; index++) {
       const walker = this.walkers[index], moving = this.state.turn === index && this.phase === 'walk';
       const bob = moving ? Math.sin(this.phaseTime / 65) * 2 : 0;
@@ -157,13 +168,13 @@ export class JolenGame implements ActivityControls {
         const dx = m.x - active.x, dy = m.y - active.y;
         return { m, along: dx * rayX + dy * rayY, across: Math.abs(dx * rayY - dy * rayX) };
       }).filter(hit => hit.along > 0 && hit.across <= hit.m.radius + active.radius).sort((a, b) => a.along - b.along)[0];
-      if (first) { c.strokeStyle = '#fff5d2'; c.lineWidth = 2; c.beginPath(); c.arc(first.m.x, first.m.y, first.m.radius + 5, 0, Math.PI * 2); c.stroke(); }
+      if (first && this.opponent.level < 2) { c.strokeStyle = '#fff5d2'; c.lineWidth = 2; c.beginPath(); c.arc(first.m.x, first.m.y, first.m.radius + 5, 0, Math.PI * 2); c.stroke(); }
       c.strokeStyle = this.state.turn ? '#375e5c' : '#684a31'; c.lineWidth = 2; c.setLineDash([6, 5]);
       const guide = this.ui.profile.jolenDifficulty === 'easy' ? 145 : 82;
       const endX = active.x + Math.cos(this.angle) * guide, endY = active.y + Math.sin(this.angle) * guide;
       c.beginPath(); c.moveTo(active.x, active.y); c.lineTo(endX, endY); c.stroke(); c.setLineDash([]);
       c.beginPath(); c.moveTo(endX - Math.cos(this.angle - .5) * 12, endY - Math.sin(this.angle - .5) * 12); c.lineTo(endX, endY); c.lineTo(endX - Math.cos(this.angle + .5) * 12, endY - Math.sin(this.angle + .5) * 12); c.stroke();
-      c.strokeStyle = this.state.turn ? '#315f65' : '#735330'; c.beginPath(); c.arc(active.x, active.y, active.radius + 6, 0, Math.PI * 2); c.stroke();
+      if (this.opponent.level < 2) { c.strokeStyle = this.state.turn ? '#315f65' : '#735330'; c.beginPath(); c.arc(active.x, active.y, active.radius + 6, 0, Math.PI * 2); c.stroke(); }
     }
     for (const m of this.state.marbles) {
       if (m.collected) continue;
@@ -180,8 +191,8 @@ export class JolenGame implements ActivityControls {
   }
   private finish() {
     if (this.reported || this.disposed) return; this.reported = true; this.phase = 'finished'; this.refresh();
-    const won = this.state.scores[0] > this.state.scores[1]; this.ui.sound(won ? 'win' : 'tag');
-    this.ui.result({ game: 'jolen', won, title: won ? 'Your jar is fuller!' : `${this.opponent.name} takes this one.`, summary: `${this.ui.profile.name}: ${this.state.scores[0]} marbles · ${this.opponent.name}: ${this.state.scores[1]}. Every shot started where the shooter landed.`, coins: won ? 60 + this.opponent.level * 10 : 10, record: this.state.scores[0] });
+    const won = this.state.pocketWinner !== null ? this.state.pocketWinner === 0 : this.state.scores[0] > this.state.scores[1]; this.ui.sound(won ? 'win' : 'tag');
+    this.ui.result({ game: 'jolen', won, title: this.state.pocketWinner !== null ? won ? 'Hole-in! Instant victory!' : `${this.opponent.name} wins by hole-in!` : won ? 'Your jar is fuller!' : `${this.opponent.name} takes this one.`, summary: `${this.ui.profile.name}: ${this.state.scores[0]} marbles · ${this.opponent.name}: ${this.state.scores[1]}. ${this.state.pocketWinner !== null ? 'The opposing shooter was knocked into the hole.' : 'Every shot started where the shooter landed.'}`, coins: won ? 60 + this.opponent.level * 10 : 10, record: this.state.scores[0] });
   }
   setTouch() {} setSprint() {} resetInput() { this.dragPointer = undefined; }
   setPaused(value: boolean) { this.paused = value; this.resetInput(); }

@@ -23,8 +23,9 @@ export class RetroGame implements ActivityControls {
   constructor(ui: ActivityUI, id: 'snake' | 'impact') {
     this.ui = ui; this.id = id;
     this.root = document.createElement('div'); this.root.id = 'retro-stage'; this.root.className = 'retro-stage';
-    this.root.innerHTML = `<div class="retro-phone"><div class="retro-speaker" aria-hidden="true">▪ ▪ ▪ ▪ ▪</div><div class="retro-brand">TALA <span>01</span></div><div class="retro-lcd"><canvas id="retro-canvas" width="168" height="96" role="img" aria-label="${id === 'snake' ? 'Snake' : 'Orbit Patrol'} monochrome game screen"></canvas></div><div class="retro-softkeys"><button id="retro-start">Start</button><button id="retro-help">Controls</button></div><div class="retro-keypad" aria-label="Phone keypad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(key => `<button type="button" ${['2', '4', '6', '8'].includes(key) ? `data-retro-input="${({ 2: 'up', 4: 'left', 6: 'right', 8: 'down' } as Record<string, string>)[key]}"` : key === '5' ? 'data-retro-input="fire"' : 'disabled'}>${key}<small>${({ 2: '↑', 4: '←', 6: '→', 8: '↓', 5: 'FIRE' } as Record<string, string>)[key] ?? '·'}</small></button>`).join('')}</div><span class="retro-phone-label">BULSA EDITION · NO SIGNAL NEEDED</span></div><div class="retro-console"><div class="eyebrow">A LITTLE SECRET IN YOUR POCKET</div><h2>${id === 'snake' ? 'Snake' : 'Orbit Patrol'}</h2><p id="retro-instructions">${id === 'snake' ? 'Collect food. Avoid walls and yourself. Use arrows, WASD, the keypad, or swipe the screen.' : 'Move with arrows, WASD, or the pad. Hold Space / Fire. Stop incoming craft and survive 60 seconds.'}</p><div class="retro-controller" aria-label="Retro game controls"><div class="retro-dpad">${['up', 'left', 'right', 'down'].map(key => `<button type="button" data-retro-input="${key}" aria-label="Retro ${key}">${({ up: '↑', down: '↓', left: '←', right: '→' })[key]}</button>`).join('')}</div><button id="retro-fire" data-retro-input="fire" ${id === 'snake' ? 'hidden' : ''}>Fire</button></div><p id="retro-status" role="status">Press Start. Coins and high scores save after a finished game.</p><small>Pause with Escape or the pause button. Leaving early earns no coins.</small></div>`;
-    document.querySelector('#game-shell')!.append(this.root); this.canvas = this.root.querySelector('#retro-canvas')!; this.c = this.canvas.getContext('2d')!; this.c.imageSmoothingEnabled = false;
+    this.root.innerHTML = `<div class="retro-phone"><div class="retro-speaker" aria-hidden="true">▪ ▪ ▪ ▪ ▪</div><div class="retro-brand">TALA <span>01</span></div><div class="retro-lcd"><canvas id="retro-canvas" width="168" height="96" role="img" aria-label="${id === 'snake' ? 'Snake' : 'Orbit Patrol'} monochrome game screen"></canvas></div><div class="retro-softkeys"><button id="retro-start">Start</button><button id="retro-help">Controls</button></div><div class="retro-keypad" aria-label="Phone keypad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(key => `<button type="button" ${['2', '4', '6', '8'].includes(key) ? `data-retro-input="${({ 2: 'up', 4: 'left', 6: 'right', 8: 'down' } as Record<string, string>)[key]}"` : key === '5' ? 'data-retro-input="fire"' : 'disabled'}>${key}<small>${({ 2: '↑', 4: '←', 6: '→', 8: '↓', 5: 'FIRE' } as Record<string, string>)[key] ?? '·'}</small></button>`).join('')}</div><span class="retro-phone-label">BULSA EDITION · NO SIGNAL NEEDED</span></div><div class="retro-console"><div class="eyebrow">A LITTLE SECRET IN YOUR POCKET</div><h2>${id === 'snake' ? 'Snake' : 'Orbit Patrol'}</h2><p id="retro-instructions">${id === 'snake' ? 'Edges wrap to the opposite side. Eat food and avoid your own tail. Use arrows, WASD, keypad or swipe.' : 'Move with arrows, WASD or the left pad. Hold Space / Fire on the right. Dodge fast scouts and boss fire. Defeat each boss to loop into the next wave.'}</p><div class="retro-controller" aria-label="Retro game controls"><div class="retro-dpad">${['up', 'left', 'right', 'down'].map(key => `<button type="button" data-retro-input="${key}" aria-label="Retro ${key}">${({ up: '↑', down: '↓', left: '←', right: '→' })[key]}</button>`).join('')}</div><button id="retro-fire" data-retro-input="fire" ${id === 'snake' ? 'hidden' : ''}>Fire</button></div><p id="retro-status" role="status">Press Start. Coins and high scores save after a finished game.</p><small>Pause with Escape or the pause button. Leaving early earns no coins.</small></div>`;
+    document.querySelector('#game-shell')!.append(this.root); this.root.append(this.root.querySelector('.retro-controller')!);
+    this.canvas = this.root.querySelector('#retro-canvas')!; this.c = this.canvas.getContext('2d')!; this.c.imageSmoothingEnabled = false;
     this.root.querySelector<HTMLButtonElement>('#retro-start')!.onclick = () => { if (!this.blocked() && this.ready) { this.ready = false; this.root.querySelector<HTMLButtonElement>('#retro-start')!.disabled = true; this.status(); } };
     this.root.querySelector<HTMLButtonElement>('#retro-help')!.onclick = () => this.toggleHelp();
     for (const button of this.root.querySelectorAll<HTMLButtonElement>('[data-retro-input]')) {
@@ -67,8 +68,9 @@ export class RetroGame implements ActivityControls {
     this.root.dataset.snakeHead = JSON.stringify(this.snake.body[0]); this.root.dataset.lives = String(this.orbit.lives);
     this.root.dataset.time = this.orbit.time.toFixed(2); this.root.dataset.bullets = String(this.orbit.bullets.length);
     this.root.dataset.player = JSON.stringify(this.orbit.player);
+    this.root.dataset.wave = String(this.orbit.wave); this.root.dataset.bossHp = String(this.orbit.boss?.hp ?? 0); this.root.dataset.hostile = String(this.orbit.hostile.length);
     const game = document.querySelector<HTMLElement>('#game')!; game.dataset.mode = this.id; game.dataset.phase = this.ready ? 'ready' : this.finished ? 'finished' : 'playing';
-    this.root.querySelector('#retro-status')!.textContent = this.ready ? 'Press Start. Coins and high scores save after a finished game.' : this.id === 'snake' ? `${score} points · Best ${this.ui.profile.records.snake.best}` : `${score} points · ${this.orbit.lives} lives · ${Math.max(0, Math.ceil(60 - this.orbit.time))}s left`;
+    this.root.querySelector('#retro-status')!.textContent = this.ready ? 'Press Start. Coins and high scores save after a finished game.' : this.id === 'snake' ? `${score} points · Best ${this.ui.profile.records.snake.best}` : `${score} points · ${this.orbit.lives} lives · Wave ${this.orbit.wave}${this.orbit.boss ? ' · BOSS ' + this.orbit.boss.hp + '/' + this.orbit.boss.maxHp : ' · boss in ' + Math.max(0, Math.ceil(24 - this.orbit.waveTime)) + 's'}`;
   }
   private tick = (now: number) => {
     if (this.disposed) return;
@@ -95,12 +97,21 @@ export class RetroGame implements ActivityControls {
       for (const [index, cell] of this.snake.body.entries()) { c.fillRect(cell.x * 8 + 1, 14 + cell.y * 8, 6, 6); if (!index) { c.fillStyle = '#a8b87c'; c.fillRect(cell.x * 8 + 3, 16 + cell.y * 8, 1, 1); c.fillStyle = '#263c24'; } }
       const food = this.snake.food; c.fillRect(food.x * 8 + 2, 15 + food.y * 8, 4, 4); c.fillRect(food.x * 8 + 3, 14 + food.y * 8, 2, 6);
     } else {
-      c.fillText(`${this.orbit.score}  HP ${this.orbit.lives}  ${Math.ceil(60 - this.orbit.time)}s`, 3, 9); c.fillRect(0, 12, 168, 1);
+      c.fillText(`${this.orbit.score}  HP ${this.orbit.lives}  WAVE ${this.orbit.wave}`, 3, 9); c.fillRect(0, 12, 168, 1);
       for (let n = 0; n < 20; n++) c.fillRect((n * 47 - Math.floor(this.orbit.time * 18) % 168 + 168) % 168, 17 + n * 31 % 76, 1, 1);
       const p = this.orbit.player;
       if (!this.orbit.invulnerable || Math.floor(this.orbit.time * 12) % 2) { c.fillRect(Math.round(p.x - 5), Math.round(p.y - 2), 10, 4); c.fillRect(Math.round(p.x - 2), Math.round(p.y - 4), 4, 8); c.fillRect(Math.round(p.x + 5), Math.round(p.y - 1), 3, 2); }
       for (const bullet of this.orbit.bullets) c.fillRect(Math.round(bullet.x), Math.round(bullet.y), 3, 1);
       for (const enemy of this.orbit.enemies) { c.fillRect(Math.round(enemy.x - 5), Math.round(enemy.y - 3), 10, 6); c.fillStyle = '#a8b87c'; c.fillRect(Math.round(enemy.x - 2), Math.round(enemy.y - 1), 3, 2); c.fillStyle = '#263c24'; c.fillRect(Math.round(enemy.x - 7), Math.round(enemy.y - 1), 2, 2); }
+      for (const enemy of this.orbit.enemies.filter(e => e.fast)) { c.fillRect(Math.round(enemy.x - 9), Math.round(enemy.y), 5, 1); c.fillRect(Math.round(enemy.x + 2), Math.round(enemy.y - 5), 3, 10); }
+      const boss = this.orbit.boss;
+      if (boss) {
+        const x = Math.round(boss.x), y = Math.round(boss.y);
+        c.fillRect(x - 12, y - 10, 25, 20); c.fillRect(x - 17, y - 5, 6, 10); c.fillRect(x - 8, y - 14, 18, 28);
+        c.fillStyle = '#a8b87c'; c.fillRect(x - 7, y - 6, 13, 12); c.fillStyle = '#263c24'; c.fillRect(x - 5, y - 3, 5, 6);
+        c.strokeRect(111, 15, 52, 4); c.fillRect(112, 16, 50 * boss.hp / boss.maxHp, 2);
+      }
+      for (const bullet of this.orbit.hostile) { c.fillRect(Math.round(bullet.x) - 1, Math.round(bullet.y) - 1, 3, 3); }
     }
   }
   private finish() {
