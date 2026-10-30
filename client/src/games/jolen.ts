@@ -187,7 +187,7 @@ export class JolenGame implements ActivityControls {
   setPaused(value: boolean) { this.paused = value; this.resetInput(); }
   updateAvatar() {
     this.portraits = [document.createElement('canvas'), document.createElement('canvas')];
-    paintCharacterPreview(this.portraits[0], this.ui.profile.gender, COLORS[this.ui.profile.color]);
+    paintCharacterPreview(this.portraits[0], this.ui.profile.gender, COLORS[this.ui.profile.color], 0, 0, this.ui.profile.wardrobe.equipped);
     paintCharacterPreview(this.portraits[1], this.opponent.look, COLORS[this.opponent.color]);
   }
   dispose() { this.disposed = true; cancelAnimationFrame(this.frame); window.removeEventListener('keydown', this.keyboard); this.root.remove(); }

@@ -9,7 +9,7 @@
     "preview": "npm run preview --workspace @laro/client",
     "play": "node scripts/play.mjs",
     "typecheck": "npm run typecheck --workspace @laro/client",
-    "test": "node --test tests/rules.test.ts tests/new-games.test.ts tests/jolen.test.ts",
+    "test": "node --test tests/rules.test.ts tests/new-games.test.ts tests/jolen.test.ts tests/expansion.test.ts",
     "test:e2e": "playwright test"
   },
   "workspaces": [

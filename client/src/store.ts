@@ -1,10 +1,12 @@
 import type { Difficulty } from './rules';
 import { DEFAULT_PLAYER_NAME, type AvatarGender } from './characters.ts';
 import { isDamaDifficulty, type DamaDifficulty } from './games/dama-levels.ts';
+import { freshWardrobe, normalizeWardrobe, type Wardrobe } from './wardrobe.ts';
 
 export const COLORS = ['#e7b65d', '#7fafba', '#ca867b', '#a3af75'] as const;
-export type RecordBook = Record<'dama' | 'taguan' | 'tinik' | 'jolen', { wins: number; played: number; best: number }>;
-const freshRecords = (): RecordBook => ({ dama: { wins: 0, played: 0, best: 0 }, taguan: { wins: 0, played: 0, best: 0 }, tinik: { wins: 0, played: 0, best: 0 }, jolen: { wins: 0, played: 0, best: 0 } });
+export const RECORD_IDS = ['dama', 'taguan', 'tinik', 'jolen', 'lubid', 'snake', 'impact'] as const;
+export type RecordBook = Record<typeof RECORD_IDS[number], { wins: number; played: number; best: number }>;
+const freshRecords = (): RecordBook => Object.fromEntries(RECORD_IDS.map(id => [id, { wins: 0, played: 0, best: 0 }])) as RecordBook;
 export interface Profile {
   name: string;
   color: number;
@@ -18,22 +20,21 @@ export interface Profile {
   damaDifficulty: DamaDifficulty;
   jolenDifficulty: DamaDifficulty;
   records: RecordBook;
+  wardrobe: Wardrobe;
+  phoneFinds: number;
 }
 export const STORAGE_KEY = 'laro.offline.profile.v1';
 export let storageAvailable = true;
-const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', records: freshRecords() };
+const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', records: freshRecords(), wardrobe: freshWardrobe(), phoneFinds: 0 };
+const freshProfile = (): Profile => ({ ...defaults, records: freshRecords(), wardrobe: freshWardrobe() });
 const number = (value: unknown, max = 1_000_000) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(0, Math.floor(value))) : 0;
 
-export function loadProfile(): Profile {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    let raw: Partial<Profile>;
-    try { raw = JSON.parse(stored || '{}') ?? {}; }
-    catch { return { ...defaults, records: freshRecords() }; }
+export function normalizeProfile(value: unknown): Profile {
+    const raw: Partial<Profile> = value && typeof value === 'object' ? value : {};
     const records = freshRecords();
-    for (const id of ['dama', 'taguan', 'tinik', 'jolen'] as const) {
+    for (const id of RECORD_IDS) {
       const item = raw.records?.[id];
-      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
+      records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'lubid' ? 30 : id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
     }
     return {
       name: typeof raw.name === 'string' && raw.name.trim() && raw.name.trim() !== 'Kaibigan' ? raw.name.trim().slice(0, 16) : defaults.name,
@@ -44,11 +45,15 @@ export function loadProfile(): Profile {
       damaDifficulty: isDamaDifficulty(raw.damaDifficulty) ? raw.damaDifficulty : isDamaDifficulty(raw.difficulty) ? raw.difficulty : 'easy',
       jolenDifficulty: isDamaDifficulty(raw.jolenDifficulty) ? raw.jolenDifficulty : 'easy',
       records,
+      wardrobe: normalizeWardrobe(raw.wardrobe), phoneFinds: number(raw.phoneFinds),
     };
-  } catch { storageAvailable = false; return { ...defaults, records: freshRecords() }; }
+}
+export function loadProfile(): Profile {
+  try { const stored = localStorage.getItem(STORAGE_KEY); try { return normalizeProfile(JSON.parse(stored || '{}')); } catch { return freshProfile(); } }
+  catch { storageAvailable = false; return freshProfile(); }
 }
 
-export function saveProfile(profile: Profile): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); storageAvailable = true; }
-  catch { storageAvailable = false; }
+export function saveProfile(profile: Profile): boolean {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(profile)); storageAvailable = true; return true; }
+  catch { storageAvailable = false; return false; }
 }

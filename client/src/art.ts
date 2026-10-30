@@ -1,12 +1,11 @@
 import type Phaser from 'phaser';
 import { COLORS } from './store';
-import type { Rect } from './rules';
 import { pixelLabel } from './pixel-font';
 import { CHARACTER_HEIGHT, CHARACTER_WIDTH, outlineSprite } from './sprite-outline';
-import { propGroundPoint, propObstacles, WORLD_PROPS, type WorldMap } from './world-props';
+import { propGroundPoint, WORLD_PROPS, type WorldMap } from './world-props';
 import { BOT_APPEARANCES, characterTexture, type CharacterLook } from './characters';
 import { drawCharacter } from './character-art';
-import { HUB_EXTRA_OBSTACLES, HUB_SIZE } from './hub';
+import { HUB_SIZE } from './hub';
 import { HIDE_OBJECTS } from './games/hide-objects';
 
 const WIDTH = 480;
@@ -181,6 +180,9 @@ function drawHub(c: Painter) {
   c.strokeStyle = '#f4e5bd'; c.lineWidth = 2; c.beginPath(); c.arc(499, 239, 23, 0, Math.PI * 2); c.stroke();
   for (const [x, y, color] of [[495, 236, '#83b9b2'], [502, 240, '#e7bc70'], [495, 243, '#cd8e87']] as const) { rect(c, x, y, 4, 4, '#405b43'); rect(c, x, y, 3, 3, color); rect(c, x, y, 1, 1, '#fff1c4'); }
   rect(c, 477, 271, 45, 12, '#435f46'); label(c, 'JOLEN', 500, 280, '#f4dfaa', 8);
+  rect(c, 164, 455, 140, 40, '#bdae88'); c.strokeStyle = '#eee0b4'; c.strokeRect(175, 460, 115, 30);
+  line(c, [[183, 474], [210, 483], [250, 483], [280, 474]], '#7b6245', 2);
+  label(c, 'LUKSONG LUBID', 234, 495, '#3c5c43', 8);
 }
 
 function drawHidingObject(c: Painter, kind: string, x: number, y: number, w: number, h: number) {
@@ -225,17 +227,7 @@ function drawCourt(c: Painter) {
   label(c, 'PUROK 01', 40, 205, '#e5dfb4', 7);
 }
 
-export const HUB_OBSTACLES: Rect[] = [
-  { x: 43, y: 100, width: 151, height: 203 },
-  { x: 294, y: 67, width: 146, height: 141 },
-  { x: 454, y: 99, width: 130, height: 128 },
-  { x: 630, y: 45, width: 147, height: 126 },
-  { x: 32, y: 460, width: 151, height: 133 },
-  { x: 398, y: 330, width: 86, height: 64 },
-  { x: 142, y: 347, width: 65, height: 48 },
-  ...propObstacles('hub'),
-  ...HUB_EXTRA_OBSTACLES,
-];
+export { HUB_OBSTACLES } from './hub-obstacles';
 
 export function createArt(scene: Phaser.Scene) {
   for (const [key, painter] of [['hub', drawHub], ['court', drawCourt]] as const) {

@@ -1,5 +1,33 @@
 # LARO: neighborhood game designs
 
+## Wardrobe, Luksong Lubid, and pocket games (alpha 0.8)
+
+The wardrobe offers free identity/basic choices and coin-priced cosmetic
+accessories. Prices scale with pixel detail: simple pieces, detailed pieces,
+then four original superhero/film-inspired signature suits. Previewing is
+free; purchase ownership and the equipped appearance persist. All clothes
+use the same player hitbox and feet anchor. Skin tones and boy/girl choices
+never cost coins. Clothes can be mixed; signature suits cover tops/bottoms.
+
+Two neighbors hold the long rope in Luksong Lubid. A screen tap, Jump button,
+or Space starts the fixed jump arc immediately. A small landing buffer accepts
+a closely timed next tap, without making held buttons auto-jump. Every
+clearance increases rope speed. Thirty clearances win; three rope hits lose.
+The yard is on the south side of the Dama courtyard.
+
+The TALA 01 is an original unbranded feature-phone simulator. Its collectible
+is placed on a different reachable village spot after each page reload.
+Finding it unlocks Snake and Orbit Patrol for the current visit, with
+monochrome graphics, phone-key controls, high scores, and modest coin rewards.
+The two secrets stay out of the normal game picker. Snake supports swipes
+and buffered perpendicular turns. Orbit Patrol supports simultaneous movement
+and held fire, incoming waves, three lives, and a 60-second survival goal.
+
+Progress saves locally. Downloadable, validated save backups transfer coins,
+owned/equipped clothes, avatar choices, records, and an unfinished Dama match.
+Cloud accounts/synchronization and mid-round saves for the other games are
+outside this offline milestone.
+
 ## Jolen circle game (implemented in alpha 0.7)
 
 The circle variant replaces the earlier hole-in proposal. Fifteen targets

@@ -4,6 +4,8 @@ import { DamaGame } from './dama';
 import { TaguanScene } from './taguan';
 import { TinikScene } from './tinik';
 import { JolenGame } from './jolen';
+import { LubidScene } from './lubid';
+import { RetroGame } from './retro';
 import type { ActivityControls, ActivityUI, GameId } from './types';
 
 export class GameDirector {
@@ -11,11 +13,13 @@ export class GameDirector {
   private activity?: ActivityControls;
   private dama?: DamaGame;
   private jolen?: JolenGame;
+  private retro?: RetroGame;
   constructor(private game: Phaser.Game, private barangay: BarangayScene, private ui: ActivityUI) {}
 
   private stop() {
     this.activity?.resetInput(); this.activity = undefined; this.dama?.dispose(); this.dama = undefined; this.jolen?.dispose(); this.jolen = undefined;
-    for (const key of ['taguan', 'tinik']) if (this.game.scene.getScene(key)) this.game.scene.remove(key);
+    this.retro?.dispose(); this.retro = undefined;
+    for (const key of ['taguan', 'tinik', 'lubid']) if (this.game.scene.getScene(key)) this.game.scene.remove(key);
     this.barangay.resetInput();
     document.querySelector<HTMLElement>('#game')!.style.visibility = '';
   }
@@ -25,14 +29,17 @@ export class GameDirector {
     if (id === 'patintero') { this.startMatch(); return; }
     if (this.active === 'hub') this.barangay.rememberHubPosition();
     this.stop(); this.active = id; this.game.scene.sleep('barangay');
-    if (id === 'jolen') {
+    if (id === 'snake' || id === 'impact') {
+      document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
+      this.retro = new RetroGame(this.ui, id); this.activity = this.retro;
+    } else if (id === 'jolen') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.jolen = new JolenGame(this.ui); this.activity = this.jolen;
     } else if (id === 'dama') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.dama = new DamaGame(this.ui, options.mode ?? 'bot', options.resume); this.activity = this.dama;
     } else {
-      const scene = id === 'taguan' ? new TaguanScene(this.ui) : new TinikScene(this.ui, options.practice);
+      const scene = id === 'lubid' ? new LubidScene(this.ui) : id === 'taguan' ? new TaguanScene(this.ui) : new TinikScene(this.ui, options.practice);
       this.activity = scene; this.game.scene.add(id, scene, true);
     }
   }
@@ -40,7 +47,7 @@ export class GameDirector {
   setSprint(value: boolean) { if (this.activity) this.activity.setSprint(value); else this.barangay.setSprint(value); }
   setPaused(value: boolean) { if (this.activity) this.activity.setPaused(value); else this.barangay.setPaused(value); }
   resetInput() { this.activity?.resetInput(); this.barangay.resetInput(); }
-  updateAvatar() { this.activity?.updateAvatar(); this.barangay.updateAvatar(); }
+  updateAvatar() { this.barangay.updateAvatar(); this.activity?.updateAvatar(); }
   action() { if (this.activity) this.activity.action(); else if (this.active === 'hub') this.barangay.interact(); }
   emote() { if (this.active === 'hub' || this.active === 'patintero') this.barangay.emote(); }
 }

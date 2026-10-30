@@ -7,6 +7,9 @@ import { CHARACTER_ORIGIN } from './sprite-outline';
 import { HUB_SIZE, HUB_SITES, nearbySite } from './hub';
 import type { GameId } from './games/types';
 import { BOT_APPEARANCES, CHARACTERS, characterTexture, type CharacterId, type CharacterLook } from './characters';
+import { createPlayerArt, playerTexture } from './avatar-art';
+import { phoneSpotForPage } from './phone-spots';
+import { GAMES } from './games/types';
 
 export interface GameUI {
   profile: Profile;
@@ -17,6 +20,7 @@ export interface GameUI {
   result(match: Match, coins: number): void;
   sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote'): void;
   enterGame(game: GameId): void;
+  foundPhone(): void;
 }
 type Kid = { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; name: Phaser.GameObjects.Text; facing: number; color: number; look: CharacterLook; x: number; y: number };
 type Guard = { kid: Kid; axis: 'x' | 'y'; position: number; offset: number };
@@ -48,21 +52,28 @@ export class BarangayScene extends Phaser.Scene {
   private courtProps: Phaser.GameObjects.Image[] = [];
   private locationMarkers: Phaser.GameObjects.GameObject[] = [];
   private hubReturnPoint = { x: 514, y: 422 };
+  private phone!: Phaser.GameObjects.Container;
+  private phoneSpot = phoneSpotForPage();
+  private phoneFound = false;
 
   constructor(ui: GameUI) { super('barangay'); this.ui = ui; }
 
   create() {
     createArt(this);
+    createPlayerArt(this, this.ui.profile);
     this.background = this.add.image(0, 0, 'hub').setOrigin(0).setScale(2);
     this.hubProps = addWorldProps(this, 'hub');
     this.courtProps = addWorldProps(this, 'court').map(prop => prop.setVisible(false));
     this.hubProps.push(this.add.image(450, 720, 'world-dama-table').setScale(2).setOrigin(.5, 44 / 48).setDepth(720));
     for (const site of HUB_SITES.filter(site => site.game !== 'patintero')) {
       const ring = this.add.ellipse(site.at.x, site.at.y, 52, 23, 0xe6c078, .25).setDepth(.5);
-      const label = this.add.text(site.at.x, site.at.y + 26, `${site.game === 'jolen' ? 'JOLEN' : site.game === 'dama' ? 'DAMA TABLE' : site.game === 'tinik' ? 'LUKSONG-TINIK' : 'TAGU-TAGUAN'} · E`, { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950);
+      const label = this.add.text(site.at.x, site.at.y + 26, `${site.game === 'dama' ? 'DAMA TABLE' : GAMES[site.game].title.toUpperCase()} · E`, { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950);
       this.locationMarkers.push(ring, label);
     }
     this.marker = this.add.text(755, 213, 'PATINTERO  ↗', { ...textStyle, fontSize: '16px', color: '#fff0b7' }).setOrigin(0.5);
+    const phoneBody = this.add.graphics(); phoneBody.fillStyle(0x22384a); phoneBody.fillRoundedRect(-8, -22, 16, 24, 4); phoneBody.fillStyle(0xa8b87c); phoneBody.fillRect(-5, -16, 10, 7); phoneBody.fillStyle(0xd1d3bc);
+    for (let y = -6; y <= -1; y += 3) for (let x = -4; x <= 4; x += 4) phoneBody.fillRect(x, y, 2, 1);
+    this.phone = this.add.container(this.phoneSpot.x, this.phoneSpot.y, [phoneBody]).setDepth(this.phoneSpot.y);
     this.player = this.kid(514, 422, this.ui.profile.color, this.ui.profile.name);
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT,SHIFT,E,SPACE,ESC', false) as Record<string, Phaser.Input.Keyboard.Key>;
     this.input.keyboard!.addCapture(['UP', 'DOWN', 'LEFT', 'RIGHT', 'SPACE']);
@@ -92,7 +103,7 @@ export class BarangayScene extends Phaser.Scene {
   private drawKid(kid: Kid, time: number, moving = false, vector: Point = { x: 0, y: 0 }) {
     if (moving) kid.facing = Math.abs(vector.x) > Math.abs(vector.y) ? vector.x < 0 ? 1 : 2 : vector.y < 0 ? 3 : 0;
     const frame = moving ? Math.floor(time / 115) % 4 : 0;
-    kid.sprite.setPosition(Math.round(kid.x), Math.round(kid.y)).setTexture(characterTexture(kid.look, kid.color, kid.facing, frame)).setDepth(kid.y);
+    kid.sprite.setPosition(Math.round(kid.x), Math.round(kid.y)).setTexture(kid === this.player ? playerTexture(kid.facing, frame) : characterTexture(kid.look, kid.color, kid.facing, frame)).setDepth(kid.y);
     kid.shadow.setPosition(kid.x, kid.y + 2).setDepth(kid.y - 1);
     kid.name.setPosition(kid.x, kid.y - 59).setDepth(1000);
   }
@@ -109,6 +120,7 @@ export class BarangayScene extends Phaser.Scene {
     this.background.setTexture('hub'); this.marker.setVisible(true);
     this.hubProps.forEach(prop => prop.setVisible(true)); this.courtProps.forEach(prop => prop.setVisible(false));
     this.locationMarkers.forEach(marker => (marker as Phaser.GameObjects.Image).setVisible(true));
+    this.phone.setVisible(!this.phoneFound);
     this.cameras.main.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height).setScroll(0, 0);
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
     this.cameras.main.setScroll(Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600));
@@ -124,6 +136,7 @@ export class BarangayScene extends Phaser.Scene {
     this.background.setTexture('court'); this.marker.setVisible(false);
     this.hubProps.forEach(prop => prop.setVisible(false)); this.courtProps.forEach(prop => prop.setVisible(true));
     this.locationMarkers.forEach(marker => (marker as Phaser.GameObjects.Image).setVisible(false));
+    this.phone.setVisible(false);
     this.cameras.main.setBounds(0, 0, 960, 600).setScroll(0, 0);
     this.player.x = SPAWN.x; this.player.y = SPAWN.y; this.player.facing = 3; this.player.sprite.setAlpha(1);
     this.match = newMatch(); this.reported = false; this.sprint = 100;
@@ -142,7 +155,7 @@ export class BarangayScene extends Phaser.Scene {
   resetInput() { this.blur(); }
   interact() { if (!this.ui.blocked()) this.interactRequested = true; }
   rememberHubPosition() { if (this.player && this.mode === 'hub') this.hubReturnPoint = { x: this.player.x, y: this.player.y }; }
-  updateAvatar() { if (this.player) { this.player.color = this.ui.profile.color; this.player.look = this.ui.profile.gender; this.player.name.setText(this.ui.profile.name); } }
+  updateAvatar() { if (this.player) { createPlayerArt(this, this.ui.profile); this.player.color = this.ui.profile.color; this.player.look = this.ui.profile.gender; this.player.name.setText(this.ui.profile.name); this.player.sprite.setTexture(playerTexture(this.player.facing)); } }
   emote() { if (!this.ui.blocked()) { this.say('Tara, laro!'); this.ui.sound('emote'); } }
 
   private say(text: string) {
@@ -194,16 +207,18 @@ export class BarangayScene extends Phaser.Scene {
         else this.drawKid(kid, time);
       });
       const site = nearbySite(this.player);
+      const atPhone = !this.phoneFound && Math.hypot(this.player.x - this.phoneSpot.x, this.player.y - this.phoneSpot.y) < 43;
       const atStore = Math.hypot(this.player.x - 227, this.player.y - 316) < 75;
       if (time - this.lastHUD > 110) {
-        this.ui.hint(site ? `Press E or tap Play to enter ${site.name}.` : atStore ? `Press E to say hello to ${CHARACTERS.mamaShoni}` : 'Jolen is beside the schoolyard · Dama is south · Tagu-taguan is southeast');
+        this.ui.hint(atPhone ? 'Something on the ground… Press E or Pick up phone.' : site ? `Press E or tap Play to enter ${site.name}.` : atStore ? `Press E to say hello to ${CHARACTERS.mamaShoni}` : 'Luksong Lubid is south of Dama · a little phone may be hiding somewhere.');
         const button = document.querySelector<HTMLButtonElement>('#activity-action')!;
-        button.hidden = !site; if (site) button.textContent = `Play ${site.game === 'jolen' ? 'Jolen' : site.game === 'dama' ? 'Dama' : site.game === 'tinik' ? 'Luksong-tinik' : site.game === 'taguan' ? 'Tagu-taguan' : 'Patintero'} · E`;
-        document.querySelector<HTMLButtonElement>('#emote-button')!.hidden = Boolean(site);
+        button.hidden = !site && !atPhone; if (atPhone) button.textContent = 'Pick up phone · E'; else if (site) button.textContent = `Play ${GAMES[site.game].title} · E`;
+        document.querySelector<HTMLButtonElement>('#emote-button')!.hidden = Boolean(site) || atPhone;
       }
       if (this.interactRequested) {
         this.interactRequested = false;
-        if (site) this.ui.enterGame(site.game);
+        if (atPhone) { this.phoneFound = true; this.phone.setVisible(false); this.ui.foundPhone(); }
+        else if (site) this.ui.enterGame(site.game);
         else if (atStore) this.say(`${CHARACTERS.mamaShoni}: Kaya mo ’yan!`);
         else this.emote();
       }
@@ -214,6 +229,7 @@ export class BarangayScene extends Phaser.Scene {
       const miniView = document.querySelector('#hub-map-view'); miniView?.setAttribute('x', String(camera.scrollX / HUB_SIZE.width * 136)); miniView?.setAttribute('y', String(camera.scrollY / HUB_SIZE.height * 85));
       const gameElement = document.querySelector<HTMLElement>('#game')!;
       gameElement.dataset.cameraX = String(camera.scrollX); gameElement.dataset.cameraY = String(camera.scrollY); gameElement.dataset.nearby = site?.game ?? '';
+      gameElement.dataset.phoneSpot = this.phoneSpot.id; gameElement.dataset.phoneX = String(this.phoneSpot.x); gameElement.dataset.phoneY = String(this.phoneSpot.y); gameElement.dataset.phoneFound = String(this.phoneFound);
       document.querySelector('#location-subtitle')!.textContent = site?.district ?? (this.player.x > 1000 ? 'EAST BARANGAY' : this.player.y > 600 ? 'TAMBAYAN' : 'THE PLAZA');
     } else if (this.match) {
       tickMatch(this.match, dt);

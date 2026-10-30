@@ -6,6 +6,11 @@ import './avatar.css';
 import './touch-pad.css';
 import './games/dama-motion.css';
 import './games/jolen.css';
+import './games/retro.css';
+import './games/lubid.css';
+import './wardrobe.css';
+import { mountWardrobe } from './wardrobe-ui';
+import { mountSaveTools } from './save-ui';
 import { GAME_VERSION } from './version';
 import { JOLEN_OPPONENTS } from './games/jolen';
 import { createGame } from './game';
@@ -13,7 +18,7 @@ import { COLORS, loadProfile, saveProfile, storageAvailable } from './store';
 import type { Match } from './rules';
 import { GameDirector } from './games/director';
 import { savedDama } from './games/dama';
-import { GAMES, type ActivityUI, type GameId, type NewGameId, type Result } from './games/types';
+import { GAMES, PUBLIC_GAMES, type ActivityUI, type GameId, type NewGameId, type Result } from './games/types';
 import { HUB_SIZE, HUB_SITES } from './hub';
 import { CHARACTERS, type AvatarGender } from './characters';
 import { paintCharacterPreview } from './character-art';
@@ -35,6 +40,8 @@ const icons = {
 const icon = (name: keyof typeof icons) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
 const app = document.querySelector<HTMLDivElement>('#app')!;
 const profile = loadProfile();
+const DOM_GAMES = ['dama', 'jolen', 'snake', 'impact'];
+let phoneUnlocked = false;
 let paused = false;
 let lastFocus: HTMLElement | null = null;
 let resultMatch: Match | Result | null = null;
@@ -59,7 +66,7 @@ app.innerHTML = `
       <section class="welcome"><div><div class="eyebrow">MALIGAYANG PAGDATING <span> / </span> WELCOME HOME</div><h1>A little street. A lot of play<span>.</span></h1><p>Old-school games. New memories. Your barangay is waiting.</p></div><div class="daily-note">${icon('sun')}<span>A good day<br><strong>to play outside.</strong></span></div></section>
       <div class="play-layout">
         <section id="game-display" class="world-card" aria-label="Playable game">
-          <div class="world-toolbar"><div class="place"><span class="live-dot"></span><strong id="location-title">Barangay Maligaya</strong><span id="location-subtitle">PUROK 01</span></div><div class="weather">${icon('sun')}<span>15:30 · GOLDEN HOUR</span><button id="pause-button" class="tiny-button" aria-label="Pause game" title="Pause game">Ⅱ</button><button id="fullscreen-button" class="tiny-button" aria-label="Fullscreen game" title="Fullscreen game">⛶</button></div></div>
+          <div class="world-toolbar"><div class="place"><span class="live-dot"></span><strong id="location-title">Barangay Maligaya</strong><span id="location-subtitle">PUROK 01</span></div><div class="weather">${icon('sun')}<span>15:30 · GOLDEN HOUR</span><button id="pocket-phone" class="tiny-button" hidden aria-label="Open pocket phone" title="Pocket phone">▣</button><button id="pause-button" class="tiny-button" aria-label="Pause game" title="Pause game">Ⅱ</button><button id="fullscreen-button" class="tiny-button" aria-label="Fullscreen game" title="Fullscreen game">⛶</button></div></div>
           <div id="game-shell" class="game-shell"><div id="game" aria-label="Barangay game. Move with WASD or arrow keys. Press E to interact." tabindex="0"></div>
             <div class="map-label" id="map-label"><span>EXPLORE AT YOUR OWN PACE</span><strong>Welcome to the barangay.</strong></div>
             <div class="round-hud" id="round-hud" hidden><span id="lives">♥ ♥ ♥</span><strong id="round-objective">CROSS THE COURT</strong><span id="timer">01:30</span></div>
@@ -92,11 +99,11 @@ window.addEventListener('laro-ready', finishBoot, { once: true });
 document.querySelector('.rail-bottom')!.insertAdjacentHTML('beforeend', '<button id="about-button" class="nav-item" aria-label="About LARO"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg><span>About</span></button>');
 document.querySelector('#exit-play-screen')!.insertAdjacentHTML('beforebegin', '<button data-screen-nav="about-button">About</button>');
 document.querySelector('#nav-play span')!.textContent = 'Games';
-document.querySelector('.more-games')!.innerHTML = '<span>FIVE NEIGHBORHOOD CLASSICS</span><span>All playable offline · your progress stays here.</span>';
-document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${(Object.keys(GAMES) as GameId[]).map(id => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${({ patintero: '╬', dama: '◉', taguan: '♧', tinik: '↟', jolen: '●' })[id]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);
+document.querySelector('.more-games')!.innerHTML = '<span>SIX CLASSICS · TWO HIDDEN SECRETS</span><span>All playable offline · your progress stays here.</span>';
+document.querySelector('.side-panel')!.insertAdjacentHTML('afterbegin', `<section class="game-picker" aria-label="Choose a game"><div class="eyebrow">WHAT SHALL WE PLAY?</div><div class="game-picker-grid">${PUBLIC_GAMES.map(id => `<button type="button" data-game="${id}" aria-label="Choose ${GAMES[id].title}" aria-pressed="${id === selectedGame}" class="${id === selectedGame ? 'selected' : ''}"><span>${({ patintero: '╬', dama: '◉', taguan: '♧', tinik: '↟', jolen: '●', lubid: '∿', snake: '▧', impact: '✧' })[id]}</span>${GAMES[id].title}</button>`).join('')}</div></section>`);
 document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', '<button id="activity-action" class="activity-action" hidden>Jump · Space</button>');
 document.querySelector('.game-picker')!.insertAdjacentHTML('beforeend', '<button id="quick-settings" class="quick-settings">Difficulty: Easy · Change</button>');
-document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', `<div id="hub-map" class="hub-map"><svg viewBox="0 0 136 85" role="img" aria-label="Barangay map with five game locations"><path d="M19 12V81M0 31H132M19 58H129M108 31V79" fill="none" stroke="#b8a780" stroke-width="5"/>${HUB_SITES.map(site => `<circle cx="${site.at.x / HUB_SIZE.width * 136}" cy="${site.at.y / HUB_SIZE.height * 85}" r="4" fill="#e7bd73"/><text x="${site.at.x / HUB_SIZE.width * 136 + 5}" y="${site.at.y / HUB_SIZE.height * 85 - 4}" fill="#f3e7bb" font-size="8">${site.game === 'jolen' ? 'J' : site.game === 'dama' ? 'D' : site.game === 'tinik' ? 'L' : site.game === 'taguan' ? 'T' : 'P'}</text>`).join('')}<rect id="hub-map-view" width="81.6" height="51" fill="none" stroke="#e4efcc" stroke-opacity=".6"/><circle id="hub-map-player" r="3" fill="#fff8d7" stroke="#314a35"/></svg><span>MALIGAYA · 5 PLACES</span></div>`);
+document.querySelector('#game-shell')!.insertAdjacentHTML('beforeend', `<div id="hub-map" class="hub-map"><svg viewBox="0 0 136 85" role="img" aria-label="Barangay map with six game locations"><path d="M19 12V81M0 31H132M19 58H129M108 31V79" fill="none" stroke="#b8a780" stroke-width="5"/>${HUB_SITES.map(site => `<circle cx="${site.at.x / HUB_SIZE.width * 136}" cy="${site.at.y / HUB_SIZE.height * 85}" r="4" fill="#e7bd73"/><text x="${site.at.x / HUB_SIZE.width * 136 + 5}" y="${site.at.y / HUB_SIZE.height * 85 - 4}" fill="#f3e7bb" font-size="8">${site.game === 'lubid' ? 'R' : site.game === 'jolen' ? 'J' : site.game === 'dama' ? 'D' : site.game === 'tinik' ? 'L' : site.game === 'taguan' ? 'T' : 'P'}</text>`).join('')}<rect id="hub-map-view" width="81.6" height="51" fill="none" stroke="#e4efcc" stroke-opacity=".6"/><circle id="hub-map-player" r="3" fill="#fff8d7" stroke="#314a35"/></svg><span>MALIGAYA · 6 PLACES</span></div>`);
 const $ = <T extends HTMLElement = HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 const dialog = $<HTMLDialogElement>('#modal');
 // Keep dialogs and feedback inside the fullscreen element on every browser.
@@ -107,17 +114,17 @@ function refreshProfile() {
   $('#player-name').textContent = profile.name;
   $('#mini-avatar').style.setProperty('--shirt', COLORS[profile.color]);
   $('#mini-avatar').classList.add('has-portrait');
-  const portrait = document.createElement('canvas'); paintCharacterPreview(portrait, profile.gender, COLORS[profile.color]); $('#mini-avatar').replaceChildren(portrait);
-  $('#game').dataset.avatarGender = profile.gender;
+  const portrait = document.createElement('canvas'); paintCharacterPreview(portrait, profile.gender, COLORS[profile.color], 0, 0, profile.wardrobe.equipped); $('#mini-avatar').replaceChildren(portrait);
+  $('#game').dataset.avatarGender = profile.gender; $('#game').dataset.avatarOutfit = JSON.stringify(profile.wardrobe.equipped);
   const record = selectedGame === 'patintero' ? { wins: profile.wins, best: profile.best, played: profile.played } : profile.records[selectedGame];
   $('#wins').textContent = String(record.wins); $('#coins').textContent = String(profile.coins);
-  $('#best').textContent = selectedGame === 'dama' ? String(record.played) : record.best ? selectedGame === 'jolen' ? `${record.best}/15` : selectedGame === 'tinik' ? `${record.best}/6` : `${record.best}s` : '—';
+  $('#best').textContent = selectedGame === 'dama' ? String(record.played) : record.best ? selectedGame === 'lubid' ? `${record.best}/30` : selectedGame === 'snake' || selectedGame === 'impact' ? String(record.best) : selectedGame === 'jolen' ? `${record.best}/15` : selectedGame === 'tinik' ? `${record.best}/6` : `${record.best}s` : '—';
   document.querySelector('.stats > div:last-child > span')!.textContent = GAMES[selectedGame].record;
   $('#sound-button').setAttribute('aria-label', profile.muted ? 'Unmute sound' : 'Mute sound');
   $('#sound-button').classList.toggle('muted', profile.muted);
   $('#save-status').textContent = storageAvailable ? 'Progress saved on this device' : 'Saving unavailable in this browser';
 }
-function persist() { saveProfile(profile); refreshProfile(); }
+function persist() { const saved = saveProfile(profile); refreshProfile(); return saved; }
 function openModal(content: string, dismissible = true) {
   touchPad.reset(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
   scene.resetInput();
@@ -126,7 +133,7 @@ function openModal(content: string, dismissible = true) {
   $('#modal-content').innerHTML = content; $('#close-modal').hidden = !dismissible;
   if (!dialog.open) dialog.showModal();
 }
-function closeModal() { scene.resetInput(); game.input.keyboard!.preventDefault = !['dama', 'jolen'].includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
+function closeModal() { scene.resetInput(); game.input.keyboard!.preventDefault = !DOM_GAMES.includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
 $('#close-modal').onclick = closeModal;
 document.addEventListener('keydown', event => {
   if (!dialog.open && scene?.active === 'dama' && event.key === 'Escape') pause();
@@ -152,6 +159,7 @@ function sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote') {
 
 const { scene: barangay, game } = createGame({
   profile, blocked: () => dialog.open,
+  foundPhone() { phoneUnlocked = true; profile.phoneFinds++; persist(); $('#pocket-phone').hidden = false; openPhone(); },
   enterGame(id) { selectedGame = id; updateGameCard(); setupGame(id); },
   location(mode) {
     activityLocation(mode);
@@ -209,21 +217,21 @@ function activityLocation(mode: 'hub' | 'match' | NewGameId) {
   const active = mode === 'match' ? 'patintero' : mode;
   if (scene) scene.active = active;
   if (active !== 'hub') selectedGame = active;
-  const titles = { hub: 'Barangay Maligaya', patintero: 'Patintero Court', dama: 'Dama sa Tindahan', taguan: 'Tagu-taguan Alley', tinik: 'Luksong-tinik Schoolyard', jolen: 'Jolen Circle' };
+  const titles = { hub: 'Barangay Maligaya', patintero: 'Patintero Court', dama: 'Dama sa Tindahan', taguan: 'Tagu-taguan Alley', tinik: 'Luksong-tinik Schoolyard', jolen: 'Jolen Circle', lubid: 'Luksong Lubid Yard', snake: 'Pocket Phone · Snake', impact: 'Pocket Phone · Orbit Patrol' };
   $('#location-title').textContent = titles[active];
   $('#location-subtitle').textContent = active === 'hub' ? 'PUROK 01' : active === 'dama' ? 'AT THE WOODEN TABLE' : 'OFFLINE PLAY';
   $('#game-shell').dataset.activity = active;
   $('#game-display').dataset.activity = active;
-  game.input.keyboard!.preventDefault = !['dama', 'jolen'].includes(active);
-  $('#map-label').hidden = active !== 'hub'; $('#round-hud').hidden = active === 'hub' || active === 'dama' || active === 'jolen'; $('#countdown').hidden = true;
+  game.input.keyboard!.preventDefault = !DOM_GAMES.includes(active);
+  $('#map-label').hidden = active !== 'hub'; $('#round-hud').hidden = active === 'hub' || DOM_GAMES.includes(active); $('#countdown').hidden = true;
   $('#hub-map').hidden = active !== 'hub';
-  $('.player-chip').hidden = active === 'dama' || active === 'jolen'; $('#emote-button').hidden = active !== 'hub' && active !== 'patintero';
-  $('.touch-controls').hidden = active === 'dama' || active === 'tinik' || active === 'jolen';
-  $('.stamina').hidden = active === 'dama' || active === 'tinik' || active === 'jolen';
-  $('#activity-action').hidden = active !== 'tinik' && active !== 'taguan';
-  $('#activity-action').textContent = active === 'tinik' ? 'Jump · Space' : 'Crouch · E';
+  $('.player-chip').hidden = DOM_GAMES.includes(active); $('#emote-button').hidden = active !== 'hub' && active !== 'patintero';
+  $('.touch-controls').hidden = !['hub', 'patintero', 'taguan'].includes(active);
+  $('.stamina').hidden = !['hub', 'patintero', 'taguan'].includes(active);
+  $('#activity-action').hidden = !['tinik', 'taguan', 'lubid'].includes(active);
+  $('#activity-action').textContent = active === 'tinik' || active === 'lubid' ? 'Jump · Space' : 'Crouch · E';
   $('#nav-hub').classList.toggle('active', active === 'hub'); $('#nav-play').classList.toggle('active', active !== 'hub');
-  const instructions = active === 'jolen' ? 'Tap to aim · Tira starts power · tap again to shoot · Space also works' : active === 'dama' ? 'Click a piece, then its highlighted destination.' : active === 'tinik' ? 'Space or Jump to take off · Escape to pause' : active === 'taguan' ? 'WASD / arrows move · Shift sprints · E crouches' : 'WASD / arrows move · Shift runs · E interacts';
+  const instructions = active === 'lubid' ? 'Tap the court or Jump · Space jumps · Escape pauses' : active === 'snake' || active === 'impact' ? 'Phone keypad / WASD / arrows · Space fires · Escape pauses' : active === 'jolen' ? 'Tap to aim · Tira starts power · tap again to shoot · Space also works' : active === 'dama' ? 'Click a piece, then its highlighted destination.' : active === 'tinik' ? 'Space or Jump to take off · Escape to pause' : active === 'taguan' ? 'WASD / arrows move · Shift sprints · E crouches' : 'WASD / arrows move · Shift runs · E interacts';
   $('.keyboard-guide').textContent = instructions;
   updateGameCard();
   if (active !== 'hub' && innerWidth <= 1100) requestAnimationFrame(() => $('.world-card').scrollIntoView({ block: 'start' }));
@@ -234,9 +242,11 @@ function updateGameCard() {
   $('.game-card h2').textContent = item.title; $('.game-card p').textContent = item.description;
   $('.game-category').textContent = item.category;
   $('.game-tags').innerHTML = item.tags.map(tag => `<span>${tag}</span>`).join('');
-  $('.number').textContent = `${String(Object.keys(GAMES).indexOf(selectedGame) + 1).padStart(2, '0')} / 05`;
+  $('.number').textContent = PUBLIC_GAMES.includes(selectedGame) ? `${String(PUBLIC_GAMES.indexOf(selectedGame) + 1).padStart(2, '0')} / 06` : 'SECRET / 02';
   const art = $('.court-art'); art.dataset.gameArt = selectedGame;
   if (selectedGame === 'patintero') art.innerHTML = '<div class="chalk-court"><i></i><i></i><i></i><b></b></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="art-spark">✦</span>';
+  else if (selectedGame === 'lubid') art.innerHTML = '<div class="preview-rope"></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="preview-caption">TALON. BILIS. ULIT!</span>';
+  else if (selectedGame === 'snake' || selectedGame === 'impact') art.innerHTML = '<span class="preview-pocket">▣</span><span class="preview-caption">A SECRET IN YOUR POCKET</span>';
   else if (selectedGame === 'jolen') art.innerHTML = '<div class="preview-jolen"><i></i><i></i><i></i></div><span class="preview-caption">TUTOK. TIMING. TIRA!</span>';
   else if (selectedGame === 'dama') art.innerHTML = '<div class="preview-board">' + Array.from({ length: 16 }, (_, i) => `<i class="${(Math.floor(i / 4) + i % 4) % 2 ? 'dark' : ''}">${[1, 3, 12, 14].includes(i) ? '<b></b>' : ''}</i>`).join('') + '</div><span class="preview-caption">SA TABI NG TINDAHAN</span>';
   else if (selectedGame === 'taguan') art.innerHTML = '<div class="preview-wall"></div><div class="preview-bush"></div><span class="art-kid one"></span><span class="preview-search">⌕</span><span class="preview-caption">TAHAN… MAY TAYA.</span>';
@@ -247,7 +257,13 @@ function updateGameCard() {
 }
 
 function setupGame(id: GameId) {
-  if (id === 'jolen') {
+  if (id === 'snake' || id === 'impact') {
+    if (!phoneUnlocked) { toast('Explore the barangay and find the little phone first.'); return; }
+    closeModal(); scene.start(id);
+  } else if (id === 'lubid') {
+    openModal(`<div class="eyebrow">TALON. BILIS. ULIT! · ${profile.difficulty.toUpperCase()}</div><h2 id="modal-title">Tara, Luksong Lubid!</h2><p>Sheena and Ferdie turn the rope. Tap the court, Jump, or Space to jump immediately. Clear 30 passes as the rope speeds up. Three rope hits end the round.</p><p>Tap as the rope comes down toward your feet. One tap makes one jump; holding does not repeat. A tap just before landing is briefly buffered.</p><button id="lubid-start" class="primary-button">Start jumping</button>`);
+    $('#lubid-start').onclick = () => { closeModal(); scene.start('lubid'); };
+  } else if (id === 'jolen') {
     openModal(`<div class="eyebrow">TUTOK. TIMING. TIRA!</div><h2 id="modal-title">Tara, Jolen tayo.</h2><p>Fifteen marbles in a chalk circle. Knock them out to collect them. Most marbles wins.</p><p>Your shooter stays where it lands. Aim, tap Tira to start the fast power bar, then tap again to shoot. Turns alternate after every shot.</p><label class="field-label" for="jolen-difficulty">YOUR OPPONENT</label><select id="jolen-difficulty" class="opponent-select">${(Object.keys(JOLEN_OPPONENTS) as DamaDifficulty[]).map(level => `<option value="${level}">${DAMA_LEVELS[level].label} · ${JOLEN_OPPONENTS[level].name}</option>`).join('')}</select><button id="jolen-start" class="primary-button">Play Jolen</button>`);
     const select = $<HTMLSelectElement>('#jolen-difficulty'); select.value = profile.jolenDifficulty;
     $('#jolen-start').onclick = () => { if (isDamaDifficulty(select.value)) profile.jolenDifficulty = select.value; persist(); closeModal(); scene.start('jolen'); };
@@ -269,7 +285,14 @@ function setupGame(id: GameId) {
 }
 function damaOptions() { return (Object.keys(DAMA_LEVELS) as DamaDifficulty[]).map(id => `<option value="${id}">${DAMA_LEVELS[id].label} · ${DAMA_LEVELS[id].opponent}</option>`).join(''); }
 document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach(button => { button.onclick = () => { selectedGame = button.dataset.game as GameId; updateGameCard(); }; });
-$('#activity-action').onclick = () => scene.action();
+$('#activity-action').onpointerdown = event => { if (scene.active === 'lubid') { event.preventDefault(); scene.action(); } };
+$('#activity-action').onclick = event => { if (scene.active !== 'lubid' || event.detail === 0) scene.action(); };
+function openPhone() {
+  if (!phoneUnlocked) return;
+  openModal('<div class="eyebrow">A SECRET IN YOUR POCKET</div><h2 id="modal-title">You found a pocket phone!</h2><p>A chunky old handset, a green screen, and two little games. It stays in your pocket for this visit. On the next browser load, another phone appears elsewhere in the barangay.</p><button id="phone-snake" class="primary-button">Play Snake</button><button id="phone-impact" class="secondary-button">Play Orbit Patrol</button><p class="fine-print">High scores and earned coins save on this device. Use the little phone button above the map to reopen this menu during this visit.</p>');
+  for (const id of ['snake', 'impact'] as const) $('#phone-' + id).onclick = () => { selectedGame = id; closeModal(); updateGameCard(); play(); };
+}
+$('#pocket-phone').onclick = openPhone;
 
 function play() {
   if ($('#game').dataset.ready !== 'true') return;
@@ -282,7 +305,7 @@ function play() {
 }
 $('#play-button').onclick = play;
 $('#nav-play').onclick = () => {
-  openModal(`<div class="eyebrow">TARA, LARO TAYO</div><h2 id="modal-title">An afternoon of play.</h2><div class="game-menu">${(Object.keys(GAMES) as GameId[]).map(id => `<button class="game-menu-card" data-menu-game="${id}"><strong>${GAMES[id].title}</strong><span>${GAMES[id].description}</span><small>Play ${GAMES[id].title} →</small></button>`).join('')}</div>`);
+  openModal(`<div class="eyebrow">TARA, LARO TAYO</div><h2 id="modal-title">An afternoon of play.</h2><div class="game-menu">${PUBLIC_GAMES.map(id => `<button class="game-menu-card" data-menu-game="${id}"><strong>${GAMES[id].title}</strong><span>${GAMES[id].description}</span><small>Play ${GAMES[id].title} →</small></button>`).join('')}</div>`);
   document.querySelectorAll<HTMLButtonElement>('[data-menu-game]').forEach(button => { button.onclick = () => { selectedGame = button.dataset.menuGame as GameId; closeModal(); updateGameCard(); play(); }; });
 };
 $('#nav-hub').onclick = () => {
@@ -296,6 +319,9 @@ $('#sound-button').onclick = () => { profile.muted = !profile.muted; persist(); 
 function guide() {
   if (selectedGame !== 'patintero') {
     const pages: Record<NewGameId, string> = {
+      lubid: '<p>Two neighbors turn a long rope. Tap the court, Jump, or Space to jump immediately. Clear 30 rope passes to win.</p><ol class="rules-list"><li>Watch the rope descend. Get your feet above it when it crosses the ground.</li><li>Every successful pass increases the rotation speed. Easy, Normal, and Hard set the starting pace.</li><li>One tap makes one jump. Holding does not repeat; a tap within 75 milliseconds of landing is buffered.</li><li>Three rope hits end the round. A hit briefly resets the rope to give you time to recover.</li></ol><p>Wins earn 60 / 80 / 100 coins plus 10 per remaining chance. A finished attempt earns 5 plus 2 per clearance. Pausing freezes the rope and your jump.</p>',
+      snake: '<p>Find the phone in the barangay, then use its keypad, arrows, WASD, or swipe to steer. Eat food for 10 points and grow longer. Avoid the walls and your own body. Reversing directly is not allowed. The snake gets faster as it grows. Earn 2 coins per food, up to 30 per finished game. Leaving early earns none.</p>',
+      impact: '<p>Orbit Patrol is an original monochrome space shooter. Use arrows, WASD, or the phone pad to move and hold Space or Fire to shoot. Destroy incoming ships and survive 60 seconds. A collision or an enemy crossing the left edge costs one of three lives. Earn 1 coin per 25 points, up to 40 per finished game. Leaving early earns none.</p>',
       jolen: '<p>Collect the most of the 15 target marbles by knocking them completely outside the chalk circle.</p><ol class="rules-list"><li>You and the bot alternate shots, even after scoring.</li><li>Each shooter stays where it lands. Your character walks beside it before your next shot.</li><li>Tap or drag on the court to aim, or use the direction slider. Tap Tira (or Space) to start the power meter. Tap again to lock the strength and shoot.</li><li>The meter rises to full in 0.6 seconds and bounces back. Cancel lets you aim again.</li><li>Targets must cross the whole chalk line to score. Shooter marbles never score, but can collide and move each other.</li><li>Outside the circle is playable. A shooter leaving the dirt court is placed at its nearest edge. Once all targets are collected, the higher score wins.</li></ol><p>Five opponents use the same physics. Easy shows a longer aim guide. Wins earn 60–100 coins by difficulty; a finished loss earns 10. Leaving early earns none. Escape pauses aiming, power, and motion.</p>',
       dama: `<p>LARO’s Filipino-style preset: an 8×8 board, twelve pieces per side, and Gold moves first.</p><ol class="rules-list"><li>Ordinary pieces step diagonally forward, but can capture forward or backward.</li><li>Captures are mandatory. Choose a sequence that takes the most pieces, and finish every jump with the same piece.</li><li>Captured pieces remain blockers until the complete sequence ends. Equal-length routes are your choice.</li><li>Kings fly along clear diagonals. Each capture jumps one opponent and lands on an empty square beyond it.</li><li>A piece becomes a king only if it ends its complete turn on the far rank.</li><li>Win when the opponent has no pieces or legal moves. Threefold repetition or 40 full moves without a capture or ordinary-piece move is a draw.</li></ol><p>Choose Easy with ${CHARACTERS.mamaShoni}, Normal with ${CHARACTERS.audrey}, Hard with ${CHARACTERS.mj}, Expert with ${CHARACTERS.ferdie}, or Master with ${CHARACTERS.tatayEfren}. You can also pass the device between two people. An unfinished match saves automatically. Bot wins earn 60 coins, draws 20, and losses 10. Friendly pass-and-play has no rewards.</p>`,
       taguan: `<p>${CHARACTERS.audrey} counts for 10 seconds. Use that time to hide, then survive a 75-second search.</p><ol class="rules-list"><li>Move with WASD, arrows, touch buttons, or by clicking the ground.</li><li>Hold Shift / Takbo to sprint. Sprinting uses energy and makes noise.</li><li>Press E or Crouch to move quietly. Shrubs, laundry, and bamboo conceal you; buildings, crates, and barrels block sight. Crouching in the open does not make you invisible.</li><li>The awareness meter fills when ${CHARACTERS.audrey} can see you. Break sight around a wall and relocate.</li><li>${CHARACTERS.audrey} investigates sounds and remembers where she last saw you, but cannot see through buildings. She must reach you to catch you.</li></ol><p>Easy mode shows her sight cone. Normal and Hard increase her speed, sight, and memory. Surviving earns 60 / 80 / 100 coins on Easy / Normal / Hard; a finished caught round earns 10. No transformation, disguise, or weapons.</p>`,
@@ -310,28 +336,30 @@ function guide() {
 }
 $('#guide-button').onclick = guide; $('#rules-button').onclick = guide;
 $('#avatar-button').onclick = () => {
-  openModal(`<div class="eyebrow">A FAMILIAR FACE</div><h2 id="modal-title">Make yourself at home.</h2><form id="avatar-form"><label class="field-label" for="nickname">YOUR NICKNAME</label><input id="nickname" maxlength="16" required autocomplete="nickname" /><fieldset class="avatar-genders"><legend class="field-label">YOUR CHARACTER</legend>${(['boy', 'girl'] as const).map(gender => `<button type="button" class="avatar-choice" data-avatar-gender="${gender}" aria-pressed="${profile.gender === gender}"><canvas aria-hidden="true"></canvas><span>${gender === 'boy' ? 'Boy' : 'Girl'}</span></button>`).join('')}</fieldset><span class="field-label">YOUR FAVORITE SHIRT</span><div class="swatches">${COLORS.map((color, index) => `<button type="button" class="swatch ${profile.color === index ? 'selected' : ''}" data-color="${index}" style="--swatch:${color}" aria-label="${['Sunflower', 'Ocean', 'Guava', 'Calamansi'][index]} shirt" aria-pressed="${profile.color === index}"><canvas aria-hidden="true"></canvas></button>`).join('')}</div><button class="primary-button" type="submit">Save my avatar ${icon('arrow')}</button></form>`);
+  openModal(`<div class="eyebrow">A FAMILIAR FACE</div><h2 id="modal-title">Make yourself at home.</h2><form id="avatar-form"><label class="field-label" for="nickname">YOUR NICKNAME</label><input id="nickname" maxlength="16" required autocomplete="nickname" /><fieldset class="avatar-genders"><legend class="field-label">YOUR CHARACTER</legend>${(['boy', 'girl'] as const).map(gender => `<button type="button" class="avatar-choice" data-avatar-gender="${gender}" aria-pressed="${profile.gender === gender}"><canvas aria-hidden="true"></canvas><span>${gender === 'boy' ? 'Boy' : 'Girl'}</span></button>`).join('')}</fieldset><span class="field-label">YOUR FAVORITE SHIRT</span><div class="swatches">${COLORS.map((color, index) => `<button type="button" class="swatch ${profile.color === index ? 'selected' : ''}" data-color="${index}" style="--swatch:${color}" aria-label="${['Sunflower', 'Ocean', 'Guava', 'Calamansi'][index]} shirt" aria-pressed="${profile.color === index}"><canvas aria-hidden="true"></canvas></button>`).join('')}</div><button class="primary-button" type="submit">Save my avatar ${icon('arrow')}</button></form><div id="wardrobe-host"></div>`);
   $<HTMLInputElement>('#nickname').value = profile.name;
   let selected = profile.color, gender: AvatarGender = profile.gender;
   const repaint = () => {
-    document.querySelectorAll<HTMLButtonElement>('button[data-avatar-gender]').forEach(button => { const value = button.dataset.avatarGender as AvatarGender; button.classList.toggle('selected', value === gender); button.setAttribute('aria-pressed', String(value === gender)); paintCharacterPreview(button.querySelector('canvas')!, value, COLORS[selected]); });
-    document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(button => { const color = Number(button.dataset.color); button.classList.toggle('selected', color === selected); button.setAttribute('aria-pressed', String(color === selected)); paintCharacterPreview(button.querySelector('canvas')!, gender, COLORS[color]); });
+    document.querySelectorAll<HTMLButtonElement>('button[data-avatar-gender]').forEach(button => { const value = button.dataset.avatarGender as AvatarGender; button.classList.toggle('selected', value === gender); button.setAttribute('aria-pressed', String(value === gender)); paintCharacterPreview(button.querySelector('canvas')!, value, COLORS[selected], 0, 0, profile.wardrobe.equipped); });
+    document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(button => { const color = Number(button.dataset.color); button.classList.toggle('selected', color === selected); button.setAttribute('aria-pressed', String(color === selected)); paintCharacterPreview(button.querySelector('canvas')!, gender, COLORS[color], 0, 0, profile.wardrobe.equipped); });
   };
   document.querySelectorAll<HTMLButtonElement>('button[data-avatar-gender]').forEach(button => { button.onclick = () => { gender = button.dataset.avatarGender as AvatarGender; repaint(); }; });
   document.querySelectorAll<HTMLButtonElement>('[data-color]').forEach(button => { button.onclick = () => { selected = Number(button.dataset.color); repaint(); }; });
   repaint();
+  mountWardrobe($('#wardrobe-host'), profile, () => { const saved = persist(); scene.updateAvatar(); repaint(); return saved; });
   $('#avatar-form').onsubmit = event => { event.preventDefault(); const name = $<HTMLInputElement>('#nickname').value.trim(); if (!name) { $<HTMLInputElement>('#nickname').setCustomValidity('Please enter a nickname.'); $<HTMLInputElement>('#nickname').reportValidity(); return; } profile.name = name; profile.color = selected; profile.gender = gender; persist(); scene.updateAvatar(); closeModal(); toast('Looking good! Your avatar is saved.'); };
   $('#nickname').oninput = () => $<HTMLInputElement>('#nickname').setCustomValidity('');
 };
 $('#settings-button').onclick = () => {
-  openModal(`<div class="eyebrow">JUST THE WAY YOU LIKE IT</div><h2 id="modal-title">A little fine-tuning.</h2><label class="setting-row" for="difficulty">Street games<select id="difficulty"><option value="easy">Easy · learn the rhythm</option><option value="normal">Normal · a real challenge</option><option value="hard">Hard · quick and precise</option></select></label><label class="setting-row" for="settings-dama-difficulty">Dama opponent<select id="settings-dama-difficulty">${damaOptions()}</select></label><label class="setting-row" for="sound-enabled">Game sounds<input id="sound-enabled" type="checkbox" ${profile.muted ? '' : 'checked'} /></label><p class="fine-print">Dama, Tagu-taguan, and jumping difficulty changes apply to new matches. Saved Dama matches keep their opponent. Higher street-game difficulties earn more coins.</p><button id="save-settings" class="primary-button">All set</button>`);
+  openModal(`<div class="eyebrow">JUST THE WAY YOU LIKE IT</div><h2 id="modal-title">A little fine-tuning.</h2><label class="setting-row" for="difficulty">Street games<select id="difficulty"><option value="easy">Easy · learn the rhythm</option><option value="normal">Normal · a real challenge</option><option value="hard">Hard · quick and precise</option></select></label><label class="setting-row" for="settings-dama-difficulty">Dama opponent<select id="settings-dama-difficulty">${damaOptions()}</select></label><label class="setting-row" for="sound-enabled">Game sounds<input id="sound-enabled" type="checkbox" ${profile.muted ? '' : 'checked'} /></label><p class="fine-print">Dama, Tagu-taguan, and jumping difficulty changes apply to new matches. Saved Dama matches keep their opponent. Higher street-game difficulties earn more coins.</p><button id="save-settings" class="primary-button">All set</button><div id="save-tools"></div>`);
+  mountSaveTools($('#save-tools'), profile, () => scene.active === 'hub', () => { persist(); scene.updateAvatar(); closeModal(); toast('Progress restored: coins, clothes, avatar, records, and saved Dama match.'); });
   $<HTMLSelectElement>('#difficulty').value = profile.difficulty;
   $<HTMLSelectElement>('#settings-dama-difficulty').value = profile.damaDifficulty;
   $('#save-settings').onclick = () => { const level = $<HTMLSelectElement>('#difficulty').value; profile.difficulty = level === 'hard' ? 'hard' : level === 'normal' ? 'normal' : 'easy'; const damaLevel = $<HTMLSelectElement>('#settings-dama-difficulty').value; if (isDamaDifficulty(damaLevel)) profile.damaDifficulty = damaLevel; profile.muted = !$<HTMLInputElement>('#sound-enabled').checked; persist(); closeModal(); };
 };
 $('#quick-settings').onclick = () => selectedGame === 'jolen' ? setupGame('jolen') : $('#settings-button').click();
 $('#about-button').onclick = () => {
-  openModal(`<div class="eyebrow">ROOTED IN FILIPINO PLAY</div><h2 id="modal-title">About LARO</h2><div class="tphilo-logo about-logo"><img src="./tphilo-mark.svg" alt="tphilo games emblem" width="70" height="70" /><div class="tphilo-wordmark">tphilo<span>games</span></div></div><div class="about-credits"><strong>tphilo games</strong><p>developed by Sab</p><p id="about-version">Version ${GAME_VERSION}</p><p>Five neighborhood classics. Made for one more round.</p><p class="fine-print">Offline edition · Progress is saved on this device.</p></div><button id="about-close" class="primary-button">Back to playing</button>`);
+  openModal(`<div class="eyebrow">ROOTED IN FILIPINO PLAY</div><h2 id="modal-title">About LARO</h2><div class="tphilo-logo about-logo"><img src="./tphilo-mark.svg" alt="tphilo games emblem" width="70" height="70" /><div class="tphilo-wordmark">tphilo<span>games</span></div></div><div class="about-credits"><strong>tphilo games</strong><p>developed by Sab</p><p id="about-version">Version ${GAME_VERSION}</p><p>Six neighborhood classics and two hidden pocket games. Made for one more round.</p><p class="fine-print">Offline edition · Progress is saved on this device.</p></div><button id="about-close" class="primary-button">Back to playing</button>`);
   $('#about-close').onclick = closeModal;
 };
 function resume() { paused = false; scene.setPaused(false); $('#pause-button').setAttribute('aria-label', 'Pause game'); closeModal(); }

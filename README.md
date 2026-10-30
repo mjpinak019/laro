@@ -2,8 +2,54 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.7.0 is a local game collection with a barangay hub, Jolen, Patintero,
-Dama, Tagu-taguan, and Luksong-tinik. All five games work offline.
+Alpha 0.8.0 is a local game collection with a barangay hub, Jolen, Patintero,
+Dama, Tagu-taguan, Luksong-tinik, and Luksong Lubid, plus two hidden phone
+games. All eight games work offline after the first complete online load.
+
+## Wardrobe, jumping rope, and the secret phone
+
+My avatar includes a 32-item wardrobe with six free skin tones, free basic
+clothes, and coin purchases for hats, beards, tops, pants, shoes, and four
+original superhero/cinema-inspired suits. Boy/girl selection stays free.
+Simple accessories cost 40–85 coins; more detailed pieces cost 95–220;
+signature suits cost 320, 420, 520, or 650. Previewing costs nothing. Buying
+charges once and equips the item; owned items can be equipped freely.
+An active signature suit covers the separate top and bottoms; select My
+own mix to show them. All designs are cosmetic and use the same collision
+size. The current player's sixteen walking/facing textures refresh in place.
+
+Luksong Lubid is south of the Dama table. Sheena and Ferdie hold the rope.
+Tap the screen, press Jump, or press Space to start a jump. Touch buttons
+react on pointer down, holding does not repeat, and a 75 ms landing buffer
+accepts closely timed taps. Every cleared pass increases rotation speed;
+30 clearances win, three rope hits end the attempt. Easy/Normal/Hard adjust
+the starting pace. Wins earn 60/80/100 plus 10 per remaining chance; a
+finished attempt earns 5 plus 2 per clearance. Pausing freezes the rope.
+
+A small unbranded TALA 01 handset is placed at one of six reachable map
+spots on every browser load. The previous spot is excluded when session
+storage is available. Explore exposed paths and quieter corners, then
+press E or Pick up phone nearby. It stays in your pocket for that page
+visit, accessible from the phone button in the game toolbar. Reloading
+requires finding the newly placed handset again; earned coins and high
+scores stay saved. The hidden games do not appear in the ordinary picker.
+
+Snake uses arrows/WASD, swipes, or phone keys 2/4/6/8. Food earns 10 points,
+the snake speeds up, and a finished run earns 2 coins per food up to 30.
+Orbit Patrol is an original side-scrolling monochrome shooter. Move with
+arrows/WASD or the pad and hold Fire/Space/5. Stop incoming ships and survive
+60 seconds with three lives. Escaped ships and collisions cost lives.
+Finished runs earn 1 coin per 25 points up to 40. Both have pause, touch
+controls, recorded high scores, and a phone-style simulator without a real
+phone manufacturer's branding. Leaving any of these games early earns none.
+
+Coins, avatar choices, owned items, equipped clothes, and game records save
+automatically in the existing browser profile. Settings → Download save file
+exports those fields and any unfinished Dama match. Choose save file checks
+the format and previews the incoming profile before an explicit restore.
+Restore is available only in the barangay and replaces the local profile
+and Dama snapshot. Backups can move progress to another browser/device;
+there is no automatic cloud sync. Clearing browser data removes local saves.
 
 Jolen uses the circle rules: collect the most of 15 target marbles by
 knocking their entire body outside the chalk circle. Players alternate
@@ -19,13 +65,13 @@ Jolen has its own five-level setting: Weng, Sheena, MJ, Ferdie, and Tatay
 Efren. Bots plan using the same collision and friction rules as the player.
 Their aims, power selections, and shots are visible. A win earns 60–100 coins
 by difficulty; a finished loss earns 10. The new court is beside the schoolyard
-and appears in the game picker, Games menu, and five-location minimap.
+and appears in the game picker, Games menu, and six-location minimap.
 Girl NPC Weng is distinct from Amor; both remain in the barangay.
 
 A pixel emblem and lowercase `tphilo games` wordmark welcome players while
 the barangay initializes. About is available in ordinary and fullscreen
 navigation and credits `tphilo games`, `developed by Sab`, and version
-`0.7.0-alpha`. The displayed version comes from `client/src/version.ts`.
+`0.8.0-alpha`. The displayed version comes from `client/src/version.ts`.
 Existing coins, avatars, records, and Dama saves are preserved. Jolen adds
 `records.jolen` and `jolenDifficulty` to the existing profile key.
 
@@ -92,7 +138,7 @@ would need a separate server, but the current offline games do not.
 - A pixel-art barangay with a sari-sari store, plaza, tricycle, houses,
   neighbors, and Patintero court. The scrolling 1600 by 1000 barangay connects
   the plaza to a Dama courtyard with a playable table, an eastern schoolyard,
-  and a southeast garden. A minimap tracks the player and five game locations.
+  and a southeast garden. A minimap tracks the player and six game locations.
   Walk to a marker and press E or tap Play to enter; returning preserves your
   location. All art is original, generated locally
   from canvas drawing routines in `client/src/art.ts`.
@@ -305,8 +351,8 @@ modules loaded successfully without compiling it.
 
 ## Verification and dependency report
 
-Alpha 0.7 validation: production build and TypeScript checks pass; all 43
-rule tests and 38 browser scenarios pass. The world-art scenario walks
+Alpha 0.8 validation: production build and TypeScript checks pass; all 55
+rule tests and 46 browser scenarios pass. The world-art scenario walks
 behind and in front of a tree, verifies its trunk collision, and captures
 screenshots of the outlined characters and sharpened signage. Tagu-taguan
 also checks that camping in the starting bush is not a free win. New coverage
@@ -319,7 +365,7 @@ tests and production build on pushes and pull requests.
 Rule tests cover Patintero, diagonal movement and collision, Dama longest
 captures and king landings, promotion, draws, bot legality, save validation,
 seeker visibility/pathfinding, and clearance of every jump height. Browser
-checks cover all five games, saved boards, captures and rewards, disconnected
+checks cover all eight games, saved boards, captures and rewards, disconnected
 bot play, crouching/pause, a six-height winning run, missed-jump practice,
 mobile controls, and preservation of legacy progress. Run the commands above
 for the current results. Production compilation includes TypeScript checks.
@@ -329,6 +375,13 @@ collision transfer, persistent shooters, edge re-spots, power timing, and
 legacy profile migration. Browser checks enter its map court, pause the
 power meter, observe bot shots, play a complete match with one reward,
 reload offline, and verify portrait, landscape, loading, and About layouts.
+
+New coverage checks purchase debit/idempotency, migration and save-file
+round trips, responsive and buffered rope input, thirty-jump wins, actual
+walking paths to hidden phones, Snake growth/turns, shooter damage and
+victories, two-finger phone controls, offline wardrobe/pocket games, and
+short mobile landscape windows. An art review rendered all 32 wardrobe
+items across 1,024 boy/girl walking/facing frames with no frame clipping.
 
 - Verified TypeScript, Vite, tsx, and Playwright version commands.
 - Successfully imported Colyseus, its client SDK, and its schema package.
