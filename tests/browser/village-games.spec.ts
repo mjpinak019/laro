@@ -40,7 +40,9 @@ test('pocket phone keeps the LCD ratio and separates movement and Fire on deskto
     const stage = (await page.locator('#game-shell').boundingBox())!;
     const canvas = (await page.locator('#retro-canvas').boundingBox())!, pad = (await page.locator('.retro-dpad').boundingBox())!, fire = (await page.locator('#retro-fire').boundingBox())!;
     expect(canvas.width / canvas.height).toBeCloseTo(168 / 96, 1); expect(canvas.width).toBeGreaterThan(200);
-    for (const selector of ['.retro-phone', '#retro-canvas', '#retro-start', '.retro-dpad', '#retro-fire', '#retro-status']) {
+    await expect(page.locator('.retro-softkeys')).toBeHidden(); await expect(page.locator('.retro-brand')).toBeHidden(); await expect(page.locator('#pocket-phone')).toBeHidden();
+    expect(await page.locator('.retro-phone').evaluate(el => getComputedStyle(el).display)).toBe('contents');
+    for (const selector of ['#retro-canvas', '.retro-dpad', '#retro-fire', '#retro-status']) {
       const box = (await page.locator(selector).boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(stage.x - 1); expect(box.x + box.width).toBeLessThanOrEqual(stage.x + stage.width + 1);
       expect(box.y).toBeGreaterThanOrEqual(stage.y - 1); expect(box.y + box.height).toBeLessThanOrEqual(stage.y + stage.height + 1);

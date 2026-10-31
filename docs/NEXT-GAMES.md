@@ -1,5 +1,50 @@
 # LARO: neighborhood game designs
 
+## East lane expansion (alpha 0.11)
+
+The Piko and Tumbang Preso concepts were approved before implementation.
+The barangay now spans 2200 by 1400 with eight entrances. Wendy is the girl
+hosting the new eastern Piko lane; Eric is the boy at the southeast dirt
+clearing. Both use original local pixel art and shared feet/depth anchors.
+
+The Dama table offers Dama and Chess without adding a separate map area or
+picker tile. Chess supports local pass-and-play and three beginner bot levels,
+legal highlights, castling, en passant, four promotion choices, checkmate and
+automatic draws. Its rules library is bundled for offline play. Completed
+bot matches have separate records and rewards; friendly local matches do
+not. Leaving ends a chess match and preserves any unfinished Dama save.
+
+Piko uses eight pamato courses on a nine-square chalk court. Aim the marker,
+time a power meter, then make one-foot or two-foot landings out and back,
+skipping the occupied square. Paired rows become single-foot rows when the
+marker occupies one half. Missed throws and early, late, or incorrect-foot
+landings consume one of three chances. Easy provides a trajectory and a
+wide timing window; Normal tightens the timing; Hard hides the trajectory
+and tightens it further, with two out-and-back laps on courses five to eight.
+The next landing stays highlighted for clarity.
+Space operates tossing and single-foot hops; D makes two-foot hops. Pointer
+aiming and on-screen buttons offer the same actions on touch devices.
+
+Tumbang Preso alternates player and Eric between thrower and guard over
+three rounds (six turns). Aim and time a tsinelas throw. A real hit sends
+the can tipping, spinning and rolling. Retrieve the slipper and cross back
+behind the safe line to score. Retrieval can start while the slipper is
+in flight. Guards must physically reach the settled can and spend time
+resetting it before a tag counts; tags are valid only outside the safe line.
+Use Retrieve for an automatic return route, Reset/Chase for the guard's
+current objective, or tap the court to pick a route. Difficulty changes
+Eric's accuracy, speed, reset time and guide visibility. Each retrieval
+turn has a 22-second limit. This is LARO's compact digital neighborhood
+adaptation, rather than a claim that all local rule variants are identical.
+
+The phone retains its complete handset in normal view. Fullscreen removes
+the TALA casing, branding, keypad and physical softkeys, preserves the LCD's
+168:96 ratio, and keeps separate movement/Fire controls. Tap the LCD or press
+Enter to start. Pause and Rules remain in the play toolbar/menu.
+
+New records and chess difficulty migrate through the existing profile/save
+backup format without changing coins, wardrobe ownership, or Dama saves.
+
 ## Wardrobe, Luksong Lubid, and pocket games (alpha 0.9)
 
 The wardrobe offers free identity/basic choices and coin-priced cosmetic

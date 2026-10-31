@@ -1,6 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { HUB_OBSTACLES } from '../../client/src/hub-obstacles.ts';
 import { overlaps, type Point } from '../../client/src/rules.ts';
+import { HUB_SIZE } from '../../client/src/hub.ts';
 
 export function pathTo(from: Point, target: Point) {
   const start = { x: Math.round(from.x / 10) * 10, y: Math.round(from.y / 10) * 10 }, queue = [start], parents = new Map<string, Point | null>([[`${start.x},${start.y}`, null]]);
@@ -9,7 +10,7 @@ export function pathTo(from: Point, target: Point) {
     const point = queue[head]; if (Math.hypot(point.x - target.x, point.y - target.y) < 22) { end = point; break; }
     for (const [dx, dy] of [[10, 0], [-10, 0], [0, 10], [0, -10]]) {
       const at = { x: point.x + dx, y: point.y + dy }, key = `${at.x},${at.y}`;
-      if (at.x < 30 || at.x > 1550 || at.y < 50 || at.y > 970 || parents.has(key) || HUB_OBSTACLES.some(rect => overlaps(at, rect, 15))) continue;
+      if (at.x < 30 || at.x > HUB_SIZE.width - 50 || at.y < 50 || at.y > HUB_SIZE.height - 30 || parents.has(key) || HUB_OBSTACLES.some(rect => overlaps(at, rect, 15))) continue;
       parents.set(key, point); queue.push(at);
     }
   }
@@ -28,10 +29,16 @@ export function pathTo(from: Point, target: Point) {
   }
   return smooth;
 }
+export async function settleHubCamera(page: Page) {
+  // Resolve the animated camera before translating a world waypoint into a click.
+  const camera = () => page.locator('#game').evaluate(el => `${(el as HTMLElement).dataset.cameraX},${(el as HTMLElement).dataset.cameraY}`);
+  await expect.poll(async () => { const before = await camera(); await page.waitForTimeout(100); return before === await camera(); }, { timeout: 3000, intervals: [50] }).toBe(true);
+}
 export async function findPhone(page: Page) {
   const game = page.locator('#game');
   const from = { x: Number(await game.getAttribute('data-x')), y: Number(await game.getAttribute('data-y')) }, target = { x: Number(await game.getAttribute('data-phone-x')), y: Number(await game.getAttribute('data-phone-y')) };
   for (const at of pathTo(from, target)) {
+    await settleHubCamera(page);
     const box = (await page.locator('#game canvas').boundingBox())!, camera = { x: Number(await game.getAttribute('data-camera-x')), y: Number(await game.getAttribute('data-camera-y')) };
     await page.locator('#game canvas').click({ position: { x: (at.x - camera.x) / 960 * box.width, y: (at.y - camera.y) / 600 * box.height } });
     await expect.poll(async () => Math.hypot(Number(await game.getAttribute('data-x')) - at.x, Number(await game.getAttribute('data-y')) - at.y), { timeout: 9000, intervals: [50] }).toBeLessThan(8);

@@ -2,9 +2,26 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.10.1 is a local game collection with a barangay hub, Jolen, Patintero,
-Dama, Tagu-taguan, Luksong-tinik, and Luksong Lubid, plus two hidden phone
-games. All eight games work offline after the first complete online load.
+Alpha 0.11 includes nine neighborhood classics across eight areas, plus two
+hidden phone games. All eleven games work offline after the first complete
+online load.
+
+## Alpha 0.11 additions
+
+The Dama table now offers **Dama or Chess** at the same location. Chess has
+three beginner bot levels and friendly pass-and-play, including castling,
+en passant, promotion choices, checkmate and draws.
+
+The expanded **2200 × 1400** barangay adds **Wendy** at the Piko lane and
+**Eric** at the Tumbang Preso clearing. Piko combines pamato aiming with
+timed one-foot/two-foot landings. Tumbang Preso combines tsinelas aiming,
+a physically rotating can, retrieval and rotating thrower/guard turns.
+Both have Easy/Normal/Hard difficulty, touch and keyboard controls, local
+records and offline support. Read [the approved designs](docs/NEXT-GAMES.md).
+
+Fullscreen pocket games display the LCD without the TALA handset or its
+physical buttons. Tap the screen or press Enter to start; movement and Fire
+remain separate. The normal view keeps the complete phone.
 
 ## Wardrobe, jumping rope, and the secret phone
 
@@ -88,7 +105,7 @@ Jolen has its own five-level setting: Pom, Sheena, MJ, Ferdie, and Tatay
 Efren. Bots plan using the same collision and friction rules as the player.
 Their aims, power selections, and shots are visible. A win earns 60–100 coins
 by difficulty; a finished loss earns 10. The new court is beside the schoolyard
-and appears in the game picker, Games menu, and six-location minimap.
+and appears in the game picker, Games menu, and eight-location minimap.
 Girl NPC Weng is distinct from Amor and now turns the rope in Luksong Lubid.
 Pom is a new boy character at the Jolen circle and its Easy opponent.
 
@@ -175,9 +192,9 @@ would need a separate server, but the current offline games do not.
 ## What is playable
 
 - A pixel-art barangay with a sari-sari store, plaza, tricycle, houses,
-  neighbors, and Patintero court. The scrolling 1600 by 1000 barangay connects
+  neighbors, and Patintero court. The scrolling 2200 by 1400 barangay connects
   the plaza to a Dama courtyard with a playable table, an eastern schoolyard,
-  and a southeast garden. A minimap tracks the player and six game locations.
+  and a southeast garden. A minimap tracks the player and eight game locations.
   Walk to a marker and press E or tap Play to enter; returning preserves your
   location. All art is original, generated locally
   from canvas drawing routines in `client/src/art.ts`.

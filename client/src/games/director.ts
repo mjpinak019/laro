@@ -1,6 +1,9 @@
 import type Phaser from 'phaser';
 import type { BarangayScene } from '../game';
 import { DamaGame } from './dama';
+import { ChessGame } from './chess';
+import { PikoGame } from './piko';
+import { TumbangGame } from './tumbang';
 import { TaguanScene } from './taguan';
 import { TinikScene } from './tinik';
 import { JolenGame } from './jolen';
@@ -12,6 +15,8 @@ export class GameDirector {
   active: GameId | 'hub' = 'hub';
   private activity?: ActivityControls;
   private dama?: DamaGame;
+  private chess?: ChessGame;
+  private street?: PikoGame | TumbangGame;
   private jolen?: JolenGame;
   private retro?: RetroGame;
   private phoneSession = false;
@@ -19,6 +24,8 @@ export class GameDirector {
   constructor(private game: Phaser.Game, private barangay: BarangayScene, private ui: ActivityUI) {}
 
   private stop() {
+    this.street?.dispose(); this.street = undefined;
+    this.chess?.dispose(); this.chess = undefined;
     this.activity?.resetInput(); this.activity = undefined; this.dama?.dispose(); this.dama = undefined; this.jolen?.dispose(); this.jolen = undefined;
     this.returnPhone(); this.retro?.dispose(); this.retro = undefined;
     for (const key of ['taguan', 'tinik', 'lubid']) if (this.game.scene.getScene(key)) this.game.scene.remove(key);
@@ -38,6 +45,12 @@ export class GameDirector {
     } else if (id === 'jolen') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.jolen = new JolenGame(this.ui); this.activity = this.jolen;
+    } else if (id === 'piko' || id === 'tumbang') {
+      document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
+      this.street = id === 'piko' ? new PikoGame(this.ui) : new TumbangGame(this.ui); this.activity = this.street;
+    } else if (id === 'chess') {
+      document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
+      this.chess = new ChessGame(this.ui, options.mode ?? 'bot'); this.activity = this.chess;
     } else if (id === 'dama') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.dama = new DamaGame(this.ui, options.mode ?? 'bot', options.resume); this.activity = this.dama;

@@ -9,3 +9,4 @@ artifacts/
 !.env.example
 *.log
 .colyseus-cloud.json
+.npm-cache/

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@colyseus/sdk": "0.18.8",
+    "chess.js": "^1.4.0",
     "phaser": "4.2.1"
   },
   "devDependencies": {

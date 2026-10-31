@@ -5,6 +5,16 @@ export type WorldMap = 'hub' | 'court' | 'alley' | 'schoolyard';
 export type WorldPlacement = { id: string; kind: 'tree' | 'palm' | 'bench' | 'vase' | 'fence' | 'sign'; x: number; y: number; scale?: number; width?: number };
 export const WORLD_PROPS: Record<WorldMap, WorldPlacement[]> = {
   hub: [
+    { id: 'piko-palm', kind: 'palm', x: 1080, y: 125 },
+    { id: 'wendy-tree', kind: 'tree', x: 870, y: 85 },
+    { id: 'piko-bench', kind: 'bench', x: 1015, y: 310 },
+    { id: 'east-crossing-tree', kind: 'tree', x: 1080, y: 410 },
+    { id: 'eric-palm', kind: 'palm', x: 1080, y: 620 },
+    { id: 'tumbang-tree', kind: 'tree', x: 870, y: 475 },
+    { id: 'tumbang-bench', kind: 'bench', x: 1005, y: 645 },
+    { id: 'south-extension-tree', kind: 'tree', x: 700, y: 680 },
+    { id: 'piko-north-fence', kind: 'fence', x: 900, y: 85, width: 150 },
+    { id: 'tumbang-south-fence', kind: 'fence', x: 900, y: 665, width: 150 },
     { id: 'maligaya-sign', kind: 'sign', x: 115, y: 275 },
     { id: 'plaza-tree', kind: 'tree', x: 220, y: 178, scale: .72 },
     { id: 'northwest-tree', kind: 'tree', x: 35, y: 42 },

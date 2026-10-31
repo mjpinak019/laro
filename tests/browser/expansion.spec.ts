@@ -89,7 +89,7 @@ test('mobile wardrobe and backups stay usable offline and fit the portrait viewp
 test('the retro phone works offline with two touch controls and fits short landscape browser windows', async ({ page, context }) => {
   test.setTimeout(70000); await ready(page); await findPhone(page); await page.locator('#phone-impact').click();
   await page.setViewportSize({ width: 932, height: 430 }); await page.evaluate(() => { HTMLElement.prototype.requestFullscreen = () => Promise.reject(new Error('Mobile fallback')); }); await page.locator('#fullscreen-button').click();
-  await page.locator('#retro-start').click();
+  await expect(page.locator('.retro-softkeys')).toBeHidden(); await page.locator('#retro-canvas').click();
   await page.evaluate(async () => { await navigator.serviceWorker.ready; }); await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true); await context.setOffline(true);
   const right = (await page.locator('.retro-dpad [data-retro-input="right"]').boundingBox())!, fire = (await page.locator('#retro-fire').boundingBox())!, client = await context.newCDPSession(page);
   const touchPoints = [{ x: right.x + right.width / 2, y: right.y + right.height / 2, id: 1 }, { x: fire.x + fire.width / 2, y: fire.y + fire.height / 2, id: 2 }];
@@ -98,7 +98,7 @@ test('the retro phone works offline with two touch controls and fits short lands
   await expect.poll(async () => JSON.parse((await page.locator('#retro-stage').getAttribute('data-player'))!).x).toBeGreaterThan(initial.x + 5); await expect.poll(async () => Number(await page.locator('#retro-stage').getAttribute('data-bullets'))).toBeGreaterThan(0);
   await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await page.locator('#pause-button').click(); const frozen = await page.locator('#retro-stage').getAttribute('data-player'); await page.waitForTimeout(150); expect(await page.locator('#retro-stage').getAttribute('data-player')).toBe(frozen); await page.locator('#resume-button').click();
   await page.locator('#pause-button').click(); await page.setViewportSize({ width: 932, height: 330 }); await page.locator('#resume-button').click();
-  for (const selector of ['#retro-canvas', '#retro-start', '.retro-dpad', '#retro-fire']) {
+  for (const selector of ['#retro-canvas', '.retro-dpad', '#retro-fire']) {
     const box = (await page.locator(selector).boundingBox())!; expect(box.y).toBeGreaterThanOrEqual(0); expect(box.y + box.height).toBeLessThanOrEqual(331); expect(box.height).toBeGreaterThan(15);
   }
   await page.screenshot({ path: 'artifacts/secret-phone-landscape.png' }); await page.locator('#fullscreen-button').click();

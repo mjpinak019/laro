@@ -148,7 +148,7 @@ export class BarangayScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height).setScroll(0, 0);
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
     this.cameras.main.setScroll(Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600));
-    this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'amor'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena'), this.bot(1030, 460, 'pom'), this.bot(530, 938, 'weng')];
+    this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'amor'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena'), this.bot(1030, 460, 'pom'), this.bot(530, 938, 'weng'), this.bot(1790, 490, 'wendy'), this.bot(1790, 1110, 'eric')];
     this.animals.setVisible(true);
     this.ui.location('hub'); this.ui.status(null);
     this.ui.hint('Explore the larger barangay. Walk to a game marker and press E, or use Games.');

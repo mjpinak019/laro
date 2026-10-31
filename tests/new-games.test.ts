@@ -128,7 +128,7 @@ test('benches, vases, and fence sections use their actual feet for depth and blo
     assert.equal(footprint.y + footprint.height, ground.y); assert.ok(propObstacles('hub').some(rect => JSON.stringify(rect) === JSON.stringify(footprint)));
     for (const side of [-1, 1]) {
       let point = { x: footprint.x + footprint.width / 2, y: side < 0 ? footprint.y - 40 : footprint.y + footprint.height + 40 };
-      for (let step = 0; step < 60; step++) point = move(point, { x: 0, y: -side }, 160, .02, [footprint], { x: 0, y: 0, width: 1600, height: 1000 });
+      for (let step = 0; step < 60; step++) point = move(point, { x: 0, y: -side }, 160, .02, [footprint], { x: 0, y: 0, ...HUB_SIZE });
       assert.equal(overlaps(point, footprint, PLAYER_RADIUS - .1), false);
       if (side < 0) assert.ok(point.y < footprint.y); else assert.ok(point.y > footprint.y + footprint.height);
     }
@@ -191,7 +191,7 @@ test('new hiding props provide more cover while keeping cross-map paths connecte
 });
 test('the expanded barangay has a distinct, reachable interaction point for each game', () => {
   assert.ok(HUB_SIZE.width > 960 && HUB_SIZE.height > 600);
-  assert.equal(new Set(HUB_SITES.map(site => site.game)).size, 6);
+  assert.equal(new Set(HUB_SITES.map(site => site.game)).size, 8);
   for (const site of HUB_SITES) {
     assert.equal(nearbySite(site.at)?.game, site.game);
     assert.ok(site.at.x > 0 && site.at.x < HUB_SIZE.width && site.at.y > 0 && site.at.y < HUB_SIZE.height);

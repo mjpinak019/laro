@@ -136,10 +136,22 @@ function drawHub(c: Painter) {
   // A sunlit plaza with a little planter at its center.
   shadow(c, 224, 191, 25, 9);
   rect(c, 203, 169, 34, 26, '#a59778'); rect(c, 201, 167, 38, 7, '#e0d2a8'); rect(c, 207, 174, 26, 16, '#728a5d');
-  // Parked tricycle, with a blue sidecar and a tiny chrome headlamp.
-  shadow(c, 89, 195, 17, 6); rect(c, 73, 177, 26, 16, '#447f88'); rect(c, 72, 174, 28, 4, '#d8cda3');
-  rect(c, 76, 179, 13, 8, '#8cbbba'); rect(c, 92, 184, 8, 5, '#365f68');
-  rect(c, 75, 192, 6, 6, '#404b45'); rect(c, 94, 191, 6, 6, '#404b45'); rect(c, 100, 183, 4, 3, '#eadb9b');
+  // Philippine motorized tricycle: enclosed sidecar beside an exposed motorcycle.
+  // The canopy, three wheels, and chrome fork fit the shared 65-by-48 footprint.
+  shadow(c, 88, 195, 17, 5);
+  rect(c, 74, 190, 5, 7, '#293c38'); rect(c, 75, 192, 3, 3, '#a8b1a0');
+  rect(c, 90, 189, 5, 7, '#293c38'); rect(c, 91, 191, 3, 3, '#a8b1a0');
+  rect(c, 99, 190, 5, 7, '#293c38'); rect(c, 100, 192, 3, 3, '#a8b1a0');
+  rect(c, 72, 178, 17, 14, '#397d88'); rect(c, 74, 178, 12, 8, '#a9c9bf');
+  rect(c, 79, 178, 1, 9, '#416e73'); rect(c, 73, 187, 15, 4, '#5597a0');
+  rect(c, 75, 188, 8, 1, '#dfd4ad'); rect(c, 85, 181, 3, 8, '#234d53');
+  rect(c, 89, 186, 9, 4, '#b56c51'); rect(c, 90, 184, 6, 2, '#283e3e');
+  rect(c, 94, 189, 5, 2, '#c8cbb5'); rect(c, 95, 180, 2, 8, '#c8cbb5');
+  line(c, [[96, 183], [99, 186], [101, 193]], '#d2d4bd', 1);
+  rect(c, 97, 182, 5, 2, '#2b4243'); rect(c, 100, 184, 3, 3, '#f2d594');
+  rect(c, 72, 175, 2, 12, '#b8c2ac'); rect(c, 87, 175, 2, 12, '#b8c2ac');
+  rect(c, 97, 175, 1, 7, '#b8c2ac'); rect(c, 71, 173, 30, 3, '#e1cf9d');
+  rect(c, 73, 172, 25, 1, '#8e784e');
   drawPropShadows(c, 'hub');
   // Gateposts, chalk hopscotch, and scattered flowering ground cover.
   rect(c, 297, 208, 4, 17, '#806c4d'); rect(c, 297, 201, 4, 5, '#e6c278');
@@ -180,6 +192,23 @@ function drawHub(c: Painter) {
   rect(c, 164, 455, 140, 40, '#bdae88'); c.strokeStyle = '#eee0b4'; c.strokeRect(175, 460, 115, 30);
   line(c, [[183, 474], [210, 483], [250, 483], [280, 474]], '#7b6245', 2);
   label(c, 'LUKSONG LUBID', 234, 495, '#3c5c43', 8);
+  // Two connected eastern districts, each with its own walkable entrance.
+  rect(c, 790, 163, 280, 43, '#cdb994'); rect(c, 815, 163, 42, 505, '#cdb994');
+  rect(c, 620, 480, 39, 188, '#cdb994'); rect(c, 620, 645, 450, 30, '#cdb994');
+  rect(c, 815, 425, 255, 35, '#cdb994'); rect(c, 850, 570, 222, 38, '#cdb994');
+  rect(c, 875, 110, 195, 220, '#bcb28e');
+  for (let y = 0; y < 7; y++) {
+    const pair = y === 2 || y === 4, xx = pair ? 932 : 942, yy = 287 - y * 23;
+    c.strokeStyle = '#f4e7bf'; c.lineWidth = 2; c.strokeRect(xx, yy, pair ? 40 : 20, 23);
+    if (pair) line(c, [[xx + 20, yy], [xx + 20, yy + 23]], '#f4e7bf', 2);
+  }
+  label(c, 'PIKO WITH WENDY', 972, 130, '#476748', 8); pennants(c, 872, 105, 200);
+  rect(c, 875, 485, 195, 155, '#c6af86');
+  line(c, [[890, 610], [1052, 610]], '#f4e5bd', 2);
+  rect(c, 963, 534, 8, 13, '#9fafa2'); rect(c, 964, 539, 6, 4, '#bd7655');
+  rect(c, 917, 596, 5, 9, '#66939b');
+  label(c, 'TUMBANG PRESO', 973, 510, '#496648', 8); label(c, 'WITH ERIC', 974, 632, '#496648', 8);
+  label(c, 'SILANGANG KANTO', 970, 448, '#486449', 8); pennants(c, 875, 477, 192);
 }
 
 function drawHidingObject(c: Painter, kind: string, x: number, y: number, w: number, h: number) {
