@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('Tagu-taguan completes a real search and saves exactly one finished result', async ({ page }) => {
   test.setTimeout(115000);

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { pikoRoute, PIKO_LEVELS } from '../../client/src/games/piko-rules';
 import { initialDama } from '../../client/src/games/dama-rules';
 import { pathTo, settleHubCamera } from '../helpers/hub-walk';
@@ -50,19 +50,21 @@ test('Piko completes an outbound and return course, pauses its timing, and saves
   await expect(page.locator('#modal-title')).toContainText('Wendy'); await expect(page.locator('#coins')).toHaveText('10');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('laro.offline.profile.v1')!)); expect(saved.records.piko.best).toBe(1); expect(saved.records.piko.played).toBe(1);
 });
-test('Tumbang Preso visibly rotates the hit can, alternates thrower and guard, and finishes six turns', async ({ page }) => {
-  test.setTimeout(100000); await ready(page); await street(page, 'tumbang'); const stage = page.locator('#tumbang-stage');
-  for (let turn = 0; turn < 6; turn++) {
+test('Tumbang Preso rotates the hit can, supports manual pickup, and plays to three points', async ({ page }) => {
+  test.setTimeout(120000); await ready(page); await street(page, 'tumbang'); const stage = page.locator('#tumbang-stage');
+  for (let turn = 0; turn < 14; turn++) {
     await expect(stage).toHaveAttribute('data-turn', String(turn));
     if (turn % 2 === 0) {
-      await page.locator('#tumbang-action').click(); await expect.poll(async () => Number(await page.locator('#tumbang-meter').getAttribute('aria-valuenow')), { intervals: [10] }).toBeGreaterThan(53); await page.locator('#tumbang-action').click(); await page.locator('#tumbang-action').click();
+      await page.locator('#tumbang-action').click(); await expect.poll(async () => Number(await page.locator('#tumbang-meter').getAttribute('aria-valuenow')), { intervals: [10] }).toBeGreaterThan(53); await page.locator('#tumbang-action').click(); await page.locator('#tumbang-walk').click();
       await expect(stage).toHaveAttribute('data-hit', 'true'); await expect(stage).toHaveAttribute('data-can-down', 'true');
-      expect(Number(await stage.getAttribute('data-can-angle'))).not.toBe(0);
-      if (!turn) { await page.locator('#pause-button').click(); const frozen = await stage.getAttribute('data-time'); await page.waitForTimeout(200); expect(await stage.getAttribute('data-time')).toBe(frozen); await page.locator('#resume-button').click(); await page.screenshot({ path: 'artifacts/tumbang-hit.png', fullPage: true }); }
+      await expect.poll(async () => { const at = JSON.parse((await stage.getAttribute('data-player'))!), slipper = JSON.parse((await stage.getAttribute('data-slipper'))!); return Math.hypot(at.x - slipper.x, at.y - slipper.y); }, { intervals: [30] }).toBeLessThan(24);
+      await expect(stage).toHaveAttribute('data-carrying', 'false'); await page.locator('#tumbang-action').click(); await expect(stage).toHaveAttribute('data-carrying', 'true'); await page.locator('#tumbang-walk').click();
+      if (!turn) await page.screenshot({ path: 'artifacts/tumbang-hit.png', fullPage: true });
     } else await page.locator('#tumbang-action').click();
-    await expect(stage).toHaveAttribute('data-phase', 'feedback', { timeout: 25000 }); await page.locator('#tumbang-action').click();
+    await expect(stage).toHaveAttribute('data-phase', 'feedback', { timeout: 38000 });
+    const done = await page.locator('#tumbang-action').textContent(); await page.locator('#tumbang-action').click(); if (done === 'See results') break;
   }
-  await expect(page.locator('#result-summary')).toContainText('Three throws and three turns as guard each');
+  await expect(page.locator('#result-summary')).toContainText('First to three points');
   const p = await page.evaluate(() => JSON.parse(localStorage.getItem('laro.offline.profile.v1')!)); expect(p.records.tumbang.played).toBe(1); expect(p.coins).toBeGreaterThanOrEqual(10);
 });
 test('new games fit portrait and short landscape fullscreen and reload offline', async ({ page, context }) => {

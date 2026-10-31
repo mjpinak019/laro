@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './fixtures';
 import { initialDama, positionKey, type Piece } from '../../client/src/games/dama-rules';
 import { tinikStage } from '../../client/src/games/arcade-rules';
 
@@ -9,7 +9,7 @@ async function seed(page: Page, pieces: Record<number, Piece>, legacy = false) {
   state.history = [positionKey(state.board, 1)];
   await page.evaluate(({ state, legacy }) => {
     localStorage.setItem('laro.dama.match.v1', JSON.stringify(state));
-    if (legacy) localStorage.setItem('laro.offline.profile.v1', JSON.stringify({ name: 'Old Friend', color: 2, coins: 123, wins: 7, played: 10, best: 22, difficulty: 'easy', muted: true }));
+    if (legacy) localStorage.setItem('laro.offline.profile.v1', JSON.stringify({ tutorialPrompts: false, name: 'Old Friend', color: 2, coins: 123, wins: 7, played: 10, best: 22, difficulty: 'easy', muted: true }));
   }, { state, legacy });
   await page.reload(); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
 }

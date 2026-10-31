@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { findPhone } from '../helpers/hub-walk';
 import { HUB_OBSTACLES } from '../../client/src/hub-obstacles';
 import { overlaps } from '../../client/src/rules';

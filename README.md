@@ -2,9 +2,37 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.11 includes nine neighborhood classics across eight areas, plus two
+Alpha 0.12 includes nine neighborhood classics across eight areas, plus two
 hidden phone games. All eleven games work offline after the first complete
 online load.
+
+## Alpha 0.12 updates
+
+Chess pieces use explicit ivory/dark SVG drawings on every device, with no
+visible square names. Every game offers three illustrated tutorial steps
+before starting; skip them for a round, disable prompts globally in Settings,
+or replay the illustrations from How to play. Piko's Two feet action is blue.
+
+Tumbang Preso is first to three points. Easy keeps its full throw guide;
+Normal shows half and Hard shows one eighth. Use WASD, arrows, the court,
+or its own touch pad to move. Pick up or put down the tsinelas with E,
+Space, or the action button. Guards move only while the thrower holds it.
+The can must be reset before a guard tag is valid outside the safety line.
+
+Settings include master and music volume, music enable/disable, and tutorial
+prompts. Original chiptune music plays in the barangay after a user gesture;
+it pauses during games, menus, and background visits. It is generated locally
+and works offline.
+
+The 2600 by 1600 map adds a Philippine flagpole next to the school, seven
+houses, extra roads and trees, a jeepney stop, another tricycle, and two food
+carts. The F minimap marker points to the main merienda corner. Fishball,
+kwek-kwek, kikiam and taho cost coins; the sari-sari store offers biscuits
+and juice. These are optional treats, with no energy requirement to play.
+Food purchases and settings are included in save backups.
+
+Energy gates, leveling, errands and progression unlocks are **proposals only**.
+See [the recommendation](docs/PROGRESSION-CONCEPT.md).
 
 ## Alpha 0.11 additions
 

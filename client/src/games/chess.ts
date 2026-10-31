@@ -1,9 +1,9 @@
 import { Chess, type Move, type Square, type PieceSymbol } from 'chess.js';
 import { chooseChessMove } from './chess-rules';
+import { chessPiece } from './chess-pieces';
 import type { ActivityControls, ActivityUI } from './types';
 
 const NAMES: Record<PieceSymbol, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
-const GLYPHS: Record<PieceSymbol, string> = { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' };
 
 export class ChessGame implements ActivityControls {
   private readonly difficulty: ActivityUI['profile']['chessDifficulty'];
@@ -73,7 +73,7 @@ export class ChessGame implements ActivityControls {
       <div class="chess-table"><div class="chess-board" role="group" aria-label="Chess board, 8 by 8" aria-busy="${thinking}">${this.game.board().flatMap((row, r) => row.map((piece, f) => {
         const square = `${String.fromCharCode(97 + f)}${8 - r}` as Square;
         const name = piece ? `${piece.color === 'w' ? 'White' : 'Black'} ${NAMES[piece.type]}` : 'empty';
-        return `<button type="button" data-chess-square="${square}" class="chess-square ${(r + f) % 2 ? 'dark' : 'light'} ${this.selected === square ? 'selected' : ''} ${targets.has(square) ? 'legal' : ''} ${this.lastMove?.from === square || this.lastMove?.to === square ? 'last-move' : ''}" aria-label="${square}, ${name}${targets.has(square) ? ', legal destination' : ''}" aria-pressed="${this.selected === square}">${piece ? `<span class="chess-piece ${piece.color === 'w' ? 'white' : 'black'}" aria-hidden="true">${GLYPHS[piece.type]}</span>` : targets.has(square) ? '<i aria-hidden="true"></i>' : ''}<small aria-hidden="true">${square}</small></button>`;
+        return `<button type="button" data-chess-square="${square}" class="chess-square ${(r + f) % 2 ? 'dark' : 'light'} ${this.selected === square ? 'selected' : ''} ${targets.has(square) ? 'legal' : ''} ${this.lastMove?.from === square || this.lastMove?.to === square ? 'last-move' : ''}" aria-label="${square}, ${name}${targets.has(square) ? ', legal destination' : ''}" aria-pressed="${this.selected === square}">${piece ? chessPiece(piece.type, piece.color) : targets.has(square) ? '<i aria-hidden="true"></i>' : ''}</button>`;
       })).join('')}</div></div>
       <div class="chess-footer">${this.promotion ? `<div class="chess-promotion" role="group" aria-label="Choose promotion"><strong>Promote pawn to</strong>${this.promotion.map(move => `<button type="button" data-promote="${move.promotion}">${NAMES[move.promotion!]}</button>`).join('')}</div>` : ''}<span id="chess-last-move">${this.lastMove ? `Last move: ${this.lastMove.san}` : 'Select a piece to see its legal moves.'}</span><p>Castling, en passant, and all four promotion choices are supported.</p><button id="chess-resign" class="secondary-button" ${this.finished ? 'disabled' : ''}>Resign match</button><small>Leaving ends this match. Completed bot matches save coins and records.</small></div>`;
     this.root.querySelectorAll<HTMLButtonElement>('[data-chess-square]').forEach(button => {

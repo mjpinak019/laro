@@ -209,6 +209,14 @@ function drawHub(c: Painter) {
   rect(c, 917, 596, 5, 9, '#66939b');
   label(c, 'TUMBANG PRESO', 973, 510, '#496648', 8); label(c, 'WITH ERIC', 974, 632, '#496648', 8);
   label(c, 'SILANGANG KANTO', 970, 448, '#486449', 8); pennants(c, 875, 477, 192);
+  // Walkable new housing loops connect to both existing eastern roads.
+  rect(c, 106, 490, 39, 265, '#cdb994'); rect(c, 106, 645, 1080, 38, '#cdb994');
+  rect(c, 106, 735, 1050, 28, '#cdb994'); rect(c, 1120, 75, 38, 685, '#cdb994');
+  rect(c, 1050, 163, 108, 43, '#cdb994'); rect(c, 1050, 425, 108, 35, '#cdb994');
+  rect(c, 145, 610, 150, 75, '#c3b18c'); rect(c, 340, 683, 105, 65, '#c3b18c');
+  label(c, 'MERIENDA CORNER', 230, 682, '#416147', 8); pennants(c, 147, 565, 160);
+  label(c, 'JEEPNEY STOP', 350, 635, '#416147', 8); label(c, 'BAHAY KALINGA', 1220, 460, '#416147', 8);
+  for (let x = 160; x < 1090; x += 50) rect(c, x, 662, 16, 2, '#e9d8b2');
 }
 
 function drawHidingObject(c: Painter, kind: string, x: number, y: number, w: number, h: number) {
@@ -260,6 +268,32 @@ export function createArt(scene: Phaser.Scene) {
     const image = canvas(key === 'hub' ? HUB_SIZE.width / 2 : WIDTH, key === 'hub' ? HUB_SIZE.height / 2 : HEIGHT); painter(image.getContext('2d')!); scene.textures.addCanvas(key, image);
   }
   const treeImage = canvas(64, 56); tree(treeImage.getContext('2d')!, 32, 48, 1, false); scene.textures.addCanvas('world-tree', treeImage);
+  const homeImage = canvas(110, 100); house(homeImage.getContext('2d')!, 10, 0, 90, 80, '#d7b98d', '#9f7864'); scene.textures.addCanvas('world-house', homeImage);
+  const flagImage = canvas(90, 110), flag = flagImage.getContext('2d')!;
+  rect(flag, 20, 5, 4, 102, '#bfc7af'); rect(flag, 15, 105, 14, 5, '#8e8b70'); rect(flag, 23, 10, 62, 20, '#245ba2'); rect(flag, 23, 30, 62, 20, '#be3b3f');
+  flag.fillStyle = '#fff3d4'; flag.beginPath(); flag.moveTo(23, 10); flag.lineTo(54, 30); flag.lineTo(23, 50); flag.closePath(); flag.fill();
+  flag.fillStyle = '#e6b744'; flag.beginPath(); flag.arc(34, 30, 4, 0, Math.PI * 2); flag.fill();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; line(flag, [[34 + Math.cos(a) * 5, 30 + Math.sin(a) * 5], [34 + Math.cos(a) * 7, 30 + Math.sin(a) * 7]], '#e6b744', 1); }
+  for (const [x, y] of [[27, 17], [27, 43], [46, 30]]) { flag.beginPath(); for (let n = 0; n < 10; n++) { const a = -Math.PI / 2 + n * Math.PI / 5, radius = n % 2 ? 1.3 : 3; if (!n) flag.moveTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius); else flag.lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius); } flag.closePath(); flag.fill(); }
+  scene.textures.addCanvas('world-flag', flagImage);
+  const jeepImage = canvas(96, 62), jeep = jeepImage.getContext('2d')!;
+  rect(jeep, 7, 19, 73, 31, '#d6b45c'); rect(jeep, 14, 13, 61, 7, '#dce0c4'); rect(jeep, 3, 17, 79, 5, '#a8b5ad');
+  for (let x = 13; x < 65; x += 13) { rect(jeep, x, 23, 10, 12, '#406f77'); rect(jeep, x + 1, 24, 7, 4, '#a5c9c0'); }
+  rect(jeep, 68, 24, 13, 16, '#4a7c80'); rect(jeep, 78, 37, 13, 13, '#bb6750'); rect(jeep, 5, 47, 88, 5, '#a9b8ad');
+  rect(jeep, 85, 40, 8, 4, '#f2dfa2'); rect(jeep, 18, 36, 41, 6, '#a35244'); label(jeep, 'MALIGAYA', 40, 42, '#f6e2a7', 7);
+  for (const x of [19, 73]) { rect(jeep, x, 49, 13, 12, '#2a4037'); rect(jeep, x + 3, 52, 7, 6, '#b8bca5'); }
+  scene.textures.addCanvas('world-jeepney', jeepImage);
+  const triImage = canvas(54, 46), tri = triImage.getContext('2d')!;
+  rect(tri, 4, 7, 44, 5, '#dfd1a5'); rect(tri, 7, 12, 24, 24, '#4c8993'); rect(tri, 10, 14, 16, 12, '#b4d1be'); rect(tri, 8, 29, 24, 7, '#32717c');
+  rect(tri, 30, 27, 14, 7, '#bc7954'); rect(tri, 31, 24, 10, 4, '#2b4239'); line(tri, [[41, 18], [47, 27], [49, 39]], '#d4d5b9', 2); rect(tri, 45, 24, 7, 5, '#f1d990');
+  for (const x of [10, 31, 45]) { rect(tri, x, 35, 7, 10, '#2b4239'); rect(tri, x + 2, 38, 3, 4, '#a9baa6'); }
+  scene.textures.addCanvas('world-tricycle', triImage);
+  const stallImage = canvas(104, 85), stall = stallImage.getContext('2d')!;
+  rect(stall, 13, 18, 4, 62, '#806444'); rect(stall, 87, 18, 4, 62, '#806444'); rect(stall, 9, 45, 88, 27, '#b58a55');
+  for (let x = 4; x < 100; x += 12) rect(stall, x, 15, 12, 18, x % 24 ? '#e3c17b' : '#bd735a');
+  rect(stall, 9, 43, 88, 5, '#e5d3a0'); rect(stall, 11, 50, 84, 13, '#3a664d'); label(stall, 'STREET FOOD', 53, 60, '#f5e4b3', 7);
+  for (let x = 24; x < 85; x += 20) { rect(stall, x, 35, 13, 8, '#b0ba9d'); for (let i = 0; i < 3; i++) rect(stall, x + i * 4, 32, 4, 4, x === 44 ? '#dd9b46' : '#e1ca8f'); }
+  rect(stall, 18, 73, 9, 11, '#344a3a'); rect(stall, 78, 73, 9, 11, '#344a3a'); scene.textures.addCanvas('world-foodstall', stallImage);
   const signImage = canvas(68, 40), sign = signImage.getContext('2d')!;
   rect(sign, 31, 13, 5, 27, '#374d3b'); rect(sign, 32, 14, 3, 26, '#8d7453');
   rect(sign, 1, 4, 66, 18, '#294833'); rect(sign, 2, 5, 64, 16, '#5c7960');

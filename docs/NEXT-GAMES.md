@@ -1,5 +1,32 @@
 # LARO: neighborhood game designs
 
+## Alpha 0.12: clearer controls and an explorable barangay
+
+All eleven games now offer optional illustrated tutorial steps. The global
+Settings toggle controls prompts; How to play can replay the illustrations.
+Piko keeps separate gold One foot and blue Two feet actions. Chess uses
+local SVG silhouettes with explicit contrasting fills, avoiding mobile
+emoji/font substitutions, and square names are hidden visually.
+
+Tumbang Preso uses the approved revised first-to-three rules. The guide is
+full length on Easy, half on Normal, and one eighth on Hard. Players move
+with keyboard, a court touch pad, or a chosen destination. Pickup/drop is
+explicit, and the guard freezes whenever the thrower is not holding the
+tsinelas. When it is held, the guard must still reach/reset the can before
+tagging outside the safe line. Attempts alternate roles and have a 35-second
+retrieval limit. A match ends when either player reaches three points.
+
+Volume controls cover master sound and barangay music separately. A local,
+original synthesizer loop starts after a user gesture and stops sounding
+outside the hub or while paused/blocked/hidden. Existing mute preferences
+and all progress are preserved.
+
+The map expands to 2600 by 1600 with new houses, roads, trees, a school
+flagpole, jeepney, tricycle and merienda carts. Optional snack purchases
+use coins and persist a count of snacks enjoyed. They do not grant energy,
+levels, or permission to enter a game. Those systems remain proposals in
+[the progression concept](PROGRESSION-CONCEPT.md).
+
 ## East lane expansion (alpha 0.11)
 
 The Piko and Tumbang Preso concepts were approved before implementation.

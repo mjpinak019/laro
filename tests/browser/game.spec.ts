@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 
 test('hub renders, player walks, avatar persists, and menus remain accessible', async ({ page }) => {
   const errors: string[] = [];
@@ -70,7 +70,7 @@ test('corrupt saved data does not prevent playing', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('laro.offline.profile.v1', '{broken'));
   await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('#player-name')).toHaveText('Ikaw');
-  await page.locator('#play-button').click(); await expect(page.locator('#location-title')).toHaveText('Patintero Court');
+  await page.locator('#play-button').click(); await expect(page.locator('#tutorial-play')).toBeVisible(); await page.locator('#tutorial-play').click(); await expect(page.locator('#location-title')).toHaveText('Patintero Court');
 });
 
 test('a full crossing and return wins, awards coins once, and persists the result', async ({ page }) => {

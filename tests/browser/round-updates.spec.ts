@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { findPhone } from '../helpers/hub-walk';
 test.use({ hasTouch: true });
 async function ready(page: import('@playwright/test').Page) { await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true'); }
@@ -41,7 +41,7 @@ test('invalid Dama moves and rope failures vibrate even when muted; the vibratio
   await page.addInitScript(() => {
     (window as unknown as { buzzes: unknown[] }).buzzes = [];
     Object.defineProperty(navigator, 'vibrate', { configurable: true, writable: true, value: (pattern: unknown) => { (window as unknown as { buzzes: unknown[] }).buzzes.push(pattern); return true; } });
-    localStorage.setItem('laro.offline.profile.v1', JSON.stringify({ muted: true }));
+    localStorage.setItem('laro.offline.profile.v1', JSON.stringify({ tutorialPrompts: false, muted: true }));
   });
   await ready(page); await page.locator('[data-game="dama"]').click(); await page.locator('#play-button').click(); await page.locator('#dama-local').click();
   await page.locator('[data-square="24"]').click(); await expect.poll(() => page.evaluate(() => (window as unknown as { buzzes: unknown[] }).buzzes.length)).toBe(1);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Chess } from 'chess.js';
 import { chooseChessMove } from '../client/src/games/chess-rules.ts';
 import { judgePikoHop, pikoCenter, pikoInside, pikoLanding, pikoPower, pikoRoute, PIKO_LEVELS } from '../client/src/games/piko-rules.ts';
-import { initialTumbang, launchTumbang, nextTumbangTurn, stepTumbang, tumbangPower, TUMBANG_LINE } from '../client/src/games/tumbang-rules.ts';
+import { initialTumbang, launchTumbang, nextTumbangTurn, stepTumbang, toggleTsinelas, tumbangMatchOver, tumbangGuideLength, tumbangPower, TUMBANG_LINE } from '../client/src/games/tumbang-rules.ts';
 import { normalizeProfile } from '../client/src/store.ts';
 import { makeBackup, readBackup } from '../client/src/save-backup.ts';
 import { HUB_SITES, HUB_SIZE } from '../client/src/hub.ts';
@@ -56,23 +56,42 @@ test('a tsinelas physically hits, spins and rolls the tin can; misses leave it u
   const miss = initialTumbang(); launchTumbang(miss, -Math.PI / 4, .6); tick(miss, .85); assert.equal(miss.hit, false); assert.equal(miss.can.down, false);
 });
 test('a fallen can and the safety line each prevent tags; resetting requires reaching the settled can', () => {
-  const state = initialTumbang('hard'); state.turn = 1; state.phase = 'retrieve'; state.can.down = true;
+  const state = initialTumbang('hard'); state.turn = 1; state.phase = 'retrieve'; state.can.down = true; state.carrying = true;
   state.players = [{ x: 300, y: 300 }, { x: 300, y: 300 }]; state.slipper = { x: 700, y: 300 }; stepTumbang(state, .01); assert.equal(state.phase, 'retrieve');
   state.can.down = false; state.players = [{ x: 300, y: TUMBANG_LINE + 5 }, { x: 300, y: TUMBANG_LINE + 5 }]; stepTumbang(state, .01); assert.equal(state.phase, 'retrieve');
   state.players = [{ x: 300, y: 300 }, { x: 300, y: 300 }]; stepTumbang(state, .01); assert.equal(state.phase, 'feedback'); assert.equal(state.scores[0], 1);
   const reset = initialTumbang(); reset.turn = 1; reset.phase = 'retrieve'; reset.can.down = true; reset.players[0] = { x: 100, y: 100 }; reset.players[1] = { x: 100, y: 100 }; reset.slipper = { x: 700, y: 100 }; reset.landing = { ...reset.slipper }; tick(reset, 2); assert.equal(reset.can.down, true);
-  reset.players[0] = { x: reset.can.x, y: reset.can.y }; tick(reset, 1.6); assert.equal(reset.can.down, false);
+  reset.players[0] = { x: reset.can.x, y: reset.can.y }; reset.carrying = true; tick(reset, 1.6); assert.equal(reset.can.down, false);
 });
-test('all difficulties allow a clean throw-and-retrieve; roles rotate six times and completed results freeze', () => {
+test('manual pickup and free movement work on all difficulties; first to three ends and freezes the match', () => {
   for (const difficulty of ['easy', 'normal', 'hard'] as const) {
-    const state = initialTumbang(difficulty); launchTumbang(state, -Math.PI / 2, .55); state.autoRetrieve = true; tick(state, 10);
+    const state = initialTumbang(difficulty); launchTumbang(state, -Math.PI / 2, .55); state.autoRetrieve = true; tick(state, 2);
+    assert.equal(state.carrying, false); assert.equal(toggleTsinelas(state), true); state.autoRetrieve = true; tick(state, 10);
     assert.equal(state.phase, 'feedback'); assert.equal(state.hit, true); assert.equal(state.scores[0], 1);
   }
-  const state = initialTumbang();
-  for (let turn = 0; turn < 6; turn++) {
-    assert.equal(state.turn, turn); launchTumbang(state, -Math.PI / 2, .55); state.autoRetrieve = true; tick(state, 23); assert.equal(state.phase, 'feedback'); nextTumbangTurn(state);
+  const state = initialTumbang(); let turns = 0;
+  while (!tumbangMatchOver(state) && turns < 8) {
+    launchTumbang(state, -Math.PI / 2, .55); state.autoRetrieve = true; tick(state, 2);
+    if (state.turn % 2 === 0) { toggleTsinelas(state); state.autoRetrieve = true; }
+    tick(state, 12); assert.equal(state.phase, 'feedback'); turns++; nextTumbangTurn(state);
   }
-  assert.equal(state.phase, 'finished'); const saved = JSON.stringify(state); tick(state, 2); nextTumbangTurn(state); assert.equal(JSON.stringify(state), saved);
+  assert.equal(turns, 5); assert.equal(state.phase, 'finished'); assert.deepEqual(state.scores, [3, 2]);
+  const saved = JSON.stringify(state); tick(state, 2); nextTumbangTurn(state); assert.equal(JSON.stringify(state), saved);
+});
+test('guide length is full, half, or one eighth and dropping tsinelas freezes the guard while the player can dodge', () => {
+  assert.equal(tumbangGuideLength(.6, 'normal'), tumbangGuideLength(.6, 'easy') / 2);
+  assert.equal(tumbangGuideLength(.6, 'hard'), tumbangGuideLength(.6, 'easy') / 8);
+  const state = initialTumbang(); launchTumbang(state, -Math.PI / 2, .6); tick(state, 1);
+  const guard = { ...state.players[1] }; state.players[0] = { ...state.slipper };
+  stepTumbang(state, .2, { x: 1, y: 0 }); assert.deepEqual(state.players[1], guard); assert.ok(state.players[0].x > state.slipper.x);
+  state.players[0] = { ...state.slipper }; assert.equal(toggleTsinelas(state), true); stepTumbang(state, .1); assert.notDeepEqual(state.players[1], guard);
+  assert.equal(toggleTsinelas(state), true); const stopped = { ...state.players[1] }; tick(state, .4); assert.deepEqual(state.players[1], stopped);
+  assert.equal(state.carrying, false); assert.deepEqual(state.slipper, state.players[0]);
+});
+test('retrieval timeout cannot award a point before the thrower reaches the safe line', () => {
+  const state = initialTumbang(); state.phase = 'retrieve'; state.carrying = true; state.hit = true; state.can.down = true;
+  state.players[0] = { x: 150, y: 250 }; state.elapsed = 35; stepTumbang(state, .02);
+  assert.equal(state.phase, 'feedback'); assert.deepEqual(state.scores, [0, 0]);
 });
 test('legacy saves retain coins and Dama records while new games get independent records and backup round trips', () => {
   const p = normalizeProfile({ coins: 777, records: { dama: { played: 3, wins: 2, best: 40 } } });

@@ -1,11 +1,11 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { readFile } from 'node:fs/promises';
 import { findPhone } from '../helpers/hub-walk';
 
 test.use({ hasTouch: true });
 const profileKey = 'laro.offline.profile.v1';
 async function ready(page: Page, coins?: number) {
-  if (coins !== undefined) await page.addInitScript(coins => { if (!localStorage.getItem('test-seeded')) { localStorage.setItem('laro.offline.profile.v1', JSON.stringify({ coins, name: 'Sab', gender: 'girl' })); localStorage.setItem('test-seeded', 'true'); } }, coins);
+  if (coins !== undefined) await page.addInitScript(coins => { if (!localStorage.getItem('test-seeded')) { localStorage.setItem('laro.offline.profile.v1', JSON.stringify({ tutorialPrompts: false, coins, name: 'Sab', gender: 'girl' })); localStorage.setItem('test-seeded', 'true'); } }, coins);
   await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
 }
 async function lubid(page: Page) { await page.locator('[data-game="lubid"]').click(); await page.locator('#play-button').click(); await page.locator('#lubid-start').click(); await expect(page.locator('#game')).toHaveAttribute('data-phase', 'playing'); }

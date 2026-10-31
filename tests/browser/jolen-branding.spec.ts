@@ -1,5 +1,5 @@
 import { screenNav } from '../helpers/screen-nav';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { GAME_VERSION } from '../../client/src/version';
 import { initialJolen, chooseJolenShot } from '../../client/src/games/jolen-rules';
 test.use({ hasTouch: true });

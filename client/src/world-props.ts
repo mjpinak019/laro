@@ -2,9 +2,25 @@ import type Phaser from 'phaser';
 import type { Rect } from './rules';
 
 export type WorldMap = 'hub' | 'court' | 'alley' | 'schoolyard';
-export type WorldPlacement = { id: string; kind: 'tree' | 'palm' | 'bench' | 'vase' | 'fence' | 'sign'; x: number; y: number; scale?: number; width?: number };
+export type WorldPlacement = { id: string; kind: 'tree' | 'palm' | 'bench' | 'vase' | 'fence' | 'sign' | 'house' | 'flag' | 'jeepney' | 'tricycle' | 'foodstall'; x: number; y: number; scale?: number; width?: number };
 export const WORLD_PROPS: Record<WorldMap, WorldPlacement[]> = {
   hub: [
+    { id: 'paaralan-philippine-flag', kind: 'flag', x: 766, y: 214 },
+    { id: 'southwest-house', kind: 'house', x: 50, y: 620 },
+    { id: 'south-house-one', kind: 'house', x: 380, y: 570 },
+    { id: 'south-house-two', kind: 'house', x: 530, y: 575 },
+    { id: 'south-house-three', kind: 'house', x: 740, y: 590 },
+    { id: 'east-house-one', kind: 'house', x: 1225, y: 155 },
+    { id: 'east-house-two', kind: 'house', x: 1225, y: 390 },
+    { id: 'east-house-three', kind: 'house', x: 1225, y: 625 },
+    { id: 'food-corner-cart', kind: 'foodstall', x: 220, y: 625 },
+    { id: 'kwek-kwek-cart', kind: 'foodstall', x: 390, y: 745 },
+    { id: 'parked-jeepney', kind: 'jeepney', x: 340, y: 610 },
+    { id: 'south-tricycle', kind: 'tricycle', x: 800, y: 725 },
+    { id: 'food-bench', kind: 'bench', x: 275, y: 710 },
+    { id: 'south-vase', kind: 'vase', x: 170, y: 710 },
+    ...[40, 160, 500, 690, 900, 1080, 1260].map((x, i) => ({ id: `new-south-tree-${i}`, kind: 'tree' as const, x, y: 775 })),
+    ...[260, 480, 700].map((y, i) => ({ id: `new-east-palm-${i}`, kind: 'palm' as const, x: 1270, y })),
     { id: 'piko-palm', kind: 'palm', x: 1080, y: 125 },
     { id: 'wendy-tree', kind: 'tree', x: 870, y: 85 },
     { id: 'piko-bench', kind: 'bench', x: 1015, y: 310 },
@@ -97,6 +113,7 @@ export const WORLD_PROPS: Record<WorldMap, WorldPlacement[]> = {
 
 export function propGroundPoint(prop: WorldPlacement) {
   const scale = prop.scale ?? 1;
+  if (['house', 'flag', 'jeepney', 'tricycle', 'foodstall'].includes(prop.kind)) return { x: prop.x * 2, y: prop.y * 2 };
   if (prop.kind === 'sign') return { x: prop.x * 2, y: prop.y * 2 };
   if (prop.kind === 'tree') return { x: prop.x * 2, y: (prop.y + 8 * scale) * 2 };
   if (prop.kind === 'palm') return { x: (prop.x + 3 * scale) * 2, y: (prop.y + 5 * scale) * 2 };
@@ -106,11 +123,17 @@ export function propGroundPoint(prop: WorldPlacement) {
 }
 
 export function propFootprint(prop: WorldPlacement): Rect {
+  const at = propGroundPoint(prop);
+  if (prop.kind === 'house') return { x: at.x - 100, y: at.y - 180, width: 200, height: 180 };
+  if (prop.kind === 'jeepney') return { x: at.x - 84, y: at.y - 78, width: 168, height: 78 };
+  if (prop.kind === 'tricycle') return { x: at.x - 46, y: at.y - 62, width: 92, height: 62 };
+  if (prop.kind === 'foodstall') return { x: at.x - 88, y: at.y - 90, width: 176, height: 90 };
+  if (prop.kind === 'flag') return { x: at.x - 7, y: at.y - 12, width: 14, height: 12 };
   if (prop.kind === 'sign') return { x: prop.x * 2 - 5, y: prop.y * 2 - 7, width: 10, height: 10 };
   if (prop.kind === 'bench') return { x: prop.x * 2, y: (prop.y + 3) * 2, width: 60, height: 20 };
   if (prop.kind === 'vase') return { x: (prop.x - 4) * 2, y: (prop.y - 1) * 2, width: 16, height: 16 };
   if (prop.kind === 'fence') return { x: prop.x * 2, y: (prop.y + 12) * 2, width: (prop.width ?? 64) * 2, height: 10 };
-  const at = propGroundPoint(prop), scale = prop.scale ?? 1;
+  const scale = prop.scale ?? 1;
   return { x: at.x - 7 * scale, y: at.y - 10 * scale, width: 14 * scale, height: 14 * scale };
 }
 
@@ -123,7 +146,7 @@ export function addWorldProps(scene: Phaser.Scene, map: WorldMap): Phaser.GameOb
   return WORLD_PROPS[map].map(prop => {
     const at = propGroundPoint(prop);
     return scene.add.image(at.x, at.y, propTexture(prop))
-      .setOrigin(prop.kind === 'palm' ? 39 / 80 : .5, 1)
+      .setOrigin(prop.kind === 'flag' ? 22 / 90 : prop.kind === 'palm' ? 39 / 80 : .5, 1)
       .setScale(2 * (prop.scale ?? 1)).setDepth(at.y).setName(prop.id);
   });
 }

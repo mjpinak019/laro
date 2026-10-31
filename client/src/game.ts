@@ -4,7 +4,7 @@ import { checkpoint, FIELD, move, newMatch, reward, segmentDistance, SPAWN, tag,
 import { type Profile } from './store';
 import { addWorldProps, propObstacles } from './world-props';
 import { CHARACTER_ORIGIN } from './sprite-outline';
-import { HUB_SIZE, HUB_SITES, nearbySite } from './hub';
+import { FOOD_CORNER, HUB_SIZE, HUB_SITES, nearbySite } from './hub';
 import type { GameId } from './games/types';
 import { BOT_APPEARANCES, CHARACTERS, characterTexture, type CharacterId, type CharacterLook } from './characters';
 import { createPlayerArt, playerTexture } from './avatar-art';
@@ -22,6 +22,7 @@ export interface GameUI {
   sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote'): void;
   enterGame(game: GameId): void;
   foundPhone(): void;
+  openShop?(kind: 'street' | 'store'): void;
   failure?(kind?: 'mistake' | 'hit' | 'loss'): void;
 }
 type Kid = { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; name: Phaser.GameObjects.Text; facing: number; color: number; look: CharacterLook; x: number; y: number };
@@ -92,6 +93,9 @@ export class BarangayScene extends Phaser.Scene {
       const ring = this.add.ellipse(site.at.x, site.at.y, 52, 23, 0xe6c078, .25).setDepth(.5);
       const label = this.add.text(site.at.x, site.at.y + 26, `${site.game === 'dama' ? 'DAMA TABLE' : GAMES[site.game].title.toUpperCase()} · E`, { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950);
       this.locationMarkers.push(ring, label);
+    }
+    for (const point of [FOOD_CORNER, { x: 780, y: 1530 }]) {
+      this.locationMarkers.push(this.add.ellipse(point.x, point.y, 52, 23, 0xe6c078, .25).setDepth(.5), this.add.text(point.x, point.y + 23, 'MERIENDA · E', { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950));
     }
     this.marker = this.add.text(755, 213, 'PATINTERO  ↗', { ...textStyle, fontSize: '16px', color: '#fff0b7' }).setOrigin(0.5);
     const phoneBody = this.add.graphics(); phoneBody.fillStyle(0x22384a); phoneBody.fillRoundedRect(-8, -22, 16, 24, 4); phoneBody.fillStyle(0xa8b87c); phoneBody.fillRect(-5, -16, 10, 7); phoneBody.fillStyle(0xd1d3bc);
@@ -238,17 +242,18 @@ export class BarangayScene extends Phaser.Scene {
       const site = nearbySite(this.player);
       const atPhone = !this.phoneFound && Math.hypot(this.player.x - this.phoneSpot.x, this.player.y - this.phoneSpot.y) < 43;
       const atStore = Math.hypot(this.player.x - 227, this.player.y - 316) < 75;
+      const atFood = [FOOD_CORNER, { x: 780, y: 1530 }].some(point => Math.hypot(this.player.x - point.x, this.player.y - point.y) < 80);
       if (time - this.lastHUD > 110) {
         this.ui.hint(atPhone ? 'Something on the ground… Press E or Pick up phone.' : site ? `Press E or tap Play to enter ${site.name}.` : atStore ? `Press E to say hello to ${CHARACTERS.mamaShoni}` : 'Luksong Lubid is south of Dama · a little phone may be hiding somewhere.');
         const button = document.querySelector<HTMLButtonElement>('#activity-action')!;
-        button.hidden = !site && !atPhone; if (atPhone) button.textContent = 'Pick up phone · E'; else if (site) button.textContent = `Play ${GAMES[site.game].title} · E`;
+        button.hidden = !site && !atPhone && !atFood && !atStore; if (atPhone) button.textContent = 'Pick up phone · E'; else if (site) button.textContent = `Play ${GAMES[site.game].title} · E`; else if (atFood || atStore) { button.textContent = atFood ? 'Street food · E' : 'Sari-sari store · E'; this.ui.hint('Press E or tap to browse snacks. Games are always free to play.'); }
         document.querySelector<HTMLButtonElement>('#emote-button')!.hidden = Boolean(site) || atPhone;
       }
       if (this.interactRequested) {
         this.interactRequested = false;
         if (atPhone) { this.phoneFound = true; this.phone.setVisible(false); this.ui.foundPhone(); }
         else if (site) this.ui.enterGame(site.game);
-        else if (atStore) this.say(`${CHARACTERS.mamaShoni}: Kaya mo ’yan!`);
+        else if (atFood || atStore) this.ui.openShop?.(atFood ? 'street' : 'store');
         else this.emote();
       }
       const camera = this.cameras.main;

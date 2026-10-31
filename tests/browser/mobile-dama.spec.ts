@@ -1,5 +1,5 @@
 import { screenNav } from '../helpers/screen-nav';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 test.use({ hasTouch: true });
 const ready = async (page: Page) => { await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true'); };

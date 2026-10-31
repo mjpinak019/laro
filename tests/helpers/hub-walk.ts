@@ -34,15 +34,19 @@ export async function settleHubCamera(page: Page) {
   const camera = () => page.locator('#game').evaluate(el => `${(el as HTMLElement).dataset.cameraX},${(el as HTMLElement).dataset.cameraY}`);
   await expect.poll(async () => { const before = await camera(); await page.waitForTimeout(100); return before === await camera(); }, { timeout: 3000, intervals: [50] }).toBe(true);
 }
-export async function findPhone(page: Page) {
+export async function walkHubTo(page: Page, target: Point) {
   const game = page.locator('#game');
-  const from = { x: Number(await game.getAttribute('data-x')), y: Number(await game.getAttribute('data-y')) }, target = { x: Number(await game.getAttribute('data-phone-x')), y: Number(await game.getAttribute('data-phone-y')) };
+  const from = { x: Number(await game.getAttribute('data-x')), y: Number(await game.getAttribute('data-y')) };
   for (const at of pathTo(from, target)) {
     await settleHubCamera(page);
     const box = (await page.locator('#game canvas').boundingBox())!, camera = { x: Number(await game.getAttribute('data-camera-x')), y: Number(await game.getAttribute('data-camera-y')) };
     await page.locator('#game canvas').click({ position: { x: (at.x - camera.x) / 960 * box.width, y: (at.y - camera.y) / 600 * box.height } });
     await expect.poll(async () => Math.hypot(Number(await game.getAttribute('data-x')) - at.x, Number(await game.getAttribute('data-y')) - at.y), { timeout: 9000, intervals: [50] }).toBeLessThan(8);
   }
+}
+export async function findPhone(page: Page) {
+  const game = page.locator('#game'), target = { x: Number(await game.getAttribute('data-phone-x')), y: Number(await game.getAttribute('data-phone-y')) };
+  await walkHubTo(page, target);
   await expect(page.locator('#activity-action')).toHaveText('Pick up phone · E'); await page.screenshot({ path: 'artifacts/phone-found-in-barangay.png', fullPage: true });
   await page.keyboard.press('e'); await expect(page.getByRole('heading', { name: 'You found a pocket phone!' })).toBeVisible();
 }

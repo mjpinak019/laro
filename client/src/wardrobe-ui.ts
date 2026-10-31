@@ -1,4 +1,4 @@
-import { COSMETICS, SLOTS, buyCosmetic, cosmetic, equipCosmetic, ownsCosmetic, type WardrobeSlot } from './wardrobe';
+import { DEFAULT_EQUIPPED, COSMETICS, SLOTS, buyCosmetic, cosmetic, equipCosmetic, ownsCosmetic, type WardrobeSlot } from './wardrobe';
 import { COLORS, type Profile } from './store';
 import { paintCharacterPreview } from './character-art';
 
@@ -21,9 +21,9 @@ export function mountWardrobe(host: HTMLElement, profile: Profile, changed: () =
       }
     };
     for (const button of host.querySelectorAll<HTMLButtonElement>('[data-preview-item]')) {
-      const item = cosmetic(button.dataset.previewItem!)!, outfit = { ...profile.wardrobe.equipped, [item.slot]: item.id };
+      const item = cosmetic(button.dataset.previewItem!)!, outfit = { ...DEFAULT_EQUIPPED, [item.slot]: item.id };
       if (item.slot === 'top' || item.slot === 'bottom') outfit.costume = 'costume-none';
-      paintCharacterPreview(button.querySelector('canvas')!, profile.gender, COLORS[profile.color], 0, 0, outfit);
+      paintCharacterPreview(button.querySelector('canvas')!, 'boy', COLORS[0], 0, 0, outfit);
     }
     paintPreview();
   };

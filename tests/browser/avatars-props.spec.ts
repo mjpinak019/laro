@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 async function ready(page: Page) { await page.goto('/'); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true'); }
 async function walk(page: Page, x: number, y: number, reach = true) {
@@ -10,11 +10,11 @@ async function walk(page: Page, x: number, y: number, reach = true) {
   else await page.waitForTimeout(800);
 }
 
-test('boy and girl previews differ and the selected avatar persists in every game', async ({ page }) => {
+test('identity selectors stay simple and the selected avatar persists in every game', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await ready(page); await page.locator('#avatar-button').click();
-  const pictures = await page.locator('.avatar-choice canvas').evaluateAll(elements => elements.map(element => (element as HTMLCanvasElement).toDataURL())); expect(pictures[0]).not.toBe(pictures[1]);
-  await page.locator('.avatar-choice[data-avatar-gender="girl"]').click(); await page.getByLabel('YOUR NICKNAME').fill('Maria'); await page.getByRole('button', { name: 'Guava shirt', exact: true }).click();
+  await expect(page.locator('.avatar-choice canvas')).toHaveCount(0); await expect(page.locator('#wardrobe-preview')).toHaveCount(1);
+  const preview = await page.locator('#wardrobe-preview').evaluate(el => (el as HTMLCanvasElement).toDataURL()); await page.locator('.avatar-choice[data-avatar-gender="girl"]').click(); expect(await page.locator('#wardrobe-preview').evaluate(el => (el as HTMLCanvasElement).toDataURL())).not.toBe(preview); await page.getByLabel('YOUR NICKNAME').fill('Maria'); await page.getByRole('button', { name: 'Guava shirt', exact: true }).click();
   await page.screenshot({ path: 'artifacts/laro-avatar-choices.png', fullPage: true }); await page.getByRole('button', { name: 'Save my avatar' }).click();
   await expect(page.locator('#game')).toHaveAttribute('data-avatar-gender', 'girl'); await page.reload(); await expect(page.locator('#player-name')).toHaveText('Maria');
   await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');

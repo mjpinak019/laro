@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { tinikStage } from '../../client/src/games/arcade-rules';
 
 async function walk(page: Page, key: string, axis: 'x' | 'y', target: number) {

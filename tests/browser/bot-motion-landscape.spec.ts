@@ -1,5 +1,5 @@
 import { screenNav } from '../helpers/screen-nav';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { initialDama, positionKey, type Piece } from '../../client/src/games/dama-rules';
 
 test.use({ hasTouch: true });

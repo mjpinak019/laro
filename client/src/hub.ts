@@ -1,7 +1,8 @@
 import type { GameId } from './games/types';
 import type { Point, Rect } from './rules';
 
-export const HUB_SIZE = { width: 2200, height: 1400 };
+export const HUB_SIZE = { width: 2600, height: 1600 };
+export const FOOD_CORNER = { x: 440, y: 1320 };
 export const HUB_SITES: { game: GameId; name: string; district: string; at: Point }[] = [
   { game: 'patintero', name: 'Patintero Court', district: 'THE PLAZA', at: { x: 755, y: 475 } },
   { game: 'dama', name: 'Dama Table', district: 'SARI-SARI TAMBAYAN', at: { x: 450, y: 775 } },

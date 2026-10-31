@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 async function walk(page: Page, x: number, y: number) {
   const canvas = page.locator('#game canvas'), box = (await canvas.boundingBox())!;
