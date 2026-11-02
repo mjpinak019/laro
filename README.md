@@ -6,6 +6,19 @@ Alpha 0.13 includes nine neighborhood classics across eight areas, plus two
 hidden phone games. All eleven games work offline after the first complete
 online load.
 
+## Alpha 0.13.1 updates
+
+The barangay restores its original fast chiptune phrase (190 ms steps, about
+158 BPM). The former 88 BPM barangay theme now plays during games, retaining
+its mellow filter and volume. Music still respects pause, menus, mute, volume
+settings, and hidden tabs.
+
+Buying merienda brings your equipped pixel avatar from its actual map position
+into the popup, then back again. Skewers lose pieces as you bite, biscuits have
+crumbs, taho uses a spoon, and juice uses a straw. Purchases save once before
+the animation; Skip or closing the menu restores the avatar immediately. The
+performance supports reduced motion and works offline, including fullscreen.
+
 ## Alpha 0.12 updates
 
 Chess pieces use explicit ivory/dark SVG drawings on every device, with no
@@ -20,8 +33,8 @@ Space, or the action button. Guards move only while the thrower holds it.
 The can must be reset before a guard tag is valid outside the safety line.
 
 Settings include master and music volume, music enable/disable, and tutorial
-prompts. Original chiptune music plays after a user gesture: an 88 BPM barangay theme
-and a sparse, mellow 72 BPM focus theme during every game;
+prompts. Original chiptune music plays after a user gesture: a fast barangay theme
+and the mellow 88 BPM former barangay theme during every game;
 it pauses during menus, paused rounds, and background visits. It is generated locally
 and works offline.
 

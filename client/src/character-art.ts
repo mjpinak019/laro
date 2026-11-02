@@ -3,10 +3,11 @@ import { CHARACTER_HEIGHT, CHARACTER_WIDTH, outlineSprite } from './sprite-outli
 import { cosmetic, type WardrobeSlot } from './wardrobe';
 
 type Painter = CanvasRenderingContext2D;
+export type CharacterGesture = { rightHand: { x: number; y: number }; leftHand?: { x: number; y: number }; mouth?: 'open' | 'chew' | 'smile' };
 const fill = (c: Painter, x: number, y: number, w: number, h: number, color: string) => { c.fillStyle = color; c.fillRect(Math.round(x), Math.round(y), w, h); };
 
 /** All looks share the same padded frame and feet anchor, including walking frames. */
-export function drawCharacter(c: Painter, color: string, look: CharacterLook, direction = 0, frame = 0, outfit?: Record<WardrobeSlot, string>) {
+export function drawCharacter(c: Painter, color: string, look: CharacterLook, direction = 0, frame = 0, outfit?: Record<WardrobeSlot, string>, gesture?: CharacterGesture) {
   const elderlyWoman = look === 'mama-shoni', elderlyMan = look === 'tatay-efren';
   const girl = ['girl', 'mama-shoni', 'audrey', 'sheena', 'weng', 'weng-new', 'wendy'].includes(look);
   const elderly = elderlyWoman || elderlyMan, bob = frame % 2;
@@ -27,7 +28,8 @@ export function drawCharacter(c: Painter, color: string, look: CharacterLook, di
   fill(c, 6, 26 + stride, 5, 2, elderly ? '#5d594b' : '#e9d8b3'); fill(c, 13, 26 - stride, 5, 2, elderly ? '#5d594b' : '#e9d8b3');
   fill(c, 5, 14 - bob, 14, 9, color); fill(c, 5, 21 - bob, 14, 2, '#00000022');
   if (girl) { fill(c, 5, 20 - bob, 14, 4, elderlyWoman ? '#6d6570' : color); fill(c, 4, 23 - bob, 16, 1, elderlyWoman ? '#524d5a' : '#00000025'); }
-  fill(c, 3, 15 - bob - stride / 2, 3, 7, skin); fill(c, 18, 15 - bob + stride / 2, 3, 7, skin);
+  if (!gesture?.leftHand) fill(c, 3, 15 - bob - stride / 2, 3, 7, skin);
+  if (!gesture) fill(c, 18, 15 - bob + stride / 2, 3, 7, skin);
   fill(c, 7, 5 - bob, 11, 10, skin);
   fill(c, 6, 3 - bob, 13, 5, hair); fill(c, 8, 2 - bob, 9, 2, hair);
   if (elderlyMan) {
@@ -121,10 +123,22 @@ export function drawCharacter(c: Painter, color: string, look: CharacterLook, di
     if (outfit.hat === 'hat-adventure') { fill(c, 8, 2 - bob, 9, 4, '#92704a'); fill(c, 7, 5 - bob, 11, 2, '#554538'); fill(c, 4, 7 - bob, 17, 2, '#ad8758'); }
     if (outfit.hat === 'hat-astral') { fill(c, 6, 2 - bob, 13, 9, '#cbd5ba'); fill(c, 7, 6 - bob, 11, 5, '#466c77'); fill(c, 8, 6 - bob, 5, 1, '#a4d3cf'); }
   }
+  if (gesture) {
+    // Bent pixel arms keep the same outfit/skin, with a dark edge over the shirt.
+    for (const [hand, elbow] of [[gesture.rightHand, 20], [gesture.leftHand, 3]] as const) if (hand) {
+      const x = Math.round(hand.x), y = Math.round(hand.y), lo = Math.min(x, elbow), top = Math.min(y, 19);
+      fill(c, elbow - 1, top - 1, 4, 22 - top, '#213029');
+      fill(c, lo - 1, y - 1, Math.abs(x - elbow) + 4, 4, '#213029');
+      fill(c, elbow, top, 2, 21 - top, skin);
+      fill(c, lo, y, Math.abs(x - elbow) + 2, 2, skin);
+    }
+    const masked = outfit && (outfit.hat === 'hat-astral' || ['costume-ranger','costume-clockwork','costume-web'].includes(outfit.costume));
+    if (!masked && gesture.mouth) fill(c, 12, 14, gesture.mouth === 'smile' ? 3 : 2, gesture.mouth === 'open' ? 2 : 1, '#654334');
+  }
 }
 
-export function paintCharacterPreview(canvas: HTMLCanvasElement, look: CharacterLook, color: string, direction = 0, frame = 0, outfit?: Record<WardrobeSlot, string>) {
+export function paintCharacterPreview(canvas: HTMLCanvasElement, look: CharacterLook, color: string, direction = 0, frame = 0, outfit?: Record<WardrobeSlot, string>, gesture?: CharacterGesture) {
   canvas.width = CHARACTER_WIDTH; canvas.height = CHARACTER_HEIGHT;
   const c = canvas.getContext('2d')!; c.imageSmoothingEnabled = false;
-  drawCharacter(c, color, look, direction, frame, outfit); outlineSprite(c);
+  drawCharacter(c, color, look, direction, frame, outfit, gesture); outlineSprite(c);
 }

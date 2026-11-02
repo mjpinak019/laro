@@ -14,6 +14,8 @@ import './wardrobe.css';
 import './landscape.css';
 import './tutorials.css';
 import './progress-account.css';
+import './merienda.css';
+import { playMerienda } from './merienda';
 import { awardXp, playerLevel } from './progression';
 import { AccountService } from './account';
 import { mountAccount } from './account-ui';
@@ -66,6 +68,7 @@ let selectedGame: GameId = 'patintero';
 let scene: GameDirector;
 const account = new AccountService();
 let disposeAccount: (() => void) | undefined;
+let disposeMerienda: (() => void) | undefined;
 let recoveryPromptPending = false;
 
 let toastTimer = 0;
@@ -156,6 +159,7 @@ function refreshProfile() {
 function persist() { const saved = saveProfile(profile); refreshProfile(); return saved; }
 function openModal(content: string, dismissible = true) {
   disposeAccount?.(); disposeAccount = undefined;
+  disposeMerienda?.(); disposeMerienda = undefined;
   if (screenMenuOpen) $('#play-menu').click();
   touchPad.reset(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
   scene.resetInput();
@@ -164,7 +168,7 @@ function openModal(content: string, dismissible = true) {
   $('#modal-content').innerHTML = content; $('#close-modal').hidden = !dismissible;
   if (!dialog.open) dialog.showModal();
 }
-function closeModal() { disposeAccount?.(); disposeAccount = undefined; scene.resetInput(); game.input.keyboard!.preventDefault = !DOM_GAMES.includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
+function closeModal() { disposeMerienda?.(); disposeMerienda = undefined; disposeAccount?.(); disposeAccount = undefined; scene.resetInput(); game.input.keyboard!.preventDefault = !DOM_GAMES.includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
 $('#close-modal').onclick = closeModal;
 document.addEventListener('keydown', event => {
   if (!dialog.open && ['dama', 'chess'].includes(scene?.active) && event.key === 'Escape') pause();
@@ -323,12 +327,21 @@ function showTutorial(id: GameId, done: () => void, index = 0) {
 }
 function openFoodShop(kind: 'street' | 'store') {
   const render = (message = '') => {
-    openModal(`<div class="eyebrow">MERIENDA TIME</div><h2 id="modal-title">${kind === 'street' ? 'Street food corner' : 'Mama Shoni’s sari-sari store'}</h2><p>Enjoy a little treat. Games are always free to play.</p><strong id="food-coins">${profile.coins} coins</strong><div class="food-menu">${SNACKS.filter(item => item.shop === kind).map(item => `<article>${snackPicture(item.id)}<strong>${item.name}</strong><p>${item.detail}</p><button class="primary-button" data-buy-snack="${item.id}" ${profile.coins < item.price ? 'disabled' : ''}>Enjoy - ${item.price} coins</button></article>`).join('')}</div><p id="food-status" role="status">${message}</p><button id="food-close" class="secondary-button">Back to the barangay</button>`);
+    openModal(`<div class="eyebrow">MERIENDA TIME</div><h2 id="modal-title">${kind === 'street' ? 'Street food corner' : 'Mama Shoni’s sari-sari store'}</h2><p id="food-intro">Enjoy a little treat. Games are always free to play.</p><strong id="food-coins">${profile.coins} coins</strong><div id="merienda-stage" class="merienda-stage" hidden></div><div class="food-menu">${SNACKS.filter(item => item.shop === kind).map(item => `<article>${snackPicture(item.id)}<strong>${item.name}</strong><p>${item.detail}</p><button class="primary-button" data-buy-snack="${item.id}" ${profile.coins < item.price ? 'disabled' : ''}>Enjoy - ${item.price} coins</button></article>`).join('')}</div><p id="food-status" role="status">${message}</p><button id="food-close" class="secondary-button">Back to the barangay</button>`);
     document.querySelectorAll<HTMLButtonElement>('[data-buy-snack]').forEach(button => { button.onclick = () => {
+      if (disposeMerienda) return;
       const item = SNACKS.find(item => item.id === button.dataset.buySnack)!, before = { coins: profile.coins, snacksEaten: profile.snacksEaten };
       if (!buySnack(profile, item.id)) return;
       if (!persist()) { Object.assign(profile, before); persist(); render('Purchase cancelled because progress could not be saved. No coins charged.'); return; }
-      sound('emote'); render(`Sarap! You enjoyed ${item.name}. Snacks enjoyed: ${profile.snacksEaten}.`);
+      sound('emote'); $('#food-coins').textContent = `${profile.coins} coins`;
+      const menu = $<HTMLElement>('.food-menu'), stage = $('#merienda-stage'); menu.hidden = true;
+      $('#food-status').textContent = `Enjoying ${item.name}…`;
+      disposeMerienda = playMerienda(stage, profile, item.id, () => barangay.meriendaOrigin(), away => barangay.setMeriendaAway(away), () => {
+        disposeMerienda = undefined; stage.hidden = true; menu.hidden = false;
+        $('#food-status').textContent = `Sarap! You enjoyed ${item.name}. Snacks enjoyed: ${profile.snacksEaten}.`;
+        document.querySelectorAll<HTMLButtonElement>('[data-buy-snack]').forEach(buy => { buy.disabled = profile.coins < SNACKS.find(snack => snack.id === buy.dataset.buySnack)!.price; });
+        button.focus({ preventScroll: true });
+      });
     }; });
     $('#food-close').onclick = () => { closeModal(); scene.emote(); };
   }; render();

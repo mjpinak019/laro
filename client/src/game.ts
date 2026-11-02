@@ -188,6 +188,13 @@ export class BarangayScene extends Phaser.Scene {
   interact() { if (!this.ui.blocked()) this.interactRequested = true; }
   rememberHubPosition() { if (this.player && this.mode === 'hub') this.hubReturnPoint = { x: this.player.x, y: this.player.y }; }
   updateAvatar() { if (this.player) { createPlayerArt(this, this.ui.profile); this.player.color = this.ui.profile.color; this.player.look = this.ui.profile.gender; this.player.name.setText(this.ui.profile.name); this.player.sprite.setTexture(playerTexture(this.player.facing)); } }
+  meriendaOrigin() {
+    const box = this.game.canvas.getBoundingClientRect(), camera = this.cameras.main;
+    const ratio = box.width / this.game.scale.gameSize.width;
+    return { x: box.left + (this.player.x - camera.worldView.x) * camera.zoom * ratio,
+      y: box.top + (this.player.y - camera.worldView.y) * camera.zoom * ratio, scale: 2 * camera.zoom * ratio };
+  }
+  setMeriendaAway(away: boolean) { for (const object of [this.player.sprite, this.player.shadow, this.player.name]) object.setVisible(!away); }
   emote() { if (!this.ui.blocked()) { this.say('Tara, laro!'); this.ui.sound('emote'); } }
 
   private say(text: string) {

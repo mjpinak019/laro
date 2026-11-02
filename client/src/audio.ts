@@ -6,6 +6,7 @@ export class GameAudio {
   private context?: AudioContext;
   private master?: GainNode;
   private music?: GainNode;
+  private mellow?: BiquadFilterNode;
   private next = 0;
   private step = 0;
   private theme?: MusicTheme;
@@ -22,8 +23,8 @@ export class GameAudio {
     try {
       if (!this.context) {
         this.context = new AudioContext(); this.master = this.context.createGain(); this.music = this.context.createGain();
-        const mellow = this.context.createBiquadFilter(); mellow.type = 'lowpass'; mellow.frequency.value = 1050; mellow.Q.value = .4;
-        this.music.connect(mellow); mellow.connect(this.master); this.master.connect(this.context.destination);
+        this.mellow = this.context.createBiquadFilter(); this.mellow.type = 'lowpass'; this.mellow.frequency.value = 1050; this.mellow.Q.value = .4;
+        this.music.connect(this.mellow); this.mellow.connect(this.master); this.master.connect(this.context.destination);
       }
       if (this.context.state === 'suspended') void this.context.resume().catch(() => {});
       this.refresh();
@@ -35,12 +36,13 @@ export class GameAudio {
     this.master.gain.setTargetAtTime(this.profile.muted ? 0 : this.profile.volume, context.currentTime, .025);
     const mode = this.mode(), theme = mode === 'hub' ? 'barangay' : 'focus';
     if (this.theme !== theme) { this.stopMusic(); this.step = 0; this.theme = theme; }
+    this.mellow?.frequency.setTargetAtTime(theme === 'barangay' ? 18000 : 1050, context.currentTime, .035);
     const playing = !!mode && !this.blocked() && !document.hidden && this.profile.musicEnabled && !this.profile.muted && this.profile.volume > 0 && this.profile.musicVolume > 0;
     if (!playing && this.playing) this.stopMusic(); this.playing = playing;
     this.music.gain.setTargetAtTime(playing ? this.profile.musicVolume * MUSIC_THEMES[theme].gain : 0, context.currentTime, .035);
     document.querySelector('#game-display')?.setAttribute('data-music', playing && !this.profile.muted && this.profile.volume > 0 && this.profile.musicVolume > 0 ? 'playing' : 'silent');
     document.querySelector('#game-display')?.setAttribute('data-music-theme', theme);
-    document.querySelector('#game-display')?.setAttribute('data-music-bpm', String(MUSIC_THEMES[theme].bpm));
+    document.querySelector('#game-display')?.setAttribute('data-music-bpm', String(Math.round(MUSIC_THEMES[theme].bpm)));
   }
   private tone(frequency: number, when: number, duration: number, amplitude: number, type: OscillatorType, destination: AudioNode) {
     const context = this.context!, oscillator = context.createOscillator(), gain = context.createGain();
