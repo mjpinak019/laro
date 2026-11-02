@@ -37,6 +37,8 @@ jobs:
         run: npm run build
         env:
           LARO_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - name: Upload built game
         uses: actions/upload-pages-artifact@v4
         with:

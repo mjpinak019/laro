@@ -1,3 +1,7 @@
+Current status (alpha 0.13): XP, player levels and cosmetic titles are implemented.
+Optional accounts/cloud backups are prepared for Supabase configuration.
+Energy gates, errands and gameplay unlocks below remain proposals.
+
 # Optional neighborhood progression — proposal only
 
 No food-powered energy requirement, leveling system, elder-crossing event,

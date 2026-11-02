@@ -9,7 +9,7 @@
     "preview": "npm run preview --workspace @laro/client",
     "play": "node scripts/play.mjs",
     "typecheck": "npm run typecheck --workspace @laro/client",
-    "test": "node --test tests/rules.test.ts tests/new-games.test.ts tests/jolen.test.ts tests/expansion.test.ts tests/east-lane.test.ts tests/neighborhood-updates.test.ts",
+    "test": "node --test tests/rules.test.ts tests/new-games.test.ts tests/jolen.test.ts tests/expansion.test.ts tests/east-lane.test.ts tests/neighborhood-updates.test.ts tests/accounts-progression.test.ts",
     "test:e2e": "playwright test"
   },
   "workspaces": [
@@ -20,6 +20,7 @@
     "node": ">=24 <25"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.14",
     "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
     "tsx": "4.23.15",

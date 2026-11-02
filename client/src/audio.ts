@@ -1,26 +1,29 @@
 import type { Profile } from './store';
 import type { Sound } from './games/types';
+import { MUSIC_THEMES, musicNotes, musicStepSeconds, type MusicTheme } from './music';
 
-// Original chiptune phrase, generated locally. No streaming or music assets.
-const MELODY = [72, 76, 79, 76, 74, 77, 81, 77, 76, 79, 84, 79, 74, 77, 79, 71,
-  72, 76, 79, 84, 81, 79, 77, 74, 76, 79, 77, 74, 72, 67, 71, 72];
 export class GameAudio {
   private context?: AudioContext;
   private master?: GainNode;
   private music?: GainNode;
   private next = 0;
   private step = 0;
+  private theme?: MusicTheme;
+  private voices = new Set<OscillatorNode>();
+  private playing = false;
   private timer: number;
-  constructor(private profile: Profile, private inBarangay: () => boolean, private blocked: () => boolean) {
+  constructor(private profile: Profile, private mode: () => string | undefined, private blocked: () => boolean) {
     document.addEventListener('pointerdown', this.unlock, { passive: true });
     document.addEventListener('keydown', this.unlock);
+    document.addEventListener('visibilitychange', this.visibility);
     this.timer = window.setInterval(() => this.tick(), 100);
   }
   private unlock = () => {
     try {
       if (!this.context) {
         this.context = new AudioContext(); this.master = this.context.createGain(); this.music = this.context.createGain();
-        this.music.connect(this.master); this.master.connect(this.context.destination);
+        const mellow = this.context.createBiquadFilter(); mellow.type = 'lowpass'; mellow.frequency.value = 1050; mellow.Q.value = .4;
+        this.music.connect(mellow); mellow.connect(this.master); this.master.connect(this.context.destination);
       }
       if (this.context.state === 'suspended') void this.context.resume().catch(() => {});
       this.refresh();
@@ -30,16 +33,22 @@ export class GameAudio {
     const context = this.context;
     if (!context || !this.master || !this.music) return;
     this.master.gain.setTargetAtTime(this.profile.muted ? 0 : this.profile.volume, context.currentTime, .025);
-    const playing = this.inBarangay() && !this.blocked() && !document.hidden && this.profile.musicEnabled;
-    this.music.gain.setTargetAtTime(playing ? this.profile.musicVolume * .22 : 0, context.currentTime, .035);
+    const mode = this.mode(), theme = mode === 'hub' ? 'barangay' : 'focus';
+    if (this.theme !== theme) { this.stopMusic(); this.step = 0; this.theme = theme; }
+    const playing = !!mode && !this.blocked() && !document.hidden && this.profile.musicEnabled && !this.profile.muted && this.profile.volume > 0 && this.profile.musicVolume > 0;
+    if (!playing && this.playing) this.stopMusic(); this.playing = playing;
+    this.music.gain.setTargetAtTime(playing ? this.profile.musicVolume * MUSIC_THEMES[theme].gain : 0, context.currentTime, .035);
     document.querySelector('#game-display')?.setAttribute('data-music', playing && !this.profile.muted && this.profile.volume > 0 && this.profile.musicVolume > 0 ? 'playing' : 'silent');
+    document.querySelector('#game-display')?.setAttribute('data-music-theme', theme);
+    document.querySelector('#game-display')?.setAttribute('data-music-bpm', String(MUSIC_THEMES[theme].bpm));
   }
   private tone(frequency: number, when: number, duration: number, amplitude: number, type: OscillatorType, destination: AudioNode) {
     const context = this.context!, oscillator = context.createOscillator(), gain = context.createGain();
     oscillator.type = type; oscillator.frequency.value = frequency;
     gain.gain.setValueAtTime(0, when); gain.gain.linearRampToValueAtTime(amplitude, when + .008); gain.gain.exponentialRampToValueAtTime(.0001, when + duration);
     oscillator.connect(gain); gain.connect(destination); oscillator.start(when); oscillator.stop(when + duration + .02);
-    oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+    if (destination === this.music) this.voices.add(oscillator);
+    oscillator.onended = () => { this.voices.delete(oscillator); oscillator.disconnect(); gain.disconnect(); };
   }
   effect(kind: Sound) {
     if (this.profile.muted || this.profile.volume === 0) return;
@@ -49,14 +58,14 @@ export class GameAudio {
   }
   private tick() {
     this.refresh(); const context = this.context;
-    if (!context || context.state !== 'running' || this.profile.muted || !this.profile.musicEnabled || !this.inBarangay() || this.blocked() || document.hidden) { this.next = 0; return; }
+    if (!context || context.state !== 'running' || !this.playing || !this.theme) { this.next = 0; return; }
     if (this.next < context.currentTime) this.next = context.currentTime + .035;
     while (this.next < context.currentTime + .2) {
-      const note = MELODY[this.step % MELODY.length], frequency = 440 * 2 ** ((note - 69) / 12);
-      this.tone(frequency, this.next, .12, .25, 'square', this.music!);
-      if (this.step % 2 === 0) this.tone(frequency / 4, this.next, .23, .4, 'triangle', this.music!);
-      this.step++; this.next += .19;
+      for (const note of musicNotes(this.theme, this.step)) this.tone(440 * 2 ** ((note.midi - 69) / 12), this.next, note.duration, note.amplitude, note.wave, this.music!);
+      this.step++; this.next += musicStepSeconds(this.theme);
     }
   }
-  dispose() { clearInterval(this.timer); document.removeEventListener('pointerdown', this.unlock); document.removeEventListener('keydown', this.unlock); void this.context?.close(); }
+  private visibility = () => this.refresh();
+  private stopMusic() { for (const voice of this.voices) try { voice.stop(this.context!.currentTime + .03); } catch { /* Already ended. */ } this.voices.clear(); this.next = 0; }
+  dispose() { clearInterval(this.timer); this.stopMusic(); document.removeEventListener('pointerdown', this.unlock); document.removeEventListener('keydown', this.unlock); document.removeEventListener('visibilitychange', this.visibility); void this.context?.close(); }
 }

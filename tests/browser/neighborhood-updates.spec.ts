@@ -53,7 +53,7 @@ test('volume sliders persist and barangay music respects mute, modal pause, and 
   for (const [id, value] of [['sound-volume', '40'], ['music-volume', '25']]) await page.locator('#' + id).evaluate((el, value) => { (el as HTMLInputElement).value = value; el.dispatchEvent(new Event('input', { bubbles: true })); }, value);
   await page.locator('#save-settings').click(); await expect(page.locator('#game-display')).toHaveAttribute('data-music', 'playing');
   await page.locator('#sound-button').click(); await expect(page.locator('#game-display')).toHaveAttribute('data-music', 'silent'); await page.locator('#sound-button').click(); await expect(page.locator('#game-display')).toHaveAttribute('data-music', 'playing');
-  await street(page, 'piko'); await expect(page.locator('#game-display')).toHaveAttribute('data-music', 'silent'); await page.reload(); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
+  await street(page, 'piko'); await expect(page.locator('#game-display')).toHaveAttribute('data-music', 'playing'); await expect(page.locator('#game-display')).toHaveAttribute('data-music-theme', 'focus'); await page.reload(); await expect(page.locator('#game')).toHaveAttribute('data-ready', 'true');
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('laro.offline.profile.v1')!)); expect(saved.volume).toBe(.4); expect(saved.musicVolume).toBe(.25);
 });
 test('Tumbang guides use exact fractions, manual movement works, and dropping the slipper stops the guard', async ({ page }) => {

@@ -13,6 +13,12 @@ import './games/lubid.css';
 import './wardrobe.css';
 import './landscape.css';
 import './tutorials.css';
+import './progress-account.css';
+import { awardXp, playerLevel } from './progression';
+import { AccountService } from './account';
+import { mountAccount } from './account-ui';
+import { makeBackup } from './save-backup';
+import { restoreCloudBackup } from './profile-restore';
 import { TUTORIALS, tutorialIllustration } from './tutorials';
 import { GameAudio } from './audio';
 import { SNACKS, buySnack, snackPicture } from './food';
@@ -58,6 +64,9 @@ let lastFocus: HTMLElement | null = null;
 let resultMatch: Match | Result | null = null;
 let selectedGame: GameId = 'patintero';
 let scene: GameDirector;
+const account = new AccountService();
+let disposeAccount: (() => void) | undefined;
+let recoveryPromptPending = false;
 
 let toastTimer = 0;
 
@@ -104,6 +113,10 @@ app.innerHTML = `
   <div id="toast" class="toast" role="status" hidden></div>
 `;
 document.querySelector('.version')!.textContent = 'v' + GAME_VERSION;
+document.querySelector('.header-right')!.insertAdjacentHTML('afterbegin', '<button id="account-button" class="account-button">Account</button>');
+document.querySelector('#fullscreen-nav')!.insertAdjacentHTML('beforeend', '<button data-screen-nav="account-button">Account</button>');
+document.querySelector('.progress-card')!.insertAdjacentHTML('afterend', '<section class="level-card" aria-label="Player level"><div class="eyebrow">YOUR BARANGAY JOURNEY</div><div class="level-top"><strong id="player-level-number">Level 1</strong><span id="player-level-title">Bagong Kalaro</span></div><progress id="xp-progress" value="0" max="100" aria-label="Experience toward next level"></progress><p id="xp-text">0 / 100 XP</p><button id="level-info" class="text-button">How levels work</button></section>');
+document.querySelector('.player-chip div > span')!.id = 'player-level';
 document.querySelector('#boot-version')!.textContent = ' · v' + GAME_VERSION;
 const finishBoot = () => { const splash = document.querySelector<HTMLElement>('#boot-screen')!; document.querySelector('#boot-status')!.textContent = 'Tara, laro tayo!'; splash.classList.add('leaving'); window.setTimeout(() => { splash.hidden = true; }, 260); };
 window.addEventListener('laro-ready', finishBoot, { once: true });
@@ -121,6 +134,11 @@ const dialog = $<HTMLDialogElement>('#modal');
 $('#game-display').append(dialog, $('#toast'));
 function toast(message: string) { $('#toast').textContent = message; $('#toast').hidden = false; clearTimeout(toastTimer); toastTimer = window.setTimeout(() => { $('#toast').hidden = true; }, 4000); }
 function refreshProfile() {
+  const journey = playerLevel(profile.xp);
+  $('#player-level-number').textContent = `Level ${journey.level}`; $('#player-level-title').textContent = journey.title;
+  $('#player-level').textContent = `LEVEL ${journey.level}`;
+  $<HTMLProgressElement>('#xp-progress').value = journey.current; $<HTMLProgressElement>('#xp-progress').max = journey.needed;
+  $('#xp-text').textContent = `${journey.current} / ${journey.needed} XP toward Level ${journey.level + 1} · ${journey.xp} total XP`;
   $('#quick-settings').textContent = selectedGame === 'chess' ? `Chess: ${profile.chessDifficulty} - Change` : selectedGame === 'jolen' ? `Jolen: ${profile.jolenDifficulty === 'master' ? 'Extreme' : DAMA_LEVELS[profile.jolenDifficulty].label} · ${JOLEN_OPPONENTS[profile.jolenDifficulty].name}` : selectedGame === 'dama' ? `Dama: ${DAMA_LEVELS[profile.damaDifficulty].label} · ${DAMA_LEVELS[profile.damaDifficulty].opponent}` : `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
   $('#player-name').textContent = profile.name;
   $('#mini-avatar').style.setProperty('--shirt', COLORS[profile.color]);
@@ -137,6 +155,7 @@ function refreshProfile() {
 }
 function persist() { const saved = saveProfile(profile); refreshProfile(); return saved; }
 function openModal(content: string, dismissible = true) {
+  disposeAccount?.(); disposeAccount = undefined;
   if (screenMenuOpen) $('#play-menu').click();
   touchPad.reset(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
   scene.resetInput();
@@ -145,7 +164,7 @@ function openModal(content: string, dismissible = true) {
   $('#modal-content').innerHTML = content; $('#close-modal').hidden = !dismissible;
   if (!dialog.open) dialog.showModal();
 }
-function closeModal() { scene.resetInput(); game.input.keyboard!.preventDefault = !DOM_GAMES.includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
+function closeModal() { disposeAccount?.(); disposeAccount = undefined; scene.resetInput(); game.input.keyboard!.preventDefault = !DOM_GAMES.includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
 $('#close-modal').onclick = closeModal;
 document.addEventListener('keydown', event => {
   if (!dialog.open && ['dama', 'chess'].includes(scene?.active) && event.key === 'Escape') pause();
@@ -153,7 +172,7 @@ document.addEventListener('keydown', event => {
 dialog.addEventListener('cancel', event => { event.preventDefault(); if (resultMatch) return; if (paused) resume(); else closeModal(); });
 dialog.addEventListener('click', event => { if (event.target === dialog && !resultMatch) { if (paused) resume(); else closeModal(); } });
 
-const gameAudio = new GameAudio(profile, () => scene?.active === 'hub', () => dialog.open || paused || screenMenuOpen);
+const gameAudio = new GameAudio(profile, () => scene?.active, () => dialog.open || paused || screenMenuOpen);
 function sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote') { gameAudio.effect(kind); }
 
 const { scene: barangay, game } = createGame({
@@ -181,6 +200,7 @@ const { scene: barangay, game } = createGame({
   hint(message) { $('#hint').textContent = message; },
   sound,
   result(match, earned) {
+    const previousLevel = playerLevel(profile.xp).level, xp = awardXp(profile, { won: match.phase === 'won' });
     resultMatch = match; if (match.phase !== 'won') feedback.trigger('loss');
     profile.played++; profile.coins += earned;
     const seconds = Math.ceil(90 - match.remaining);
@@ -188,6 +208,7 @@ const { scene: barangay, game } = createGame({
     persist();
     openModal(`<div class="result-symbol">${match.phase === 'won' ? '✳' : '↻'}</div><div class="eyebrow">${match.phase === 'won' ? 'ANG GALING MO!' : 'ISA PANG LARO?'}</div><h2 id="modal-title">${match.phase === 'won' ? 'You made it home.' : 'Another round awaits.'}</h2><p>${match.phase === 'won' ? `Across the lines and back in ${seconds} seconds. The barangay is cheering for you.` : match.remaining === 0 ? 'Time’s up! Try using a sprint when the guards move away.' : 'Those guards are quick. Try changing lanes before you cross.'}</p><div class="result-reward">+${earned} <span>COINS EARNED</span></div><button id="rematch-button" class="primary-button">One more round ${icon('arrow')}</button><button id="return-button" class="secondary-button">Back to the barangay</button>`, false);
     $('#rematch-button').onclick = () => { closeModal(); scene.startMatch(); };
+    $('#modal-content .result-reward').insertAdjacentHTML('afterend', xpMessage(xp, previousLevel));
     $('#return-button').onclick = () => { closeModal(); scene.hub(); };
   },
 });
@@ -204,6 +225,8 @@ const activityUI: ActivityUI = {
   },
   hint(message) { $('#hint').textContent = message; }, sound,
   result(value) {
+    const previousLevel = playerLevel(profile.xp).level;
+    const xp = awardXp(profile, value);
     resultMatch = value; if (!value.won && !value.draw && !value.practice && value.failure !== false) feedback.trigger('loss');
     if (!value.practice) {
       const record = profile.records[value.game]; record.played++; if (value.won) record.wins++;
@@ -211,11 +234,31 @@ const activityUI: ActivityUI = {
     }
     openModal(`<div class="result-symbol">${value.won ? '✳' : '↻'}</div><div class="eyebrow">${GAMES[value.game].title.toUpperCase()} · ${value.practice ? 'FRIENDLY PRACTICE' : value.draw ? 'DRAW' : value.won ? 'ANG GALING MO!' : 'ISA PANG LARO?'}</div><h2 id="modal-title"></h2><p id="result-summary"></p><div class="result-reward">+${value.coins} <span>${value.practice ? 'PRACTICE · NO COINS OR RECORDS' : 'COINS EARNED'}</span></div><button id="rematch-button" class="primary-button">${value.game === 'snake' || value.game === 'impact' ? 'Find the phone again' : 'One more round'} ${icon('arrow')}</button><button id="return-button" class="secondary-button">Back to the barangay</button>`, false);
     $('#modal-title').textContent = value.title; $('#result-summary').textContent = value.summary;
+    if (xp) $('#modal-content .result-reward').insertAdjacentHTML('afterend', xpMessage(xp, previousLevel));
     $('#rematch-button').onclick = () => { closeModal(); setupGame(value.game); };
     $('#return-button').onclick = () => { closeModal(); scene.hub(); };
   },
 };
 scene = new GameDirector(game, barangay, activityUI);
+function xpMessage(xp: number, previousLevel: number) { const journey = playerLevel(profile.xp); return `<div class="result-xp">+${xp} XP · ${journey.level > previousLevel ? 'LEVEL UP! ' : ''}Level ${journey.level} · ${journey.title}</div>`; }
+$('#level-info').onclick = () => openModal('<div class="eyebrow">YOUR BARANGAY JOURNEY</div><h2 id="modal-title">Play, learn, level up.</h2><p>Finished wins earn 60 XP, draws 35 XP, and other completed rounds 20 XP. Practice, unfinished games, shopping, and zero-score early rope cash-outs earn no XP.</p><p>Level 2 starts at 100 XP. Each next level takes 100 more XP than the last. Your title grows every five levels. All games stay available at every level.</p><p>Previous completed games receive the same win/completion XP credit when your save is upgraded. XP is included in downloadable and cloud saves.</p><button id="level-close" class="secondary-button">Keep playing</button>');
+document.addEventListener('click', event => { if ((event.target as HTMLElement).id === 'level-close') closeModal(); });
+function openAccount() {
+  openModal('<div class="eyebrow">YOUR LARO ACCOUNT</div><h2 id="modal-title">Account &amp; cloud progress</h2><div id="account-panel"></div><button id="account-close" class="secondary-button">Continue playing</button>');
+  disposeAccount = mountAccount($('#account-panel'), account, profile, () => scene.active === 'hub', () => makeBackup(profile, savedDama()), backup => {
+    restoreCloudBackup(profile, backup, savedDama()); refreshProfile(); scene.updateAvatar();
+  });
+  $('#account-close').onclick = closeModal;
+}
+$('#account-button').onclick = openAccount;
+account.subscribe(() => {
+  $('#account-button').dataset.account = account.session ? 'signed-in' : account.configured ? 'signed-out' : 'guest';
+  $('#account-button').textContent = account.session ? 'My account' : 'Account';
+  if (account.recovery && !dialog.open && !recoveryPromptPending) {
+    if ($('#game').dataset.ready === 'true') openAccount();
+    else { recoveryPromptPending = true; window.addEventListener('laro-ready', () => { recoveryPromptPending = false; if (account.recovery && !dialog.open) openAccount(); }, { once: true }); }
+  }
+});
 
 function activityLocation(mode: 'hub' | 'match' | NewGameId) {
   const active = mode === 'match' ? 'patintero' : mode;
@@ -280,7 +323,7 @@ function showTutorial(id: GameId, done: () => void, index = 0) {
 }
 function openFoodShop(kind: 'street' | 'store') {
   const render = (message = '') => {
-    openModal(`<div class="eyebrow">MERIENDA TIME</div><h2 id="modal-title">${kind === 'street' ? 'Street food corner' : 'Mama Shoni’s sari-sari store'}</h2><p>Enjoy a little treat. Games are always free to play.</p><strong id="food-coins">${profile.coins} coins</strong><div class="food-menu">${SNACKS.filter(item => item.shop === kind).map(item => `<article>${snackPicture(item.color)}<strong>${item.name}</strong><p>${item.detail}</p><button class="primary-button" data-buy-snack="${item.id}" ${profile.coins < item.price ? 'disabled' : ''}>Enjoy - ${item.price} coins</button></article>`).join('')}</div><p id="food-status" role="status">${message}</p><button id="food-close" class="secondary-button">Back to the barangay</button>`);
+    openModal(`<div class="eyebrow">MERIENDA TIME</div><h2 id="modal-title">${kind === 'street' ? 'Street food corner' : 'Mama Shoni’s sari-sari store'}</h2><p>Enjoy a little treat. Games are always free to play.</p><strong id="food-coins">${profile.coins} coins</strong><div class="food-menu">${SNACKS.filter(item => item.shop === kind).map(item => `<article>${snackPicture(item.id)}<strong>${item.name}</strong><p>${item.detail}</p><button class="primary-button" data-buy-snack="${item.id}" ${profile.coins < item.price ? 'disabled' : ''}>Enjoy - ${item.price} coins</button></article>`).join('')}</div><p id="food-status" role="status">${message}</p><button id="food-close" class="secondary-button">Back to the barangay</button>`);
     document.querySelectorAll<HTMLButtonElement>('[data-buy-snack]').forEach(button => { button.onclick = () => {
       const item = SNACKS.find(item => item.id === button.dataset.buySnack)!, before = { coins: profile.coins, snacksEaten: profile.snacksEaten };
       if (!buySnack(profile, item.id)) return;
@@ -407,7 +450,7 @@ $('#avatar-button').onclick = () => {
   $('#nickname').oninput = () => $<HTMLInputElement>('#nickname').setCustomValidity('');
 };
 $('#settings-button').onclick = () => {
-  openModal(`<div class="eyebrow">JUST THE WAY YOU LIKE IT</div><h2 id="modal-title">A little fine-tuning.</h2><label class="setting-row" for="difficulty">Street games<select id="difficulty"><option value="easy">Easy · learn the rhythm</option><option value="normal">Normal · a real challenge</option><option value="hard">Hard · quick and precise</option></select></label><label class="setting-row" for="settings-dama-difficulty">Dama opponent<select id="settings-dama-difficulty">${damaOptions()}</select></label><label class="setting-row" for="sound-enabled">Sound enabled<input id="sound-enabled" type="checkbox" ${profile.muted ? '' : 'checked'} /></label><label class="setting-row sound-slider" for="sound-volume">Sound volume<output id="sound-volume-value">${Math.round(profile.volume * 100)}%</output><input id="sound-volume" type="range" min="0" max="100" value="${Math.round(profile.volume * 100)}" /></label><label class="setting-row" for="music-enabled">Barangay background music<input id="music-enabled" type="checkbox" ${profile.musicEnabled ? 'checked' : ''} /></label><label class="setting-row sound-slider" for="music-volume">Music volume<output id="music-volume-value">${Math.round(profile.musicVolume * 100)}%</output><input id="music-volume" type="range" min="0" max="100" value="${Math.round(profile.musicVolume * 100)}" /></label><label class="setting-row" for="tutorial-prompts">Ask before games: illustrated tutorials<input id="tutorial-prompts" type="checkbox" ${profile.tutorialPrompts ? 'checked' : ''} /></label><label class="setting-row" for="vibration-enabled">Failure vibrations<input id="vibration-enabled" type="checkbox" ${profile.vibration ? 'checked' : ''} /></label><p class="fine-print">Vibration depends on your device and browser.</p><p class="fine-print">Dama, Tagu-taguan, and jumping difficulty changes apply to new matches. Saved Dama matches keep their opponent. Higher street-game difficulties earn more coins.</p><button id="save-settings" class="primary-button">All set</button><div id="save-tools"></div>`);
+  openModal(`<div class="eyebrow">JUST THE WAY YOU LIKE IT</div><h2 id="modal-title">A little fine-tuning.</h2><label class="setting-row" for="difficulty">Street games<select id="difficulty"><option value="easy">Easy · learn the rhythm</option><option value="normal">Normal · a real challenge</option><option value="hard">Hard · quick and precise</option></select></label><label class="setting-row" for="settings-dama-difficulty">Dama opponent<select id="settings-dama-difficulty">${damaOptions()}</select></label><label class="setting-row" for="sound-enabled">Sound enabled<input id="sound-enabled" type="checkbox" ${profile.muted ? '' : 'checked'} /></label><label class="setting-row sound-slider" for="sound-volume">Sound volume<output id="sound-volume-value">${Math.round(profile.volume * 100)}%</output><input id="sound-volume" type="range" min="0" max="100" value="${Math.round(profile.volume * 100)}" /></label><label class="setting-row" for="music-enabled">Background music: barangay + games<input id="music-enabled" type="checkbox" ${profile.musicEnabled ? 'checked' : ''} /></label><label class="setting-row sound-slider" for="music-volume">Music volume<output id="music-volume-value">${Math.round(profile.musicVolume * 100)}%</output><input id="music-volume" type="range" min="0" max="100" value="${Math.round(profile.musicVolume * 100)}" /></label><label class="setting-row" for="tutorial-prompts">Ask before games: illustrated tutorials<input id="tutorial-prompts" type="checkbox" ${profile.tutorialPrompts ? 'checked' : ''} /></label><label class="setting-row" for="vibration-enabled">Failure vibrations<input id="vibration-enabled" type="checkbox" ${profile.vibration ? 'checked' : ''} /></label><p class="fine-print">Vibration depends on your device and browser.</p><p class="fine-print">Dama, Tagu-taguan, and jumping difficulty changes apply to new matches. Saved Dama matches keep their opponent. Higher street-game difficulties earn more coins.</p><button id="save-settings" class="primary-button">All set</button><div id="save-tools"></div>`);
   for (const [id, field] of [['sound-volume', 'volume'], ['music-volume', 'musicVolume']] as const) {
     $<HTMLInputElement>('#' + id).oninput = () => { profile[field] = Number($<HTMLInputElement>('#' + id).value) / 100; $('#' + id + '-value').textContent = Math.round(profile[field] * 100) + '%'; saveProfile(profile); gameAudio.refresh(); };
   }
@@ -442,6 +485,7 @@ const stopTakbo = () => { $('#touch-run').classList.remove('held'); scene.setSpr
 $('#touch-run').onpointerup = stopTakbo; $('#touch-run').onpointercancel = stopTakbo; $('#touch-run').onlostpointercapture = stopTakbo;
 window.addEventListener('blur', () => { touchPad.reset(); document.querySelectorAll('.held').forEach(button => button.classList.remove('held')); scene.resetInput(); });
 refreshProfile();
+void account.init();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

@@ -2,6 +2,7 @@ import type { Difficulty } from './rules';
 import { DEFAULT_PLAYER_NAME, type AvatarGender } from './characters.ts';
 import { isDamaDifficulty, type DamaDifficulty } from './games/dama-levels.ts';
 import { freshWardrobe, normalizeWardrobe, type Wardrobe } from './wardrobe.ts';
+import { legacyXp, MAX_XP } from './progression.ts';
 
 export const COLORS = ['#e7b65d', '#7fafba', '#ca867b', '#a3af75'] as const;
 export const RECORD_IDS = ['dama', 'chess', 'taguan', 'tinik', 'jolen', 'lubid', 'snake', 'impact', 'piko', 'tumbang'] as const;
@@ -29,10 +30,11 @@ export interface Profile {
   musicEnabled: boolean;
   tutorialPrompts: boolean;
   snacksEaten: number;
+  xp: number;
 }
 export const STORAGE_KEY = 'laro.offline.profile.v1';
 export let storageAvailable = true;
-const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', chessDifficulty: 'easy', records: freshRecords(), wardrobe: freshWardrobe(), phoneFinds: 0, vibration: true, volume: .65, musicVolume: .35, musicEnabled: true, tutorialPrompts: true, snacksEaten: 0 };
+const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', chessDifficulty: 'easy', records: freshRecords(), wardrobe: freshWardrobe(), phoneFinds: 0, vibration: true, volume: .65, musicVolume: .35, musicEnabled: true, tutorialPrompts: true, snacksEaten: 0, xp: 0 };
 const freshProfile = (): Profile => ({ ...defaults, records: freshRecords(), wardrobe: freshWardrobe() });
 const number = (value: unknown, max = 1_000_000) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(0, Math.floor(value))) : 0;
 
@@ -43,6 +45,7 @@ export function normalizeProfile(value: unknown): Profile {
       const item = raw.records?.[id];
       records[id] = { wins: number(item?.wins), played: number(item?.played), best: number(item?.best, id === 'lubid' || id === 'impact' ? Number.MAX_SAFE_INTEGER : id === 'piko' ? 8 : id === 'tumbang' ? 6 : id === 'jolen' ? 15 : id === 'tinik' ? 6 : id === 'taguan' ? 75 : 10000) };
     }
+    const migratedXp = legacyXp({ played: number(raw.played), wins: number(raw.wins), records });
     return {
       name: typeof raw.name === 'string' && raw.name.trim() && raw.name.trim() !== 'Kaibigan' ? raw.name.trim().slice(0, 16) : defaults.name,
       color: number(raw.color, 3), coins: number(raw.coins), wins: number(raw.wins), played: number(raw.played),
@@ -60,6 +63,7 @@ export function normalizeProfile(value: unknown): Profile {
       musicEnabled: typeof raw.musicEnabled === 'boolean' ? raw.musicEnabled : true,
       tutorialPrompts: typeof raw.tutorialPrompts === 'boolean' ? raw.tutorialPrompts : true,
       snacksEaten: number(raw.snacksEaten),
+      xp: typeof raw.xp === 'number' && Number.isFinite(raw.xp) ? number(raw.xp, MAX_XP) : migratedXp,
     };
 }
 export function loadProfile(): Profile {

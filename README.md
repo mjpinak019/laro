@@ -2,7 +2,7 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.12 includes nine neighborhood classics across eight areas, plus two
+Alpha 0.13 includes nine neighborhood classics across eight areas, plus two
 hidden phone games. All eleven games work offline after the first complete
 online load.
 
@@ -20,8 +20,9 @@ Space, or the action button. Guards move only while the thrower holds it.
 The can must be reset before a guard tag is valid outside the safety line.
 
 Settings include master and music volume, music enable/disable, and tutorial
-prompts. Original chiptune music plays in the barangay after a user gesture;
-it pauses during games, menus, and background visits. It is generated locally
+prompts. Original chiptune music plays after a user gesture: an 88 BPM barangay theme
+and a sparse, mellow 72 BPM focus theme during every game;
+it pauses during menus, paused rounds, and background visits. It is generated locally
 and works offline.
 
 The 2600 by 1600 map adds a Philippine flagpole next to the school, seven
@@ -31,7 +32,8 @@ kwek-kwek, kikiam and taho cost coins; the sari-sari store offers biscuits
 and juice. These are optional treats, with no energy requirement to play.
 Food purchases and settings are included in save backups.
 
-Energy gates, leveling, errands and progression unlocks are **proposals only**.
+Player XP and levels are implemented. Energy gates, errands and gameplay
+unlocks remain proposals; levels do not restrict access to games.
 See [the recommendation](docs/PROGRESSION-CONCEPT.md).
 
 ## Alpha 0.11 additions
@@ -498,3 +500,31 @@ The six simplified tinik poses and difficulty exports are documented in
 [the sprite guide](client/src/assets/tinik/README.md), with a
 [height preview](docs/art/tinik-heights.png). Regenerate PNGs using
 `node scripts/export-tinik-art.mjs`.
+
+## Player levels and optional accounts (alpha 0.13)
+
+Finished wins earn 60 XP, draws 35 XP and other completed rounds 20 XP.
+Practice, unfinished games, snacks, wardrobe purchases, and zero-score early
+rope cash-outs earn none. Level 2 starts at 100 XP, Level 3 at 300, Level 4
+at 600; each next level needs 100 more XP than the previous. Titles grow
+every five levels. All games remain available at every level. Existing
+finished games receive one migration credit; coins and clothes are preserved.
+XP is part of downloadable saves and cloud copies.
+
+Food art now uses six distinct original SVGs based on real food/product
+photos, with sources in [the reference guide](docs/FOOD-REFERENCES.md).
+Music keeps sound effects louder than its filtered pulse/triangle voices,
+uses rests instead of a busy rhythm, and silences on pause, menus, mute,
+zero music volume or a hidden tab. Both themes work offline.
+
+Optional Supabase email signup/login, confirmation, password recovery, local
+sign-out and reviewed cloud save/restore are implemented. Guest play works
+without configuration. No Supabase project is connected yet: follow
+[the setup guide](docs/SUPABASE-SETUP.md) and apply the included SQL migration.
+Use only the public project URL and publishable key. Account data isolation
+and revision conflicts are tested against PostgreSQL; browser flows use a
+controlled service-contract fixture. Real email delivery requires the
+project/SMTP configuration. Login never silently replaces local progress;
+cloud actions are explicit, restores keep a local safety copy, and a stale
+device cannot overwrite a newer cloud save. Offline backups are not an
+authoritative currency ledger or competitive leaderboard.
