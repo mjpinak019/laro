@@ -57,6 +57,7 @@ test('Tumbang Preso rotates the hit can, supports manual pickup, and plays to th
     if (turn % 2 === 0) {
       await page.locator('#tumbang-action').click(); await expect.poll(async () => Number(await page.locator('#tumbang-meter').getAttribute('aria-valuenow')), { intervals: [10] }).toBeGreaterThan(53); await page.locator('#tumbang-action').click(); await page.locator('#tumbang-walk').click();
       await expect(stage).toHaveAttribute('data-hit', 'true'); await expect(stage).toHaveAttribute('data-can-down', 'true');
+      await expect(stage).toHaveAttribute('data-phase','retrieve');
       await expect.poll(async () => { const at = JSON.parse((await stage.getAttribute('data-player'))!), slipper = JSON.parse((await stage.getAttribute('data-slipper'))!); return Math.hypot(at.x - slipper.x, at.y - slipper.y); }, { intervals: [30] }).toBeLessThan(24);
       await expect(stage).toHaveAttribute('data-carrying', 'false'); await page.locator('#tumbang-action').click(); await expect(stage).toHaveAttribute('data-carrying', 'true'); await page.locator('#tumbang-walk').click();
       if (!turn) await page.screenshot({ path: 'artifacts/tumbang-hit.png', fullPage: true });

@@ -1,6 +1,7 @@
 export const SLOTS = ['skin', 'hat', 'beard', 'top', 'bottom', 'shoes', 'costume'] as const;
 export type WardrobeSlot = typeof SLOTS[number];
-export type Cosmetic = { id: string; slot: WardrobeSlot; name: string; price: number; detail: string; tint?: string };
+import { playerLevel } from './progression.ts';
+export type Cosmetic = { id: string; slot: WardrobeSlot; name: string; price: number; detail: string; tint?: string; level?: number };
 export const COSMETICS: Cosmetic[] = [
   ...[['warm', 'Warm', '#dda97c'], ['light', 'Light', '#edc5a0'], ['golden', 'Golden', '#d2a06a'], ['morena', 'Morena', '#b47b55'], ['deep', 'Deep', '#88583e'], ['rich', 'Rich', '#644431']].map(([id, name, tint]) => ({ id: `skin-${id}`, slot: 'skin' as const, name, tint, price: 0, detail: 'Always free' })),
   { id: 'hat-none', slot: 'hat', name: 'No hat', price: 0, detail: 'Everyday' },
@@ -29,6 +30,19 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'costume-web', slot: 'costume', name: 'Webway scout', price: 420, detail: 'Signature · original web-pattern hero suit' },
   { id: 'costume-ranger', slot: 'costume', name: 'Galaxy ranger', price: 520, detail: 'Signature · original space-film armor and visor' },
   { id: 'costume-clockwork', slot: 'costume', name: 'Clockwork guardian', price: 650, detail: 'Signature · original mechanical movie armor' },
+  { id:'hat-bandana',slot:'hat',name:'Kanto bandana',price:120,level:2,detail:'Folded cloth and a simple knot' },
+  { id:'top-jersey',slot:'top',name:'Barangay jersey',price:200,level:3,detail:'Team trim and a gold number' },
+  { id:'hat-salakot',slot:'hat',name:'Woven salakot',price:280,level:5,detail:'Wide woven brim and cross stitching' },
+  { id:'top-barong',slot:'top',name:'Celebration barong',price:500,level:8,detail:'Cream fabric with embroidered panels' },
+  { id:'bottom-weave',slot:'bottom',name:'Woven-trim trousers',price:650,level:10,detail:'Indigo cloth and patterned cuffs' },
+  { id:'shoes-fiesta',slot:'shoes',name:'Fiesta shoes',price:700,level:12,detail:'Two-tone leather, gold trim and bright soles' },
+  { id:'top-fiesta',slot:'top',name:'Fiesta jacket',price:950,level:14,detail:'Layered teal, coral panels and gold stitching' },
+  { id:'beard-braid',slot:'beard',name:'Braided beard',price:800,level:16,detail:'Layered braid with a gold tie' },
+  { id:'hat-lantern',slot:'hat',name:'Lantern keeper',price:1200,level:18,detail:'Brim, tassels and a tiny glowing lantern' },
+  { id:'costume-bayani',slot:'costume',name:'Bayanihan guardian',price:2200,level:20,detail:'Original sun crest, blue cape and layered armor' },
+  { id:'hat-parol',slot:'hat',name:'Parol crown',price:2800,level:24,detail:'A star crown with colored rays and tassels' },
+  { id:'costume-parol',slot:'costume',name:'Parol voyager',price:3800,level:26,detail:'Original star armor, woven sash and luminous trim' },
+  { id:'costume-haribon',slot:'costume',name:'Haribon legend',price:6000,level:30,detail:'Original feather mantle, gold crown and eagle crest' },
 ];
 export const DEFAULT_EQUIPPED: Record<WardrobeSlot, string> = { skin: 'skin-warm', hat: 'hat-none', beard: 'beard-none', top: 'top-tee', bottom: 'bottom-pants', shoes: 'shoes-basic', costume: 'costume-none' };
 export type Wardrobe = { owned: string[]; equipped: Record<WardrobeSlot, string> };
@@ -43,9 +57,9 @@ export function normalizeWardrobe(raw: unknown): Wardrobe {
   for (const slot of SLOTS) { const id = source.equipped?.[slot]; if (typeof id === 'string' && cosmetic(id)?.slot === slot && ownsCosmetic(result, id)) result.equipped[slot] = id; }
   return result;
 }
-export function buyCosmetic(profile: { coins: number; wardrobe: Wardrobe }, id: string): boolean {
+export function buyCosmetic(profile: { coins: number; wardrobe: Wardrobe; xp?:number }, id: string): boolean {
   const item = cosmetic(id);
-  if (!item || ownsCosmetic(profile.wardrobe, id) || !Number.isFinite(profile.coins) || profile.coins < item.price) return false;
+  if (!item || ownsCosmetic(profile.wardrobe, id) || playerLevel(profile.xp??0).level<(item.level??0) || !Number.isFinite(profile.coins) || profile.coins < item.price) return false;
   profile.coins -= item.price; profile.wardrobe.owned.push(item.id); profile.wardrobe.equipped[item.slot] = id; return true;
 }
 export function equipCosmetic(wardrobe: Wardrobe, id: string): boolean {

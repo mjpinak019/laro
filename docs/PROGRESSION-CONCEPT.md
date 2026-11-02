@@ -1,8 +1,12 @@
-Current status (alpha 0.13): XP, player levels and cosmetic titles are implemented.
+Current status (alpha 0.14): Levels 0–30, game/shop unlocks and optional quests are implemented.
 Optional accounts/cloud backups are prepared for Supabase configuration.
-Energy gates, errands and gameplay unlocks below remain proposals.
+See [the current implementation](JOURNEY.md) for rules and prices.
+Food-powered energy gates remain unimplemented.
 
-# Optional neighborhood progression — proposal only
+# Original neighborhood progression proposal — archived
+
+The text below records the earlier alpha 0.12 proposal. Statements about
+what was implemented describe that earlier release, not the current game.
 
 No food-powered energy requirement, leveling system, elder-crossing event,
 trash activity, or level-locked content is implemented in this release.

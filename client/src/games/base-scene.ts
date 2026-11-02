@@ -3,6 +3,7 @@ import type { Point } from '../rules';
 import type { ActivityControls, ActivityUI } from './types';
 import { CHARACTER_ORIGIN } from '../sprite-outline';
 import { playerTexture } from '../avatar-art';
+import { playerLevel } from '../progression';
 
 export abstract class ActivityScene extends Phaser.Scene implements ActivityControls {
   protected keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -31,6 +32,7 @@ export abstract class ActivityScene extends Phaser.Scene implements ActivityCont
     this.nameTag = this.add.text(x, y - 65, this.ui.profile.name, { fontFamily: 'monospace', fontSize: '15px', color: '#fff0d1', backgroundColor: '#284b3bdd', padding: { x: 7, y: 4 } }).setOrigin(.5, 1);
   }
   protected drawPlayer(at: Point, time: number, moving: boolean, vector: Point, z = 0) {
+    this.nameTag.setText(`${this.ui.profile.name} · Lv ${playerLevel(this.ui.profile.xp).level}`);
     if (moving) this.facing = Math.abs(vector.x) > Math.abs(vector.y) ? vector.x < 0 ? 1 : 2 : vector.y < 0 ? 3 : 0;
     this.player.setPosition(Math.round(at.x), Math.round(at.y - z)).setTexture(playerTexture(this.facing, moving ? Math.floor(time / 115) % 4 : 0)).setDepth(at.y);
     this.shadow.setPosition(at.x, at.y + 3).setDepth(at.y - 1).setScale(Math.max(.5, 1 - z / 250));

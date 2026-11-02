@@ -1,6 +1,7 @@
 import { paintCharacterPreview } from '../character-art';
 import { BOT_APPEARANCES, CHARACTERS, type CharacterId } from '../characters';
 import { COLORS } from '../store';
+import { playerLevel } from '../progression';
 import type { ActivityControls, ActivityUI } from './types';
 
 /** Shared local canvas, avatar art, pause clock, and keyboard lifecycle. */
@@ -35,6 +36,7 @@ export abstract class NeighborhoodStage implements ActivityControls {
     const c = this.c; c.fillStyle = '#2c503b33'; c.beginPath(); c.ellipse(x, y + 3, 17, 6, 0, 0, Math.PI * 2); c.fill();
     const picture = neighbor ? this.neighbor : this.player;
     c.drawImage(picture, Math.round(x - picture.width), Math.round(y - picture.height * 2 - lift), picture.width * 2, picture.height * 2);
+    if(!neighbor) this.text(`Lv ${playerLevel(this.ui.profile.xp).level}`,x,y-picture.height*2-lift-6,12,'#253b2e');
   }
   protected ground() {
     const c = this.c; c.fillStyle = '#7e9970'; c.fillRect(0, 0, 900, 560);

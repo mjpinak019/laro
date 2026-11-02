@@ -122,6 +122,26 @@ export function drawCharacter(c: Painter, color: string, look: CharacterLook, di
     if (outfit.hat === 'hat-bucket') { fill(c, 7, 2 - bob, 11, 4, '#d0b57d'); fill(c, 4, 6 - bob, 17, 2, '#9b8056'); }
     if (outfit.hat === 'hat-adventure') { fill(c, 8, 2 - bob, 9, 4, '#92704a'); fill(c, 7, 5 - bob, 11, 2, '#554538'); fill(c, 4, 7 - bob, 17, 2, '#ad8758'); }
     if (outfit.hat === 'hat-astral') { fill(c, 6, 2 - bob, 13, 9, '#cbd5ba'); fill(c, 7, 6 - bob, 11, 5, '#466c77'); fill(c, 8, 6 - bob, 5, 1, '#a4d3cf'); }
+    if(outfit.costume==='costume-none') {
+    if (outfit.top==='top-jersey') { fill(c,5,14-bob,14,9,'#426f85');fill(c,5,14-bob,2,8,'#eed08b');fill(c,17,14-bob,2,8,'#eed08b');fill(c,11,17-bob,3,4,'#f2d48c'); }
+    if (outfit.top==='top-barong') { fill(c,5,14-bob,14,9,'#e6d9b4');fill(c,11,14-bob,2,9,'#b39e74');for(const x of [8,15])for(const y of [16,19,21])fill(c,x,y-bob,1,1,'#ad9270'); }
+    if (outfit.top==='top-fiesta') { fill(c,5,14-bob,14,9,'#437d78');fill(c,5,15-bob,3,7,'#c17868');fill(c,16,15-bob,3,7,'#c17868');fill(c,11,14-bob,2,9,'#edc579');for(const x of [7,16])fill(c,x,17-bob,1,4,'#e4bd77'); }
+    if(outfit.bottom==='bottom-weave')for(const x of [7,13]){fill(c,x,23-bob,4,3,'#425c82');fill(c,x,25-bob,4,1,'#dbb46c');fill(c,x+1,24-bob,1,1,'#cb8c78');}
+    }
+    if(outfit.shoes==='shoes-fiesta')for(const [x,step] of [[6,stride],[13,-stride]]){fill(c,x,26+step,5,2,'#873f4b');fill(c,x,27+step,5,1,'#e5c784');fill(c,x+1,26+step,2,1,'#d4ac69');}
+    if(outfit.beard==='beard-braid'&&direction!==3){fill(c,9,13-bob,7,3,'#4d3b30');fill(c,11,16-bob,3,4,'#65503a');fill(c,11,19-bob,3,1,'#e4bc6c');}
+    if(outfit.hat==='hat-bandana'){fill(c,6,4-bob,13,3,'#af625a');fill(c,17,6-bob,4,4,'#d99572');}
+    if(outfit.hat==='hat-salakot'){fill(c,10,1-bob,5,2,'#e6c78c');fill(c,7,3-bob,11,3,'#c3a16b');fill(c,3,6-bob,19,2,'#a57f4f');for(const x of [8,12,16])fill(c,x,4-bob,1,2,'#efd7a5');}
+    if(outfit.hat==='hat-lantern'){fill(c,7,2-bob,11,4,'#3d645e');fill(c,4,6-bob,17,2,'#b1945f');fill(c,20,7-bob,1,6,'#c1a06b');fill(c,19,10-bob,3,4,'#e7c878');fill(c,20,11-bob,1,2,'#f8e2a3');}
+    if(outfit.hat==='hat-parol'){fill(c,6,5-bob,13,2,'#d2af65');fill(c,11,0,3,8-bob,'#f0d282');fill(c,8,2-bob,9,3,'#e3bb66');fill(c,10,1,5,6-bob,'#e8cb77');fill(c,12,2-bob,1,2,'#cf7e73');for(const x of [5,19])fill(c,x,7-bob,1,5,'#89b5a9');}
+    if(['costume-bayani','costume-parol','costume-haribon'].includes(outfit.costume)) {
+      const bird=outfit.costume==='costume-haribon',star=outfit.costume==='costume-parol';
+      fill(c,3,15-bob,3,11,bird?'#657d57':'#405b7a');fill(c,18,15-bob,3,11,bird?'#657d57':'#405b7a');
+      fill(c,5,14-bob,14,10,star?'#6d557f':bird?'#41665b':'#426c88');fill(c,6,21-bob,12,2,'#d9b96e');
+      fill(c,10,16-bob,5,4,'#e9cc7e');fill(c,12,15-bob,1,6,'#f5e2aa');fill(c,9,18-bob,7,1,'#f5e2aa');
+      if(star||bird)for(const x of [5,17]){fill(c,x,14-bob,2,9,'#d2ad66');for(const y of [16,20])fill(c,x,y-bob,2,1,'#a4cfc0');}
+      if(bird){fill(c,7,3-bob,12,2,'#e5c477');fill(c,11,0,3,5-bob,'#f0d797');for(const x of [2,20])for(const y of [16,19,22])fill(c,x,y-bob,3,2,'#d9c590');}
+    }
   }
   if (gesture) {
     // Bent pixel arms keep the same outfit/skin, with a dark edge over the shirt.

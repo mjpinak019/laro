@@ -2,6 +2,7 @@ import type { ActivityControls, ActivityUI } from './types';
 import { CHARACTERS, type CharacterLook } from '../characters';
 import { paintCharacterPreview } from '../character-art';
 import { COLORS } from '../store';
+import { playerLevel } from '../progression';
 import { COURT, chooseJolenShot, initialJolen, jolenFinished, JOLEN_STEP, marblesMoving, nextJolenTurn, powerAt, shooter, shootJolen, stepJolen } from './jolen-rules';
 import type { DamaDifficulty } from './dama-levels';
 
@@ -160,6 +161,7 @@ export class JolenGame implements ActivityControls {
       const bob = moving ? Math.sin(this.phaseTime / 65) * 2 : 0;
       c.globalAlpha = .2; c.fillStyle = '#20372a'; c.beginPath(); c.ellipse(walker.x, walker.y + 1, 15, 5, 0, 0, Math.PI * 2); c.fill(); c.globalAlpha = 1;
       c.drawImage(this.portraits[index], Math.round(walker.x - 18), Math.round(walker.y - 42 + bob), 36, 48);
+      if(index===0){c.fillStyle='#243f2d';c.font='bold 12px monospace';c.textAlign='center';c.fillText(`Lv ${playerLevel(this.ui.profile.xp).level}`,walker.x,walker.y-48+bob);}
     }
     const active = shooter(this.state);
     if (['aim', 'power'].includes(this.phase)) {

@@ -18,6 +18,15 @@ export const PIKO_LEVELS = {
   hard: { period: 1.1, window: .105, margin: 12, guide: false },
 } as const;
 export const pikoPower = (time: number) => { const t = (time % 1.6) / .8; return t <= 1 ? t : 2 - t; };
+export const PIKO_TOSS_WINDOW = { easy: .11, normal: .08, hard: .055 } as const;
+export function timedPikoLanding(number: number, power: number, difficulty: Difficulty) {
+  const center = pikoCenter(number);
+  return Math.abs(power - .65) <= PIKO_TOSS_WINDOW[difficulty] ? center : { x: center.x + 55, y: center.y + 35 };
+}
+export function pikoBotMistake(difficulty: Difficulty, routeLength: number, roll = Math.random(), where = Math.random()) {
+  if (roll >= { easy: .42, normal: .22, hard: .07 }[difficulty]) return null;
+  return where < .3 ? -1 : Math.min(routeLength - 1, Math.floor((where - .3) / .7 * routeLength));
+}
 export const pikoCenter = (number: number) => { const s = PIKO_SQUARES[number - 1]; return { x: s.x + s.width / 2, y: s.y + s.height / 2 }; };
 export function pikoLanding(aim: { x: number; y: number }, power: number) {
   return { x: aim.x, y: aim.y + (.65 - power) * 240 };

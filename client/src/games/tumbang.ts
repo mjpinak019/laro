@@ -12,7 +12,7 @@ export class TumbangGame extends NeighborhoodStage {
   private stick = { x: 0, y: 0 };
   private pad: TouchPad;
   constructor(ui: ActivityUI) {
-    super(ui, 'tumbang', 'eric', `<label for="tumbang-angle">Aim<input id="tumbang-angle" type="range" min="-150" max="-30" value="-90" aria-label="Throw direction in degrees" /></label><div class="street-meter" id="tumbang-meter" role="meter" aria-label="Throw power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55"><b></b><i></i></div><button id="tumbang-action" class="primary-button">Start throw</button><button id="tumbang-walk" class="secondary-button" hidden>Walk to tsinelas</button><p class="street-help">WASD / arrows / pad / tap to move. E or Space: pick up / put down. First to 3 points. No holding: guard stays still.</p>`);
+    super(ui, 'tumbang', 'eric', `<label for="tumbang-angle">Aim<input id="tumbang-angle" type="range" min="-150" max="-30" value="-90" aria-label="Throw direction in degrees" /></label><div class="street-meter" id="tumbang-meter" role="meter" aria-label="Throw power" aria-valuemin="0" aria-valuemax="100" aria-valuenow="55"><b></b><i></i></div><button id="tumbang-action" class="primary-button">Start throw</button><button id="tumbang-walk" class="secondary-button" hidden>Walk to tsinelas</button><p class="street-help">WASD / arrows / pad / tap to move. E or Space: pick up / put down. First to 3 points. Can down: guard can move and reset. Upright + no holding: guard waits.</p>`);
     this.state = initialTumbang(ui.profile.difficulty);
     this.get('.neighborhood-court').insertAdjacentHTML('beforeend', '<div id="tumbang-pad" class="touch-pad" role="group" aria-label="Tumbang Preso movement pad"><span class="stick-knob" aria-hidden="true"></span></div>');
     this.pad = new TouchPad(this.get('#tumbang-pad'), (x, y) => { this.stick = { x, y }; if (x || y) this.autoGuard = false; });
@@ -58,7 +58,7 @@ export class TumbangGame extends NeighborhoodStage {
     this.root.dataset.phase = s.phase; this.root.dataset.turn = String(s.turn); this.root.dataset.canDown = String(s.can.down); this.root.dataset.canAngle = s.can.angle.toFixed(3); this.root.dataset.time = s.elapsed.toFixed(3); this.root.dataset.hit = String(s.hit); this.root.dataset.carrying = String(s.carrying);
     this.root.dataset.player = JSON.stringify(s.players[0]); this.root.dataset.guard = JSON.stringify(s.players[1 - s.turn % 2]); this.root.dataset.slipper = JSON.stringify(s.slipper); this.root.dataset.guideScale = String(TUMBANG_LEVELS[s.difficulty].guideScale);
     this.get('#street-score').textContent = `You ${s.scores[0]}/3 · Eric ${s.scores[1]}/3`;
-    this.get('#street-role').textContent = `FIRST TO 3 · YOU ${yourThrow ? 'THROW' : 'GUARD'} · ${s.carrying ? 'GUARD MOVES' : 'GUARD WAITS'}`;
+    this.get('#street-role').textContent = `FIRST TO 3 · YOU ${yourThrow ? 'THROW' : 'GUARD'} · ${s.carrying || s.can.down ? 'GUARD MOVES' : 'GUARD WAITS'}`;
     if (s.message !== this.previousMessage) { this.get('#street-status').textContent = s.message; this.ui.hint(s.message); this.previousMessage = s.message; }
     const button = this.get<HTMLButtonElement>('#tumbang-action');
     button.textContent = s.phase === 'aim' ? 'Start throw' : s.phase === 'power' ? 'Throw tsinelas' : s.phase === 'feedback' ? tumbangMatchOver(s) ? 'See results' : 'Rotate roles' : !yourThrow ? s.can.down ? 'Reset can' : 'Chase Eric' : s.carrying ? 'Put down · E' : 'Pick up · E';
@@ -85,7 +85,7 @@ export class TumbangGame extends NeighborhoodStage {
     if (can.down && can.reset) { c.fillStyle = '#2f4d38'; c.fillRect(can.x - 25, can.y + 15, 50, 5); c.fillStyle = '#f2c779'; c.fillRect(can.x - 25, can.y + 15, 50 * can.reset / level.reset, 5); }
     const slipper = s.carrying ? s.players[s.turn % 2] : s.slipper;
     c.save(); c.translate(slipper.x + (s.carrying ? 20 : 0), slipper.y - (s.phase === 'flight' ? Math.sin(s.flightTime * Math.PI) * 28 : 3)); c.rotate(s.phase === 'flight' ? s.flightTime * 8 : -.4); c.fillStyle = '#6a8c9b'; c.fillRect(-7, -13, 14, 26); c.fillStyle = '#d9d1a0'; c.fillRect(-5, -7, 10, 3); c.fillRect(-1, -7, 3, 12); c.restore();
-    this.text(!s.carrying ? 'TSINELAS ON GROUND - GUARD STAYS STILL' : can.down ? 'CAN DOWN - RESET BEFORE TAGGING' : 'HOLDING TSINELAS - GUARD CAN TAG', 450, 105, 15);
+    this.text(can.down ? 'CAN DOWN - GUARD CAN MOVE AND RESET' : !s.carrying ? 'CAN UPRIGHT - NO HOLDING, GUARD WAITS' : 'HOLDING TSINELAS - GUARD CAN TAG', 450, 105, 15);
   }
   protected key(event: KeyboardEvent) {
     if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) { event.preventDefault(); this.keys.add(event.code); this.autoGuard = false; }

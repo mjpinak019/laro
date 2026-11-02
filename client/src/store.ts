@@ -3,6 +3,7 @@ import { DEFAULT_PLAYER_NAME, type AvatarGender } from './characters.ts';
 import { isDamaDifficulty, type DamaDifficulty } from './games/dama-levels.ts';
 import { freshWardrobe, normalizeWardrobe, type Wardrobe } from './wardrobe.ts';
 import { legacyXp, MAX_XP } from './progression.ts';
+import { normalizeQuests, type QuestState } from './quests.ts';
 
 export const COLORS = ['#e7b65d', '#7fafba', '#ca867b', '#a3af75'] as const;
 export const RECORD_IDS = ['dama', 'chess', 'taguan', 'tinik', 'jolen', 'lubid', 'snake', 'impact', 'piko', 'tumbang'] as const;
@@ -31,11 +32,12 @@ export interface Profile {
   tutorialPrompts: boolean;
   snacksEaten: number;
   xp: number;
+  quests: QuestState;
 }
 export const STORAGE_KEY = 'laro.offline.profile.v1';
 export let storageAvailable = true;
-const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', chessDifficulty: 'easy', records: freshRecords(), wardrobe: freshWardrobe(), phoneFinds: 0, vibration: true, volume: .65, musicVolume: .35, musicEnabled: true, tutorialPrompts: true, snacksEaten: 0, xp: 0 };
-const freshProfile = (): Profile => ({ ...defaults, records: freshRecords(), wardrobe: freshWardrobe() });
+const defaults: Profile = { name: DEFAULT_PLAYER_NAME, color: 0, gender: 'boy', coins: 0, wins: 0, played: 0, best: 0, muted: false, difficulty: 'easy', damaDifficulty: 'easy', jolenDifficulty: 'easy', chessDifficulty: 'easy', records: freshRecords(), wardrobe: freshWardrobe(), phoneFinds: 0, vibration: true, volume: .65, musicVolume: .35, musicEnabled: true, tutorialPrompts: true, snacksEaten: 0, xp: 0, quests: normalizeQuests(null) };
+const freshProfile = (): Profile => ({ ...defaults, records: freshRecords(), wardrobe: freshWardrobe(), quests: normalizeQuests(null) });
 const number = (value: unknown, max = 1_000_000) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(0, Math.floor(value))) : 0;
 
 export function normalizeProfile(value: unknown): Profile {
@@ -64,6 +66,7 @@ export function normalizeProfile(value: unknown): Profile {
       tutorialPrompts: typeof raw.tutorialPrompts === 'boolean' ? raw.tutorialPrompts : true,
       snacksEaten: number(raw.snacksEaten),
       xp: typeof raw.xp === 'number' && Number.isFinite(raw.xp) ? number(raw.xp, MAX_XP) : migratedXp,
+      quests: normalizeQuests(raw.quests),
     };
 }
 export function loadProfile(): Profile {

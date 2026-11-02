@@ -2,9 +2,37 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.13 includes nine neighborhood classics across eight areas, plus two
+Alpha 0.14 includes nine neighborhood classics across eight areas, plus two
 hidden phone games. All eleven games work offline after the first complete
 online load.
+
+## Alpha 0.14 — a growing barangay journey
+
+New players start at Level 0 with **Patintero, Luksong-tinik and Dama**.
+Other games unlock from Levels 2–12; Chess opens at Level 12 at the Dama
+table. XP requirements increase each level, with a Level 30 cap at 58,825 XP.
+The moving avatar now shows its level. Existing coins, records and clothing
+are preserved; owned clothing stays wearable.
+
+Look for `?` above neighbors and quest objects. Nine optional quest types
+cover cleanup, honesty, a store errand, sharing merienda, care for books,
+perseverance and fair play. Accept in person, track the goal in Quests, then
+return to `!` to claim coins and XP. Random eligible offers and an active
+task save through offline reloads and backups; up to eight tasks reward daily.
+
+The wardrobe adds 13 progressively detailed designs, including a salakot,
+barong, parol crown and original Haribon legend suit. Six new merienda items
+have level/coin requirements and matching avatar eating animations. Skin
+tones, gender selection and basic clothes stay free.
+
+Tumbang Preso guards can move while the can is down even when the slipper
+is on the ground, and reset it faster. Piko targets the next number
+automatically; time the toss, then alternate visible courses with Wendy.
+Her mistakes become less frequent on harder difficulties.
+
+See [levels, unlocks, prices and quest rules](docs/JOURNEY.md).
+Bahay-bahayan remains [a scoped proposal](docs/BAHAY-BAHAYAN-PROPOSAL.md),
+as requested; no construction system has been added.
 
 ## Alpha 0.13.1 updates
 
@@ -29,7 +57,7 @@ or replay the illustrations from How to play. Piko's Two feet action is blue.
 Tumbang Preso is first to three points. Easy keeps its full throw guide;
 Normal shows half and Hard shows one eighth. Use WASD, arrows, the court,
 or its own touch pad to move. Pick up or put down the tsinelas with E,
-Space, or the action button. Guards move only while the thrower holds it.
+Space, or the action button. Guards move while the can is down or the thrower holds it.
 The can must be reset before a guard tag is valid outside the safety line.
 
 Settings include master and music volume, music enable/disable, and tutorial
@@ -45,9 +73,8 @@ kwek-kwek, kikiam and taho cost coins; the sari-sari store offers biscuits
 and juice. These are optional treats, with no energy requirement to play.
 Food purchases and settings are included in save backups.
 
-Player XP and levels are implemented. Energy gates, errands and gameplay
-unlocks remain proposals; levels do not restrict access to games.
-See [the recommendation](docs/PROGRESSION-CONCEPT.md).
+Player XP, level unlocks and optional neighborhood quests are implemented.
+Food-powered energy gates remain unimplemented. See [current progression](docs/JOURNEY.md).
 
 ## Alpha 0.11 additions
 
@@ -68,7 +95,7 @@ remain separate. The normal view keeps the complete phone.
 
 ## Wardrobe, jumping rope, and the secret phone
 
-My avatar includes a 32-item wardrobe with six free skin tones, free basic
+My avatar includes a 45-item wardrobe with six free skin tones, free basic
 clothes, and coin purchases for hats, beards, tops, pants, shoes, and four
 original superhero/cinema-inspired suits. Boy/girl selection stays free.
 Simple accessories cost 40–85 coins; more detailed pieces cost 95–220;
@@ -518,9 +545,9 @@ The six simplified tinik poses and difficulty exports are documented in
 
 Finished wins earn 60 XP, draws 35 XP and other completed rounds 20 XP.
 Practice, unfinished games, snacks, wardrobe purchases, and zero-score early
-rope cash-outs earn none. Level 2 starts at 100 XP, Level 3 at 300, Level 4
-at 600; each next level needs 100 more XP than the previous. Titles grow
-every five levels. All games remain available at every level. Existing
+rope cash-outs earn none. Level 1 starts at 100 XP, Level 2 at 235 and Level 3
+at 415; each next level needs more XP. Level 30 is the cap. Games unlock
+according to [the current level table](docs/JOURNEY.md). Existing
 finished games receive one migration credit; coins and clothes are preserved.
 XP is part of downloadable saves and cloud copies.
 

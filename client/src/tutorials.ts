@@ -3,14 +3,14 @@ import type { GameId } from './games/types';
 export type TutorialStep = { title: string; text: string; keys: string };
 export const TUTORIALS: Record<GameId, TutorialStep[]> = {
   piko: [
-    { title: 'Toss the pamato', text: 'Tap the numbered target to aim. Start the meter, then release when it reaches the gold zone. The pamato must land inside the chalk square.', keys: 'Tap to aim · Space or Toss' },
+    { title: 'Time the pamato', text: 'The next numbered square is targeted automatically. Start the timing meter, then release in gold. You and Wendy alternate courses; she can make mistakes too, especially on Easy.', keys: 'Space or Toss · Release in gold' },
     { title: 'One square, one foot. Two squares, two feet.', text: 'Skip the pamato square. A single highlighted square needs One foot. A highlighted pair needs the blue Two feet button. If the pamato occupies half a pair, use one foot.', keys: 'Gold: One foot / Space · Blue: Two feet / D' },
     { title: 'Land in the gold zone', text: 'Start hopping when you are ready. Time each landing in the gold zone; the next landing lights up after your jump. Go out and back. Three mistakes end the game.', keys: 'Watch the meter, then choose your feet' },
   ],
   tumbang: [
     { title: 'Aim and knock the can down', text: 'Tap to aim or use the direction slider. Start the power meter, then tap Throw. Easy shows a full guide, Normal half, and Hard one eighth. More power sends your tsinelas farther.', keys: 'Tap / aim slider · Space to throw' },
-    { title: 'Walk, pick up, or put down', text: 'Use WASD, arrows, the touch pad, or tap the ground to choose a route. Stand near your tsinelas and choose Pick up. Put it down any time to stop the guard. The guard moves only while the thrower holds it.', keys: 'Move freely · E / Pick up / Put down' },
-    { title: 'Race to three points', text: 'Knock the can down and bring the tsinelas behind the line for one point. The guard must reset the can before tagging outside the safe line. Alternate roles with Eric; the first to three points wins.', keys: 'Hold = guard moves · Put down = guard stops' },
+    { title: 'Walk, pick up, or put down', text: 'Use WASD, arrows, the touch pad, or tap the ground. A fallen can lets the guard move and reset it even with the slipper on the ground. When the can is upright, the guard waits until the slipper is held.', keys: 'Can down = guard can move and reset' },
+    { title: 'Race to three points', text: 'Knock the can down and bring the tsinelas behind the line for one point. The guard resets faster now and must stand the can upright before tagging outside the safe line. Alternate roles with Eric; first to three wins.', keys: 'Can upright + held slipper = legal tag' },
   ],
   chess: [
     { title: 'You play the ivory pieces', text: 'White starts at the bottom and moves first. Tap a piece, then one of its highlighted destinations. Ivory and dark green drawings stay distinct on phones.', keys: 'Tap a piece, then a highlighted square' },

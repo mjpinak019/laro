@@ -57,6 +57,6 @@ test('the restored fast map tune switches to the former mellow map theme in game
   test.setTimeout(50000);await ready(page);await page.locator('#game canvas').click();const panel=page.locator('#game-display');
   await expect(panel).toHaveAttribute('data-music-bpm','158');await expect(panel).toHaveAttribute('data-music','playing');
   await shop(page,'store');await page.locator('[data-buy-snack="juice"]').click();await expect(panel).toHaveAttribute('data-music','silent');await page.locator('#food-close').click();await expect(panel).toHaveAttribute('data-music','playing');
-  await page.locator('[data-game="jolen"]').click();await page.locator('#play-button').click();await page.locator('#jolen-start').click();await expect(panel).toHaveAttribute('data-music-bpm','88');await expect(panel).toHaveAttribute('data-music-theme','focus');
+  await page.locator('[data-game="dama"]').click();await page.locator('#play-button').click();await page.locator('#dama-bot').click();await expect(panel).toHaveAttribute('data-music-bpm','88');await expect(panel).toHaveAttribute('data-music-theme','focus');
   await page.locator('#sound-button').click();await expect(panel).toHaveAttribute('data-music','silent');
 });

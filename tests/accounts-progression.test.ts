@@ -14,13 +14,13 @@ test('legacy games receive one XP migration; purchases and unfinished/practice r
   const initial = profile.xp;
   assert.equal(awardXp(profile, { won: true, practice: true }), 0);
   assert.equal(awardXp(profile, { won: false, failure: false, record: 0 }), 0); assert.equal(profile.xp, initial);
-  awardXp(profile, { won: true }); profile.played++; assert.equal(profile.xp, 320); assert.equal(playerLevel(profile.xp).level, 3);
+  awardXp(profile, { won: true }); profile.played++; assert.equal(profile.xp, 320); assert.equal(playerLevel(profile.xp).level, 2);
   assert.equal(normalizeProfile(profile).xp, 320); assert.equal(readBackup(JSON.stringify(makeBackup(profile))).profile.xp, 320);
   awardXp(profile, { won: false, draw: true }); assert.equal(profile.xp, 355);
   awardXp(profile, { won: false }); assert.equal(profile.xp, 375);
 });
 test('level boundaries and malformed XP are bounded without losing valid old progress', () => {
-  for (const [xp, expected] of [[0,1],[99,1],[100,2],[299,2],[300,3],[599,3],[600,4]]) assert.equal(playerLevel(xp).level, expected);
+  for (const [xp, expected] of [[0,0],[99,0],[100,1],[234,1],[235,2],[414,2],[415,3]]) assert.equal(playerLevel(xp).level, expected);
   assert.equal(normalizeProfile({ xp: -10 }).xp, 0); assert.equal(normalizeProfile({ xp: Infinity, played: 1 }).xp, 20);
   const profile = normalizeProfile({ xp: MAX_XP }); awardXp(profile, { won: true }); assert.equal(profile.xp, MAX_XP);
 });

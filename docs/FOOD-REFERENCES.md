@@ -14,3 +14,10 @@ compositions, or hotlinked by the game. All artwork works offline.
 | Juice | A sealed drink pouch with a straw and mango illustration, rather than a skewer | [Zest-O mango product photo](https://zbga.shopsuki.ph/products/zest-o-juice-drink-mango-200ml) |
 
 The final SVG geometry is in `client/src/food-art.ts`. Packaging is unbranded.
+
+Alpha 0.14 adds pandesal, cheese puto, halo-halo and bibingka, referencing the
+[DOT dessert photo gallery](https://philippinetourism.co.kr/phil-intro/desserts).
+Banana cue uses caramel-coated saba shapes, and turon uses a wrapped roll,
+consistent with [Kawaling Pinoy's turon reference](https://www.kawalingpinoy.com/banana-turon/)
+and the [banana cue reference](https://nhymbe.net/banana-cue-or-skewered-sugar-coated-banana/).
+These remain original simplified SVG drawings, with no bundled photographs.

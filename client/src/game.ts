@@ -11,6 +11,8 @@ import { createPlayerArt, playerTexture } from './avatar-art';
 import { phoneSpotForPage, relocatePhone } from './phone-spots';
 import { GAMES } from './games/types';
 import { BarangayAnimals } from './wildlife';
+import { playerLevel, GAME_LEVELS, gameUnlocked } from './progression';
+import { questNodes, nearbyQuest, type QuestId } from './quests';
 
 export interface GameUI {
   profile: Profile;
@@ -23,6 +25,7 @@ export interface GameUI {
   enterGame(game: GameId): void;
   foundPhone(): void;
   openShop?(kind: 'street' | 'store'): void;
+  quest?(id:QuestId,spot:number):void;
   failure?(kind?: 'mistake' | 'hit' | 'loss'): void;
 }
 type Kid = { sprite: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Ellipse; name: Phaser.GameObjects.Text; facing: number; color: number; look: CharacterLook; x: number; y: number };
@@ -59,6 +62,8 @@ export class BarangayScene extends Phaser.Scene {
   private phoneSpot = phoneSpotForPage();
   private phoneFound = false;
   private animals!: BarangayAnimals;
+  private questMarkers: Phaser.GameObjects.GameObject[] = [];
+  private questStamp = '';
   resizeView() {
     if (!this.cameras?.main || !this.player) return;
     const camera = this.cameras.main, { width, height } = this.game.scale.gameSize;
@@ -80,6 +85,19 @@ export class BarangayScene extends Phaser.Scene {
   }
 
   constructor(ui: GameUI) { super('barangay'); this.ui = ui; }
+  refreshQuests() { if(this.mode==='hub')this.syncQuestMarkers(); }
+  private syncQuestMarkers() {
+    const nodes=questNodes(this.ui.profile), stamp=JSON.stringify(nodes);if(stamp===this.questStamp)return;
+    this.questStamp=stamp;this.questMarkers.forEach(marker=>marker.destroy());this.questMarkers=[];
+    for(const node of nodes) {
+      if(node.spot>=0) {
+        const color=node.item==='wallet'?0x946f4c:node.item==='book'?0x7da9a3:0xc0d0a0;
+        this.questMarkers.push(this.add.rectangle(node.x,node.y-7,node.item==='litter'?12:19,14,0x213029).setDepth(node.y),this.add.rectangle(node.x,node.y-8,node.item==='litter'?8:15,10,color).setDepth(node.y+1));
+      }
+      this.questMarkers.push(this.add.text(node.x,node.y-(node.spot<0?90:34),node.label,{...textStyle,fontSize:node.spot<0?'24px':'18px',color:node.label==='!'?'#ffe095':'#e2d3a0'}).setOrigin(.5,1).setDepth(2000));
+    }
+    document.querySelector<HTMLElement>('#game')!.dataset.questNodes=stamp;
+  }
 
   create() {
     createArt(this);
@@ -129,6 +147,7 @@ export class BarangayScene extends Phaser.Scene {
   private bot(x: number, y: number, id: CharacterId) { const appearance = BOT_APPEARANCES[id]; return this.kid(x, y, appearance.color, CHARACTERS[id], appearance.look); }
 
   private drawKid(kid: Kid, time: number, moving = false, vector: Point = { x: 0, y: 0 }) {
+    if(kid===this.player) { kid.name.setText(`${this.ui.profile.name} · Lv ${playerLevel(this.ui.profile.xp).level}`); document.querySelector<HTMLElement>('#game')!.dataset.avatarLevel=String(playerLevel(this.ui.profile.xp).level); }
     if (moving) kid.facing = Math.abs(vector.x) > Math.abs(vector.y) ? vector.x < 0 ? 1 : 2 : vector.y < 0 ? 3 : 0;
     const frame = moving ? Math.floor(time / 115) % 4 : 0;
     kid.sprite.setPosition(Math.round(kid.x), Math.round(kid.y)).setTexture(kid === this.player ? playerTexture(kid.facing, frame) : characterTexture(kid.look, kid.color, kid.facing, frame)).setDepth(kid.y);
@@ -148,6 +167,7 @@ export class BarangayScene extends Phaser.Scene {
     this.background.setTexture('hub'); this.marker.setVisible(true);
     this.hubProps.forEach(prop => prop.setVisible(true)); this.courtProps.forEach(prop => prop.setVisible(false));
     this.locationMarkers.forEach(marker => (marker as Phaser.GameObjects.Image).setVisible(true));
+    this.questStamp = ''; this.syncQuestMarkers();
     this.phone.setVisible(!this.phoneFound);
     this.cameras.main.setBounds(0, 0, HUB_SIZE.width, HUB_SIZE.height).setScroll(0, 0);
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
@@ -160,6 +180,7 @@ export class BarangayScene extends Phaser.Scene {
   }
 
   startMatch() {
+    this.questMarkers.forEach(marker=>marker.destroy());this.questMarkers=[];this.questStamp='';
     if (!this.player) return;
     if (this.mode === 'hub') this.rememberHubPosition();
     this.blur(); this.clearKids(); this.mode = 'match'; this.pausedByUser = false;
@@ -247,18 +268,21 @@ export class BarangayScene extends Phaser.Scene {
         else this.drawKid(kid, time);
       });
       const site = nearbySite(this.player);
+      const quest = nearbyQuest(this.ui.profile,this.player);
       const atPhone = !this.phoneFound && Math.hypot(this.player.x - this.phoneSpot.x, this.player.y - this.phoneSpot.y) < 43;
       const atStore = Math.hypot(this.player.x - 227, this.player.y - 316) < 75;
       const atFood = [FOOD_CORNER, { x: 780, y: 1530 }].some(point => Math.hypot(this.player.x - point.x, this.player.y - point.y) < 80);
       if (time - this.lastHUD > 110) {
+        this.syncQuestMarkers();
         this.ui.hint(atPhone ? 'Something on the ground… Press E or Pick up phone.' : site ? `Press E or tap Play to enter ${site.name}.` : atStore ? `Press E to say hello to ${CHARACTERS.mamaShoni}` : 'Luksong Lubid is south of Dama · a little phone may be hiding somewhere.');
         const button = document.querySelector<HTMLButtonElement>('#activity-action')!;
-        button.hidden = !site && !atPhone && !atFood && !atStore; if (atPhone) button.textContent = 'Pick up phone · E'; else if (site) button.textContent = `Play ${GAMES[site.game].title} · E`; else if (atFood || atStore) { button.textContent = atFood ? 'Street food · E' : 'Sari-sari store · E'; this.ui.hint('Press E or tap to browse snacks. Games are always free to play.'); }
+        button.hidden = !quest && !site && !atPhone && !atFood && !atStore; if(quest) {button.textContent=quest.spot>=0?'Pick up quest item · E':'Talk · Quest · E';this.ui.hint('A neighbor needs help. Press E or tap Talk.');} else if (atPhone) button.textContent = 'Pick up phone · E'; else if (site) button.textContent = gameUnlocked(this.ui.profile.xp,site.game)?`Play ${GAMES[site.game].title} · E`:`${GAMES[site.game].title} · Level ${GAME_LEVELS[site.game]}`; else if (atFood || atStore) { button.textContent = atFood ? 'Street food · E' : 'Sari-sari store · E'; this.ui.hint('Press E or tap to browse snacks.'); }
         document.querySelector<HTMLButtonElement>('#emote-button')!.hidden = Boolean(site) || atPhone;
       }
       if (this.interactRequested) {
         this.interactRequested = false;
-        if (atPhone) { this.phoneFound = true; this.phone.setVisible(false); this.ui.foundPhone(); }
+        if(quest) this.ui.quest?.(quest.id,quest.spot);
+        else if (atPhone) { this.phoneFound = true; this.phone.setVisible(false); this.ui.foundPhone(); }
         else if (site) this.ui.enterGame(site.game);
         else if (atFood || atStore) this.ui.openShop?.(atFood ? 'street' : 'store');
         else this.emote();

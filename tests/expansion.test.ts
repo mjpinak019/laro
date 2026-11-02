@@ -16,7 +16,7 @@ test('cosmetic purchases debit exactly once, reject insufficient funds, and equi
   assert.equal(buyCosmetic(player, 'costume-clockwork'), false); assert.equal(player.coins, 55); assert.equal(equipCosmetic(player.wardrobe, 'hat-none'), true); assert.equal(equipCosmetic(player.wardrobe, 'hat-cap'), true);
   assert.equal(equipCosmetic(player.wardrobe, 'hat-astral'), false); assert.equal(buyCosmetic(player, 'missing'), false);
   assert.ok(COSMETICS.filter(item => item.slot === 'skin').every(item => item.price === 0)); assert.equal(equipCosmetic(player.wardrobe, 'bottom-shorts'), true);
-  assert.ok(Math.min(...COSMETICS.filter(i => i.slot === 'costume' && i.price > 0).map(i => i.price)) > Math.max(...COSMETICS.filter(i => i.slot === 'hat').map(i => i.price)));
+  assert.ok(Math.min(...COSMETICS.filter(i => i.slot === 'costume' && i.price > 0 && !i.level).map(i => i.price)) > Math.max(...COSMETICS.filter(i => i.slot === 'hat' && !i.level).map(i => i.price)));
 });
 test('wardrobe normalization removes unknown and unowned gear, duplicates, and incorrect slot assignments', () => {
   const wardrobe = normalizeWardrobe({ owned: ['hat-cap', 'hat-cap', 'free-money', 'skin-deep'], equipped: { skin: 'skin-deep', hat: 'hat-astral', beard: 'hat-cap', costume: 'costume-clockwork' } });

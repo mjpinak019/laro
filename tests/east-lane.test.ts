@@ -65,24 +65,24 @@ test('a fallen can and the safety line each prevent tags; resetting requires rea
 });
 test('manual pickup and free movement work on all difficulties; first to three ends and freezes the match', () => {
   for (const difficulty of ['easy', 'normal', 'hard'] as const) {
-    const state = initialTumbang(difficulty); launchTumbang(state, -Math.PI / 2, .55); state.autoRetrieve = true; tick(state, 2);
+    const state = initialTumbang(difficulty); launchTumbang(state, -Math.PI / 2, .45); state.autoRetrieve = true; tick(state, 2);
     assert.equal(state.carrying, false); assert.equal(toggleTsinelas(state), true); state.autoRetrieve = true; tick(state, 10);
     assert.equal(state.phase, 'feedback'); assert.equal(state.hit, true); assert.equal(state.scores[0], 1);
   }
   const state = initialTumbang(); let turns = 0;
   while (!tumbangMatchOver(state) && turns < 8) {
-    launchTumbang(state, -Math.PI / 2, .55); state.autoRetrieve = true; tick(state, 2);
+    launchTumbang(state, -Math.PI / 2, .45); state.autoRetrieve = true; tick(state, 2);
     if (state.turn % 2 === 0) { toggleTsinelas(state); state.autoRetrieve = true; }
     tick(state, 12); assert.equal(state.phase, 'feedback'); turns++; nextTumbangTurn(state);
   }
   assert.equal(turns, 5); assert.equal(state.phase, 'finished'); assert.deepEqual(state.scores, [3, 2]);
   const saved = JSON.stringify(state); tick(state, 2); nextTumbangTurn(state); assert.equal(JSON.stringify(state), saved);
 });
-test('guide length is full, half, or one eighth and dropping tsinelas freezes the guard while the player can dodge', () => {
+test('guide length is full, half, or one eighth and dropping tsinelas freezes the guard only when the can is upright', () => {
   assert.equal(tumbangGuideLength(.6, 'normal'), tumbangGuideLength(.6, 'easy') / 2);
   assert.equal(tumbangGuideLength(.6, 'hard'), tumbangGuideLength(.6, 'easy') / 8);
   const state = initialTumbang(); launchTumbang(state, -Math.PI / 2, .6); tick(state, 1);
-  const guard = { ...state.players[1] }; state.players[0] = { ...state.slipper };
+  state.can.down = false; state.can.vx = state.can.vy = state.can.spin = 0; const guard = { ...state.players[1] }; state.players[0] = { ...state.slipper };
   stepTumbang(state, .2, { x: 1, y: 0 }); assert.deepEqual(state.players[1], guard); assert.ok(state.players[0].x > state.slipper.x);
   state.players[0] = { ...state.slipper }; assert.equal(toggleTsinelas(state), true); stepTumbang(state, .1); assert.notDeepEqual(state.players[1], guard);
   assert.equal(toggleTsinelas(state), true); const stopped = { ...state.players[1] }; tick(state, .4); assert.deepEqual(state.players[1], stopped);

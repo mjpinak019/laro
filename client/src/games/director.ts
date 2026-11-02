@@ -10,6 +10,7 @@ import { JolenGame } from './jolen';
 import { LubidScene } from './lubid';
 import { RetroGame } from './retro';
 import type { ActivityControls, ActivityUI, GameId } from './types';
+import { gameUnlocked, GAME_LEVELS } from '../progression';
 
 export class GameDirector {
   active: GameId | 'hub' = 'hub';
@@ -35,6 +36,7 @@ export class GameDirector {
   hub() { this.stop(); this.active = 'hub'; this.game.scene.wake('barangay'); this.barangay.hub(); }
   startMatch() { this.stop(); this.active = 'patintero'; this.game.scene.wake('barangay'); this.barangay.startMatch(); }
   start(id: GameId, options: { mode?: 'bot' | 'local'; resume?: boolean; practice?: boolean } = {}) {
+    if(!gameUnlocked(this.ui.profile.xp,id)) { this.ui.hint(`Unlock this game at Level ${GAME_LEVELS[id]}.`); return; }
     if (id === 'patintero') { this.startMatch(); return; }
     if (this.active === 'hub') this.barangay.rememberHubPosition();
     this.stop(); this.active = id; this.game.scene.sleep('barangay');

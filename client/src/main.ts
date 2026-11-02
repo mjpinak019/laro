@@ -15,8 +15,10 @@ import './landscape.css';
 import './tutorials.css';
 import './progress-account.css';
 import './merienda.css';
+import './journey.css';
 import { playMerienda } from './merienda';
-import { awardXp, playerLevel } from './progression';
+import { awardXp, playerLevel, gameUnlocked, GAME_LEVELS } from './progression';
+import { ensureQuests, questById, acceptQuest, collectQuestItem, claimQuest, progressQuest, questReady, type QuestId } from './quests';
 import { AccountService } from './account';
 import { mountAccount } from './account-ui';
 import { makeBackup } from './save-backup';
@@ -57,6 +59,7 @@ const icons = {
 const icon = (name: keyof typeof icons) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
 const app = document.querySelector<HTMLDivElement>('#app')!;
 const profile = loadProfile();
+if(ensureQuests(profile)) saveProfile(profile);
 const DOM_GAMES = ['piko', 'tumbang', 'chess', 'dama', 'jolen', 'snake', 'impact'];
 let phoneUnlocked = false;
 let screenMenuOpen = false;
@@ -118,6 +121,8 @@ app.innerHTML = `
 document.querySelector('.version')!.textContent = 'v' + GAME_VERSION;
 document.querySelector('.header-right')!.insertAdjacentHTML('afterbegin', '<button id="account-button" class="account-button">Account</button>');
 document.querySelector('#fullscreen-nav')!.insertAdjacentHTML('beforeend', '<button data-screen-nav="account-button">Account</button>');
+document.querySelector('.header-right')!.insertAdjacentHTML('afterbegin','<button id="quests-button" class="account-button">? Quests</button>');
+document.querySelector('#fullscreen-nav')!.insertAdjacentHTML('beforeend','<button data-screen-nav="quests-button">Quests</button>');
 document.querySelector('.progress-card')!.insertAdjacentHTML('afterend', '<section class="level-card" aria-label="Player level"><div class="eyebrow">YOUR BARANGAY JOURNEY</div><div class="level-top"><strong id="player-level-number">Level 1</strong><span id="player-level-title">Bagong Kalaro</span></div><progress id="xp-progress" value="0" max="100" aria-label="Experience toward next level"></progress><p id="xp-text">0 / 100 XP</p><button id="level-info" class="text-button">How levels work</button></section>');
 document.querySelector('.player-chip div > span')!.id = 'player-level';
 document.querySelector('#boot-version')!.textContent = ' · v' + GAME_VERSION;
@@ -141,7 +146,9 @@ function refreshProfile() {
   $('#player-level-number').textContent = `Level ${journey.level}`; $('#player-level-title').textContent = journey.title;
   $('#player-level').textContent = `LEVEL ${journey.level}`;
   $<HTMLProgressElement>('#xp-progress').value = journey.current; $<HTMLProgressElement>('#xp-progress').max = journey.needed;
-  $('#xp-text').textContent = `${journey.current} / ${journey.needed} XP toward Level ${journey.level + 1} · ${journey.xp} total XP`;
+  $('#xp-text').textContent = journey.capped ? `Level 30 · MAX LEVEL · ${journey.xp} total XP` : `${journey.current} / ${journey.needed} XP toward Level ${journey.level + 1} · ${journey.xp} total XP`;
+  ensureQuests(profile);
+  document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach(button=>{const id=button.dataset.game as GameId;button.dataset.locked=String(!gameUnlocked(profile.xp,id));button.title=gameUnlocked(profile.xp,id)?GAMES[id].title:`Unlock at Level ${GAME_LEVELS[id]}`;let badge=button.querySelector('small');if(!badge){badge=document.createElement('small');button.append(badge);}badge.textContent=gameUnlocked(profile.xp,id)?'Available':`Level ${GAME_LEVELS[id]}`;});
   $('#quick-settings').textContent = selectedGame === 'chess' ? `Chess: ${profile.chessDifficulty} - Change` : selectedGame === 'jolen' ? `Jolen: ${profile.jolenDifficulty === 'master' ? 'Extreme' : DAMA_LEVELS[profile.jolenDifficulty].label} · ${JOLEN_OPPONENTS[profile.jolenDifficulty].name}` : selectedGame === 'dama' ? `Dama: ${DAMA_LEVELS[profile.damaDifficulty].label} · ${DAMA_LEVELS[profile.damaDifficulty].opponent}` : `Difficulty: ${profile.difficulty[0].toUpperCase() + profile.difficulty.slice(1)} · Change`;
   $('#player-name').textContent = profile.name;
   $('#mini-avatar').style.setProperty('--shirt', COLORS[profile.color]);
@@ -155,8 +162,9 @@ function refreshProfile() {
   $('#sound-button').setAttribute('aria-label', profile.muted ? 'Unmute sound' : 'Mute sound');
   $('#sound-button').classList.toggle('muted', profile.muted);
   $('#save-status').textContent = storageAvailable ? 'Progress saved on this device' : 'Saving unavailable in this browser';
+  $('#play-button').innerHTML = gameUnlocked(profile.xp,selectedGame)?`${scene?.active===selectedGame?'Restart ':'Play '}${GAMES[selectedGame].title} ${icon('arrow')}`:`Unlocks at Level ${GAME_LEVELS[selectedGame]} ${icon('arrow')}`;
 }
-function persist() { const saved = saveProfile(profile); refreshProfile(); return saved; }
+function persist() { ensureQuests(profile); const saved = saveProfile(profile); refreshProfile(); return saved; }
 function openModal(content: string, dismissible = true) {
   disposeAccount?.(); disposeAccount = undefined;
   disposeMerienda?.(); disposeMerienda = undefined;
@@ -167,6 +175,7 @@ function openModal(content: string, dismissible = true) {
   lastFocus = document.activeElement as HTMLElement;
   $('#modal-content').innerHTML = content; $('#close-modal').hidden = !dismissible;
   if (!dialog.open) dialog.showModal();
+  dialog.scrollTop = 0;
 }
 function closeModal() { disposeMerienda?.(); disposeMerienda = undefined; disposeAccount?.(); disposeAccount = undefined; scene.resetInput(); game.input.keyboard!.preventDefault = !DOM_GAMES.includes(scene.active); dialog.close(); resultMatch = null; lastFocus?.focus(); }
 $('#close-modal').onclick = closeModal;
@@ -182,6 +191,7 @@ function sound(kind: 'step' | 'tag' | 'turn' | 'win' | 'emote') { gameAudio.effe
 const { scene: barangay, game } = createGame({
   profile, blocked: () => dialog.open || screenMenuOpen,
   openShop: openFoodShop,
+  quest(id,spot) { if(spot>=0) {if(questChange(()=>collectQuestItem(profile,spot)))toast(questReady(profile)?'Task ready! Return to your neighbor to claim.':'Quest item collected. Check Quests for your next step.');} else openQuest(id); },
   foundPhone() { phoneUnlocked = true; profile.phoneFinds++; persist(); $('#pocket-phone').hidden = false; openPhone(); },
   failure: feedback.trigger,
   enterGame(id) { selectedGame = id; updateGameCard(); setupGame(id); },
@@ -204,6 +214,7 @@ const { scene: barangay, game } = createGame({
   hint(message) { $('#hint').textContent = message; },
   sound,
   result(match, earned) {
+    progressQuest(profile,{kind:'game',game:'patintero',score:match.phase==='won'?1:0});
     const previousLevel = playerLevel(profile.xp).level, xp = awardXp(profile, { won: match.phase === 'won' });
     resultMatch = match; if (match.phase !== 'won') feedback.trigger('loss');
     profile.played++; profile.coins += earned;
@@ -229,6 +240,7 @@ const activityUI: ActivityUI = {
   },
   hint(message) { $('#hint').textContent = message; }, sound,
   result(value) {
+    if(!value.practice)progressQuest(profile,{kind:'game',game:value.game,score:value.record});
     const previousLevel = playerLevel(profile.xp).level;
     const xp = awardXp(profile, value);
     resultMatch = value; if (!value.won && !value.draw && !value.practice && value.failure !== false) feedback.trigger('loss');
@@ -245,8 +257,35 @@ const activityUI: ActivityUI = {
 };
 scene = new GameDirector(game, barangay, activityUI);
 function xpMessage(xp: number, previousLevel: number) { const journey = playerLevel(profile.xp); return `<div class="result-xp">+${xp} XP · ${journey.level > previousLevel ? 'LEVEL UP! ' : ''}Level ${journey.level} · ${journey.title}</div>`; }
-$('#level-info').onclick = () => openModal('<div class="eyebrow">YOUR BARANGAY JOURNEY</div><h2 id="modal-title">Play, learn, level up.</h2><p>Finished wins earn 60 XP, draws 35 XP, and other completed rounds 20 XP. Practice, unfinished games, shopping, and zero-score early rope cash-outs earn no XP.</p><p>Level 2 starts at 100 XP. Each next level takes 100 more XP than the last. Your title grows every five levels. All games stay available at every level.</p><p>Previous completed games receive the same win/completion XP credit when your save is upgraded. XP is included in downloadable and cloud saves.</p><button id="level-close" class="secondary-button">Keep playing</button>');
+$('#level-info').onclick = () => openModal(`<div class="eyebrow">YOUR BARANGAY JOURNEY</div><h2 id="modal-title">A growing barangay journey.</h2><p>Level 0 starts at 0 XP. Level 1 needs 100 XP; each later level takes more XP than the last. Level 30 is the cap. Wins earn 60 XP, draws 35, other finished rounds 20. Practice and unfinished games earn none. Optional quests also earn XP.</p><div class="unlock-list">${Object.entries(GAME_LEVELS).sort((a,b)=>a[1]-b[1]).map(([id,level])=>`<p><strong>Level ${level}</strong> · ${GAMES[id as GameId].title}</p>`).join('')}</div><p>Existing coins, clothing, records and XP are preserved up to the new XP cap. Already-owned clothing can always be equipped.</p><button id="level-close" class="secondary-button">Keep playing</button>`);
 document.addEventListener('click', event => { if ((event.target as HTMLElement).id === 'level-close') closeModal(); });
+function checkGame(id:GameId) {
+  if(gameUnlocked(profile.xp,id))return true;
+  openModal(`<div class="eyebrow">A NEW GAME TO LOOK FORWARD TO</div><h2 id="modal-title">${GAMES[id].title} · Level ${GAME_LEVELS[id]}</h2><p>You are Level ${playerLevel(profile.xp).level}. Play Patintero, Luksong-tinik or Dama, or help neighbors with quests, to gain XP.</p><button id="locked-close" class="secondary-button">Keep exploring</button>`);$('#locked-close').onclick=closeModal;return false;
+}
+function questChange(change:()=>boolean) {
+  const before=structuredClone(profile);if(!change())return false;
+  if(persist()){scene.updateAvatar();barangay.refreshQuests();return true;}
+  Object.assign(profile,before);refreshProfile();toast('This action could not be saved. Your previous progress is unchanged.');return false;
+}
+function questGoal(id:QuestId) { const def=questById(id)!,goal=def.goal;return goal.kind==='collect'?`Collect ${goal.count} ${goal.item==='litter'?'pieces of litter for recycling':goal.item==='wallet'?'lost wallet':'library book'} on plaza paths.`:goal.kind==='buy'?`Buy ${'item'in goal?'biscuits':'any street-food snack'} from the ${goal.shop==='store'?'sari-sari store':'street-food cart'}.`:`Finish ${GAMES[goal.game].title}${goal.score?` with a score of at least ${goal.score}`:''}.`; }
+function openQuest(id:QuestId) {
+  const def=questById(id);if(!def)return;
+  const atGiver=scene.active==='hub'&&Math.hypot(Number($('#game').dataset.x)-def.x,Number($('#game').dataset.y)-def.y)<55;
+  const active=profile.quests.active,ready=active?.id===id&&questReady(profile);
+  openModal(`<div class="eyebrow">${def.value}</div><h2 id="modal-title">${def.name}</h2><p><strong>${def.giver}</strong>: ${def.dialogue}</p><div class="quest-goal"><strong>Your task</strong><p>${questGoal(id)}</p><p>${active?.id===id?`Progress: ${active.progress}/${def.goal.kind==='collect'?def.goal.count:1}. ${ready?'Ready to return!':''}`:`Find ${def.giver} near the ${def.area}.`}</p><strong>Reward: ${def.xp} XP + ${def.coins} coins</strong></div>${active?.id===id?`<button id="quest-claim" class="primary-button" ${!ready||!atGiver?'disabled':''}>${ready?atGiver?'Claim reward':`Return to ${def.giver}`:'Task in progress'}</button><button id="quest-abandon" class="secondary-button">Leave this quest</button>`:`<button id="quest-accept" class="primary-button" ${!atGiver||!!active||profile.quests.claimed.length>=8?'disabled':''}>${active?'Finish your current quest first':atGiver?'I’ll help!':`Talk to ${def.giver} in the barangay`}</button>`}<p class="fine-print">One active quest at a time. Rewards are claimed in person, once per task per day; up to 8 rewarded quests daily.</p><button id="quest-journal" class="secondary-button">Quest journal</button><button id="quest-close" class="secondary-button">Keep exploring</button>`);
+  const accept=document.querySelector<HTMLButtonElement>('#quest-accept');if(accept)accept.onclick=()=>{if(questChange(()=>acceptQuest(profile,id)))openQuest(id);};
+  const claim=document.querySelector<HTMLButtonElement>('#quest-claim');if(claim)claim.onclick=()=>{const old=playerLevel(profile.xp).level;if(questChange(()=>claimQuest(profile,id))){openModal(`<div class="eyebrow">SALAMAT SA TULONG!</div><h2 id="modal-title">${def.giver} thanks you.</h2><p>${def.thanks}</p><p>+${def.coins} coins · ${playerLevel(profile.xp).capped?'Level 30 cap':`+${def.xp} XP`}${playerLevel(profile.xp).level>old?' · LEVEL UP!':''}</p><button id="quest-done" class="primary-button">Keep exploring</button>`);$('#quest-done').onclick=closeModal;}};
+  const abandon=document.querySelector<HTMLButtonElement>('#quest-abandon');if(abandon)abandon.onclick=()=>{if(questChange(()=>{profile.quests.active=null;return true;}))openQuests();};
+  $('#quest-journal').onclick=openQuests;$('#quest-close').onclick=closeModal;
+  if(scene.active==='hub'&&Math.hypot(Number($('#game').dataset.x)-227,Number($('#game').dataset.y)-316)<75){$('#quest-close').insertAdjacentHTML('beforebegin','<button id="quest-shop" class="primary-button">Browse sari-sari store</button>');$('#quest-shop').onclick=()=>openFoodShop('store');}
+}
+function openQuests() {
+  ensureQuests(profile);const ids=[...new Set([...(profile.quests.active?[profile.quests.active.id]:[]),...profile.quests.offers])];
+  openModal(`<div class="eyebrow">KAPWA · HELPING OUR NEIGHBORS</div><h2 id="modal-title">Barangay quests</h2><p>Look for ? above neighbors and items. Accept a task in person, then return to its giver when ! appears. ${profile.quests.claimed.length}/8 rewarded tasks today · ${profile.quests.total} completed overall.</p><div class="quest-list">${ids.map(id=>{const def=questById(id)!;return `<article><strong>${profile.quests.active?.id===id?'ACTIVE · ':''}${def.name}</strong><p>${def.giver} · ${def.area}</p><p>${questGoal(id)}</p><button data-quest-details="${id}" class="secondary-button">${def.xp} XP · ${def.coins} coins · Details</button></article>`;}).join('')||'<p>No new offers now. Play to unlock more tasks, or visit tomorrow.</p>'}</div><button id="quests-close" class="secondary-button">Back to the barangay</button>`);
+  document.querySelectorAll<HTMLButtonElement>('[data-quest-details]').forEach(button=>button.onclick=()=>openQuest(button.dataset.questDetails as QuestId));$('#quests-close').onclick=closeModal;
+}
+$('#quests-button').onclick=openQuests;
 function openAccount() {
   openModal('<div class="eyebrow">YOUR LARO ACCOUNT</div><h2 id="modal-title">Account &amp; cloud progress</h2><div id="account-panel"></div><button id="account-close" class="secondary-button">Continue playing</button>');
   disposeAccount = mountAccount($('#account-panel'), account, profile, () => scene.active === 'hub', () => makeBackup(profile, savedDama()), backup => {
@@ -307,11 +346,12 @@ function updateGameCard() {
   else if (selectedGame === 'taguan') art.innerHTML = '<div class="preview-wall"></div><div class="preview-bush"></div><span class="art-kid one"></span><span class="preview-search">⌕</span><span class="preview-caption">TAHAN… MAY TAYA.</span>';
   else art.innerHTML = '<div class="preview-hands"></div><span class="art-kid one"></span><span class="art-kid two"></span><span class="art-kid three"></span><span class="preview-caption">ISA PANG TAAS!</span>';
   document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach(button => { const current = button.dataset.game === (selectedGame === 'chess' ? 'dama' : selectedGame); button.classList.toggle('selected', current); button.setAttribute('aria-pressed', String(current)); });
-  $('#play-button').innerHTML = `${scene?.active === selectedGame ? 'Restart ' : 'Play '}${item.title} ${icon('arrow')}`;
+  $('#play-button').innerHTML = gameUnlocked(profile.xp,selectedGame)?`${scene?.active === selectedGame ? 'Restart ' : 'Play '}${item.title} ${icon('arrow')}`:`Unlocks at Level ${GAME_LEVELS[selectedGame]} ${icon('arrow')}`;
   refreshProfile();
 }
 
 function startWithTutorial(id: GameId, options: Parameters<GameDirector['start']>[1] = {}) {
+  if(!checkGame(id))return;
   const begin = () => { closeModal(); scene.start(id, options); };
   if (!profile.tutorialPrompts) { begin(); return; }
   openModal(`<div class="eyebrow">BEFORE YOU PLAY</div><h2 id="modal-title">Learn ${GAMES[id].title} first?</h2><p>A few illustrated steps explain the controls and goal. No timer runs while you read.</p>${tutorialIllustration(id, 0)}<label class="tutorial-preference"><input id="tutorial-disable" type="checkbox" />Don't ask before games again</label><div class="tutorial-buttons"><button id="tutorial-show" class="primary-button">Show tutorial</button><button id="tutorial-play" class="secondary-button">Skip and play</button></div>`);
@@ -326,11 +366,12 @@ function showTutorial(id: GameId, done: () => void, index = 0) {
   $('#tutorial-next').onclick = () => index === steps.length - 1 ? done() : showTutorial(id, done, index + 1);
 }
 function openFoodShop(kind: 'street' | 'store') {
+  const foodCard=(item:typeof SNACKS[number])=>{const locked=playerLevel(profile.xp).level<(item.level??0);return `<article data-food-level="${item.level??0}">${snackPicture(item.id)}<strong>${item.name}</strong><p>${item.detail}</p>${item.level?`<small>Level ${item.level}</small>`:''}<button class="primary-button" data-buy-snack="${item.id}" ${locked||profile.coins<item.price?'disabled':''}>${locked?`Level ${item.level} · `:'Enjoy · '}${item.price} coins</button></article>`;};
   const render = (message = '') => {
-    openModal(`<div class="eyebrow">MERIENDA TIME</div><h2 id="modal-title">${kind === 'street' ? 'Street food corner' : 'Mama Shoni’s sari-sari store'}</h2><p id="food-intro">Enjoy a little treat. Games are always free to play.</p><strong id="food-coins">${profile.coins} coins</strong><div id="merienda-stage" class="merienda-stage" hidden></div><div class="food-menu">${SNACKS.filter(item => item.shop === kind).map(item => `<article>${snackPicture(item.id)}<strong>${item.name}</strong><p>${item.detail}</p><button class="primary-button" data-buy-snack="${item.id}" ${profile.coins < item.price ? 'disabled' : ''}>Enjoy - ${item.price} coins</button></article>`).join('')}</div><p id="food-status" role="status">${message}</p><button id="food-close" class="secondary-button">Back to the barangay</button>`);
+    openModal(`<div class="eyebrow">MERIENDA TIME</div><h2 id="modal-title">${kind === 'street' ? 'Street food corner' : 'Mama Shoni’s sari-sari store'}</h2><p id="food-intro">Enjoy a little treat. Special merienda unlocks as you level up.</p><strong id="food-coins">${profile.coins} coins</strong><div id="merienda-stage" class="merienda-stage" hidden></div><div class="food-menu">${SNACKS.filter(item => item.shop === kind).map(foodCard).join('')}</div><p id="food-status" role="status">${message}</p><button id="food-close" class="secondary-button">Back to the barangay</button>`);
     document.querySelectorAll<HTMLButtonElement>('[data-buy-snack]').forEach(button => { button.onclick = () => {
       if (disposeMerienda) return;
-      const item = SNACKS.find(item => item.id === button.dataset.buySnack)!, before = { coins: profile.coins, snacksEaten: profile.snacksEaten };
+      const item = SNACKS.find(item => item.id === button.dataset.buySnack)!, before = { coins: profile.coins, snacksEaten: profile.snacksEaten,quests:structuredClone(profile.quests) };
       if (!buySnack(profile, item.id)) return;
       if (!persist()) { Object.assign(profile, before); persist(); render('Purchase cancelled because progress could not be saved. No coins charged.'); return; }
       sound('emote'); $('#food-coins').textContent = `${profile.coins} coins`;
@@ -339,7 +380,7 @@ function openFoodShop(kind: 'street' | 'store') {
       disposeMerienda = playMerienda(stage, profile, item.id, () => barangay.meriendaOrigin(), away => barangay.setMeriendaAway(away), () => {
         disposeMerienda = undefined; stage.hidden = true; menu.hidden = false;
         $('#food-status').textContent = `Sarap! You enjoyed ${item.name}. Snacks enjoyed: ${profile.snacksEaten}.`;
-        document.querySelectorAll<HTMLButtonElement>('[data-buy-snack]').forEach(buy => { buy.disabled = profile.coins < SNACKS.find(snack => snack.id === buy.dataset.buySnack)!.price; });
+        document.querySelectorAll<HTMLButtonElement>('[data-buy-snack]').forEach(buy => { const snack=SNACKS.find(snack=>snack.id===buy.dataset.buySnack)!;buy.disabled=profile.coins<snack.price||playerLevel(profile.xp).level<(snack.level??0); });
         button.focus({ preventScroll: true });
       });
     }; });
@@ -348,12 +389,13 @@ function openFoodShop(kind: 'street' | 'store') {
 }
 
 function setupGame(id: GameId) {
+  if(!checkGame(id))return;
   if (id === 'snake' || id === 'impact') {
     if (!phoneUnlocked || ['snake', 'impact'].includes(scene.active)) { closeModal(); scene.hub(); toast('The phone is back in the barangay at a different spot. Find it to play again.'); return; }
     closeModal(); startWithTutorial(id);
   } else if (id === 'piko' || id === 'tumbang') {
     const piko = id === 'piko';
-    openModal(`<div class="eyebrow">${piko ? 'SILANGANG KANTO - WITH WENDY' : 'BAGONG LARUAN - WITH ERIC'}</div><h2 id="modal-title">${piko ? 'Tara, Piko tayo!' : 'Tumbang Preso!'}</h2><p>${piko ? 'Toss a pamato into the numbered square. Aim by tapping the court or using the slider. Start the meter and tap again in the gold zone. Then time one-foot and two-foot landings out and back, skipping the marker.' : 'Aim a tsinelas at the tin can, start the power meter, then tap to throw. Knock the can down, retrieve your slipper, and return behind the line. The guard must reach and reset the fallen can before tagging.'}</p><p>${piko ? 'Eight courses, three chances. Space means one foot; D means two feet. The next square lights up. You can study the route before starting each course.' : 'First to three points wins. Move with WASD, arrows, the pad, or tap a destination. Pick up or put down the tsinelas with E. The guard stays still until the thrower holds it. Alternate thrower and guard after each attempt.'}</p><label class="field-label" for="street-difficulty">DIFFICULTY</label><select id="street-difficulty" class="opponent-select"><option value="easy">${piko ? "Easy - generous timing and guides" : "Easy - full aiming guide"}</option><option value="normal">${piko ? "Normal - tighter hop timing" : "Normal - half aiming guide"}</option><option value="hard">${piko ? "Hard - precise hops, no trajectory guide" : "Hard - one eighth aiming guide"}</option></select><button id="street-start" class="primary-button">Play ${GAMES[id].title}</button><p class="fine-print">LARO neighborhood adaptations. Completed games save records and earn coins. Leaving early earns none.</p>`);
+    openModal(`<div class="eyebrow">${piko ? 'SILANGANG KANTO - WITH WENDY' : 'BAGONG LARUAN - WITH ERIC'}</div><h2 id="modal-title">${piko ? 'Tara, Piko tayo!' : 'Tumbang Preso!'}</h2><p>${piko ? 'Toss a pamato into the numbered square. The next number is targeted automatically. Start the timing meter and tap again in the gold zone. Then time one-foot and two-foot landings out and back, skipping the marker.' : 'Aim a tsinelas at the tin can, start the power meter, then tap to throw. Knock the can down, retrieve your slipper, and return behind the line. The guard must reach and reset the fallen can before tagging.'}</p><p>${piko ? 'You and Wendy alternate courses. First to eight wins; you have three chances. Wendy makes more mistakes on Easy and fewer on Hard. Space means one foot; D means two feet. The next square lights up. You can study the route before starting each course.' : 'First to three points wins. Move with WASD, arrows, the pad, or tap a destination. Pick up or put down the tsinelas with E. A fallen can lets the guard move and reset it, even with the slipper on the ground. With an upright can, the guard waits until the slipper is held. Alternate thrower and guard after each attempt.'}</p><label class="field-label" for="street-difficulty">DIFFICULTY</label><select id="street-difficulty" class="opponent-select"><option value="easy">${piko ? "Easy - generous timing and guides" : "Easy - full aiming guide"}</option><option value="normal">${piko ? "Normal - tighter hop timing" : "Normal - half aiming guide"}</option><option value="hard">${piko ? "Hard - precise hops, no trajectory guide" : "Hard - one eighth aiming guide"}</option></select><button id="street-start" class="primary-button">Play ${GAMES[id].title}</button><p class="fine-print">LARO neighborhood adaptations. Completed games save records and earn coins. Leaving early earns none.</p>`);
     const select = $<HTMLSelectElement>('#street-difficulty'); select.value = profile.difficulty;
     $('#street-start').onclick = () => { profile.difficulty = select.value === 'hard' ? 'hard' : select.value === 'normal' ? 'normal' : 'easy'; persist(); closeModal(); startWithTutorial(id); };
   } else if (id === 'lubid') {
@@ -387,7 +429,7 @@ function setupGame(id: GameId) {
     $('#tinik-practice').onclick = () => { closeModal(); startWithTutorial('tinik', { practice: true }); };
   } else { closeModal(); startWithTutorial(id); sound('emote'); }
 }
-function tableOptions(active: 'dama' | 'chess') { return `<div class="table-options" role="group" aria-label="Game at the Dama table"><button type="button" data-table-game="dama" aria-pressed="${active === 'dama'}">Dama</button><button type="button" data-table-game="chess" aria-pressed="${active === 'chess'}">Chess</button></div>`; }
+function tableOptions(active: 'dama' | 'chess') { return `<div class="table-options" role="group" aria-label="Game at the Dama table"><button type="button" data-table-game="dama" aria-pressed="${active === 'dama'}">Dama</button><button type="button" data-table-game="chess" aria-pressed="${active === 'chess'}">Chess · Level 12</button></div>`; }
 function bindTableOptions() { document.querySelectorAll<HTMLButtonElement>('[data-table-game]').forEach(button => { button.onclick = () => setupGame(button.dataset.tableGame as 'dama' | 'chess'); }); }
 function damaOptions() { return (Object.keys(DAMA_LEVELS) as DamaDifficulty[]).map(id => `<option value="${id}">${DAMA_LEVELS[id].label} · ${DAMA_LEVELS[id].opponent}</option>`).join(''); }
 document.querySelectorAll<HTMLButtonElement>('[data-game]').forEach(button => { button.onclick = () => { selectedGame = button.dataset.game as GameId; updateGameCard(); }; });
@@ -412,7 +454,7 @@ function play() {
 }
 $('#play-button').onclick = play;
 $('#nav-play').onclick = () => {
-  openModal(`<div class="eyebrow">TARA, LARO TAYO</div><h2 id="modal-title">An afternoon of play.</h2><div class="game-menu">${PUBLIC_GAMES.map(id => `<button class="game-menu-card" data-menu-game="${id}"><strong>${GAMES[id].title}</strong><span>${GAMES[id].description}</span><small>Play ${GAMES[id].title} →</small></button>`).join('')}</div>`);
+  openModal(`<div class="eyebrow">TARA, LARO TAYO</div><h2 id="modal-title">An afternoon of play.</h2><div class="game-menu">${PUBLIC_GAMES.map(id => `<button class="game-menu-card" data-menu-game="${id}"><strong>${GAMES[id].title}</strong><span>${GAMES[id].description}</span><small>${gameUnlocked(profile.xp,id) ? `Play ${GAMES[id].title} →` : `Locked · Level ${GAME_LEVELS[id]}`}</small></button>`).join('')}</div>`);
   document.querySelectorAll<HTMLButtonElement>('[data-menu-game]').forEach(button => { button.onclick = () => { selectedGame = button.dataset.menuGame as GameId; closeModal(); updateGameCard(); play(); }; });
 };
 $('#nav-hub').onclick = () => {
@@ -426,8 +468,8 @@ $('#sound-button').onclick = () => { profile.muted = !profile.muted; persist(); 
 function guide() {
   if (selectedGame !== 'patintero') {
     const pages: Record<NewGameId, string> = {
-      piko: '<p>Wendy hosts eight pamato courses in the east lane. Tap a square to aim, or adjust the aim slider. Start the toss meter and release in the gold zone. The marker must land inside the target chalk square. Hop out and back, skipping the pamato square. Use Space or One foot for a single square, and D or Two feet for paired squares. A pair containing the marker becomes a one-foot landing. The next landing is highlighted. Early, late, and incorrect-foot landings each cost a chance, as does a missed toss. Three mistakes end the game. Easy shows a throw guide and generous timing, Normal tightens timing, and Hard removes the trajectory, narrows timing further, and adds a second out-and-back lap on courses five through eight. Clear all eight courses to earn 60 / 80 / 100 coins; a completed loss earns 10. Best completed courses save with your records.</p>',
-      tumbang: '<p>Eric hosts a first-to-three match, with rotating thrower and guard roles. Aim and time a tsinelas throw to topple the can. Easy shows the full throw guide, Normal half, and Hard one eighth. Move freely using WASD, arrows, the pad, or tap the court. Pick up the tsinelas with E, Space, or Pick up while standing nearby. Put it down any time. The guard stays still when the thrower is not holding it, and can move only while it is held. The guard must reset the can before tagging outside the safety line. Knock the can down and carry the slipper behind the safe line to score one point. A legal guard tag also scores one point. First to three points wins; each retrieval attempt has a 35-second limit. Wins earn 60 / 80 / 100 coins, and losses earn 10.</p>',
+      piko: '<p>Wendy hosts eight pamato courses in the east lane. The next number is targeted automatically. Start the toss timing meter and release in the gold zone. The marker must land inside the target chalk square. Hop out and back, skipping the pamato square. Use Space or One foot for a single square, and D or Two feet for paired squares. A pair containing the marker becomes a one-foot landing. The next landing is highlighted. Early, late, and incorrect-foot landings each cost a chance, as does a missed toss. Three mistakes end the game. Easy shows a throw guide and generous timing, Normal tightens timing, and Hard removes the trajectory, narrows timing further, and adds a second out-and-back lap on courses five through eight. Wendy takes visible turns between your attempts and makes more mistakes on Easy than Hard. First to eight courses wins. Clear all eight courses to earn 60 / 80 / 100 coins; a completed loss earns 10. Best completed courses save with your records.</p>',
+      tumbang: '<p>Eric hosts a first-to-three match, with rotating thrower and guard roles. Aim and time a tsinelas throw to topple the can. Easy shows the full throw guide, Normal half, and Hard one eighth. Move freely using WASD, arrows, the pad, or tap the court. Pick up the tsinelas with E, Space, or Pick up while standing nearby. Put it down any time. When the can is down, the guard can move and reset it even if nobody holds the slipper. An upright can makes the guard wait until the slipper is held. The guard must reset the can before tagging outside the safety line. Knock the can down and carry the slipper behind the safe line to score one point. A legal guard tag also scores one point. First to three points wins; each retrieval attempt has a 35-second limit. Wins earn 60 / 80 / 100 coins, and losses earn 10.</p>',
       chess: '<p>Open the Dama table and choose Chess. White moves first. Select a piece, then a highlighted destination. Moves that leave your king in check are forbidden. Castling requires a clear, safe path and an unmoved king and rook. En passant is available only immediately after the opposing pawn advances two squares. A pawn reaching the last rank lets you choose queen, rook, bishop, or knight.</p><p>Checkmate wins. Stalemate, insufficient material, threefold repetition, and fifty moves by each side without a pawn move or capture end in a draw. These draws are automatic in this digital version. Choose a beginner bot at Easy, Normal, or Hard, or play a friend on the same device. Bot wins earn 60 coins, draws 20, and losses 10; pass-and-play awards none. Leaving ends your current chess match. Your unfinished Dama save is kept separately.</p>',
       lubid: '<p>Endless rope jumping. Tap the court, Jump, or Space to lift your feet before the rope crosses. Holding never auto-jumps; a tap within 75 ms of landing is buffered.</p><p>The rope speeds up to a cap of about 94 / 97 / 100 RPM on Easy / Normal / Hard. From 50 clears it smoothly shifts between faster and slower rhythms. Reach 100, then keep going: there is no final jump.</p><p>Your best score saves after every clear. Three hits end the run, or choose Finish to collect early. Rewards are 1 coin per 2 clearances, capped at 100 per run and awarded once on completion. Leaving through another menu saves the best score but earns no coins. Pause freezes the rope and your jump.</p>',
       snake: '<p>Find the phone in the barangay, then use its keypad, arrows, WASD, or swipe to steer. Eat food for 10 points and grow longer. Wrap through the edges and avoid your own body. Reversing directly is not allowed. The snake gets faster as it grows. Earn 2 coins per food, up to 30 per finished game. Leaving early earns none.</p>',

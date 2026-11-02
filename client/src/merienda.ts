@@ -6,7 +6,7 @@ import type { SnackId } from './food-art';
 type Origin = { x: number; y: number; scale: number };
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (t: number) => t * t * (3 - 2 * t);
-const motions: Record<SnackId, string> = { fishball: 'Bite by bite, off the skewer.', 'kwek-kwek': 'A crunchy orange bite!', kikiam: 'One golden piece at a time.', taho: 'Scoop, taste, sarap!', biscuit: 'Crunch! Watch those crumbs.', juice: 'A refreshing sip through the straw.' };
+const motions: Record<SnackId, string> = { fishball: 'Bite by bite, off the skewer.', 'kwek-kwek': 'A crunchy orange bite!', kikiam: 'One golden piece at a time.', taho: 'Scoop, taste, sarap!', biscuit: 'Crunch! Watch those crumbs.', juice: 'A refreshing sip through the straw.',pandesal:'Soft bread, one little bite at a time.','banana-cue':'Caramelized saba off the skewer.',turon:'A crisp banana roll — crunch!',puto:'A soft rice cake with cheese.','halo-halo':'Mix, scoop, and enjoy the cool colors!',bibingka:'A golden slice for merienda.' };
 
 /** A presentation only: the purchase is saved before this starts; skip/close never charges again. */
 export function playMerienda(host: HTMLElement, profile: Profile, id: SnackId, origin: () => Origin, away: (value: boolean) => void, done: () => void) {
@@ -47,30 +47,33 @@ export function playMerienda(host: HTMLElement, profile: Profile, id: SnackId, o
   }
   const box = (x:number,y:number,w:number,h:number,color:string) => { c.fillStyle=color; c.fillRect(Math.round(x),Math.round(y),w,h); };
   function food(t: number) {
+    const spoon = id==='taho'||id==='halo-halo', biteFood=['biscuit','pandesal','turon','puto','bibingka'].includes(id);
     const bite = Math.min(2,Math.floor(t*3)), cycle = t*3%1;
     const lift = reduced ? .75 : Math.sin(Math.min(1,cycle*1.6)*Math.PI);
     const atMouth = cycle > .25 && cycle < .7;
-    const hand = id === 'taho' ? {x:lerp(4,15,lift),y:lerp(20,13,lift)} : id === 'juice' ? {x:19,y:18} : id === 'biscuit' ? {x:lerp(22,13,lift),y:lerp(21,15,lift)} : {x:lerp(22,11,lift),y:lerp(23,18,lift)};
-    const gesture: CharacterGesture = { rightHand: hand, leftHand: id === 'taho' ? {x:4,y:21} : undefined, mouth: atMouth ? 'open' : cycle > .7 ? 'chew' : 'smile' };
+    const hand = spoon ? {x:lerp(4,15,lift),y:lerp(20,13,lift)} : id === 'juice' ? {x:19,y:18} : biteFood ? {x:lerp(22,13,lift),y:lerp(21,15,lift)} : {x:lerp(22,11,lift),y:lerp(23,18,lift)};
+    const gesture: CharacterGesture = { rightHand: hand, leftHand: spoon ? {x:4,y:21} : undefined, mouth: atMouth ? 'open' : cycle > .7 ? 'chew' : 'smile' };
     paintPerson(0,gesture);
     c.save(); c.translate(132,reduced ? 14 : 14-Math.round(Math.sin(t*18)*.5)); c.scale(4,4); c.drawImage(person,0,0);
-    if (id === 'taho') {
+    if (spoon) {
       box(0,20,9,10,'#213029'); box(1,21,7,8,'#e8d6af'); box(1,21,7,2,'#a66e3c');
       box(2,26,1,1,'#795135'); box(5,27,1,1,'#795135');
       box(hand.x,hand.y,5,1,'#c6c6a3'); box(hand.x-1,hand.y-1,3,2,'#edd9ab');
       if (!atMouth) box(hand.x,hand.y-1,2,1,'#9d673b');
       // The tofu/syrup level drops with each spoonful.
       box(1,21,7,bite,'#6c8268');
+      if(id==='halo-halo'){box(1,21,7,3,'#a78aba');box(2,20,5,2,'#e4dfca');box(2,25,2,2,'#9b6e93');box(5,27,2,1,'#709354');}
     } else if (id === 'juice') {
       box(17,18,9,12,'#213029'); box(18,19,7,10,'#82b0ae'); box(19,22,5,4,'#e8c47c');
       box(18,19,7,1,'#ede1b7'); box(18,28,7,1,'#ede1b7');
       box(22,14,1,5,'#ebddb1'); box(15,14,8,1,'#ebddb1');
       if (atMouth) { box(22,16+Math.floor(cycle*8)%3,1,1,'#8abbb8'); box(27,10,1,2,'#c3dcd0'); }
-    } else if (id === 'biscuit') {
+    } else if (biteFood) {
       if (!(bite===2 && cycle>.68)) {
         box(hand.x-1,hand.y-3,7,7,'#213029'); box(hand.x,hand.y-2,5,5,'#edce91');
         box(hand.x+1,hand.y-1,1,1,'#ac7d45'); box(hand.x+3,hand.y+1,1,1,'#ac7d45');
         if (bite) box(hand.x-1,hand.y-3,2+bite,2,'#78946a');
+        if(id!=='biscuit') {box(hand.x,hand.y-2,5,5,id==='puto'?'#f2e6c9':id==='turon'?'#bc8b4e':'#dbb477');box(hand.x+1,hand.y-2,3,1,id==='puto'?'#e2bc6a':'#f0cf92');if(bite)box(hand.x,hand.y-2,2,1,'#78946a');}
       }
       if (cycle > .5) for(let n=0;n<3;n++) box(15+n*3,17+(cycle-.5)*20+n,1,1,'#edce91');
     } else {
@@ -79,13 +82,13 @@ export function playMerienda(host: HTMLElement, profile: Profile, id: SnackId, o
       for(let n=0;n<Math.max(0,3-bite-(cycle>.68?1:0));n++) {
         const x=hand.x+1+n, y=hand.y+4-n*4;
         box(x-1,y-1,5,id==='kikiam'?7:5,'#213029');
-        box(x,y,3,id==='kikiam'?5:3,id==='kwek-kwek'?'#e58c39':id==='kikiam'?'#b8844e':'#ead3a0');
+        box(x,y,3,id==='kikiam'||id==='banana-cue'?5:3,id==='kwek-kwek'?'#e58c39':id==='kikiam'?'#b8844e':id==='banana-cue'?'#bd803c':'#ead3a0');
         if(id==='kwek-kwek' && atMouth && n===2-bite) box(x,y,2,2,'#f4e8c7');
       }
     }
     c.restore();
     host.dataset.bite = String(bite+1);
-    host.dataset.motion = id === 'taho' ? 'spoon' : id === 'juice' ? 'sip' : id === 'biscuit' ? 'crunch' : 'skewer';
+    host.dataset.motion = spoon ? 'spoon' : id === 'juice' ? 'sip' : biteFood ? 'crunch' : 'skewer';
   }
   function draw(now: number) {
     if(disposed) return;

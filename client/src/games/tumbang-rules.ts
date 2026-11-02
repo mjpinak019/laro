@@ -2,9 +2,9 @@ import type { Difficulty, Point } from '../rules.ts';
 
 export const TUMBANG_LINE = 440;
 export const TUMBANG_LEVELS = {
-  easy: { guardSpeed: 138, runnerSpeed: 170, reset: 1.5, error: .14, guideScale: 1 },
-  normal: { guardSpeed: 175, runnerSpeed: 190, reset: 1, error: .075, guideScale: .5 },
-  hard: { guardSpeed: 210, runnerSpeed: 205, reset: .65, error: .025, guideScale: .125 },
+  easy: { guardSpeed: 138, runnerSpeed: 170, reset: .65, error: .14, guideScale: 1 },
+  normal: { guardSpeed: 175, runnerSpeed: 190, reset: .4, error: .075, guideScale: .5 },
+  hard: { guardSpeed: 210, runnerSpeed: 205, reset: .25, error: .025, guideScale: .125 },
 } as const;
 export type TumbangPhase = 'aim' | 'power' | 'bot-aim' | 'flight' | 'retrieve' | 'feedback' | 'finished';
 export type TumbangState = {
@@ -21,7 +21,7 @@ export function toggleTsinelas(state: TumbangState) {
   if (state.phase !== 'retrieve') return false;
   if (state.carrying) {
     state.slipper = { ...state.players[state.turn % 2] }; state.landing = { ...state.slipper }; state.carrying = false; state.autoRetrieve = false;
-    state.message = 'Tsinelas put down. The guard stays still. Walk freely, then pick it up when ready.'; return true;
+    state.message = state.can.down ? 'Tsinelas put down. The guard can still reset the fallen can.' : 'Tsinelas put down. With the can upright, the guard waits.'; return true;
   }
   if (Math.hypot(state.players[state.turn % 2].x - state.slipper.x, state.players[state.turn % 2].y - state.slipper.y) > 27) { state.message = 'Move closer to the tsinelas before picking it up.'; return false; }
   state.carrying = true; state.autoRetrieve = false; state.message = 'Holding the tsinelas! The guard can move. Dodge and get behind the safety line.'; return true;
@@ -83,7 +83,7 @@ export function stepTumbang(state: TumbangState, dt: number, input: Point = { x:
     if (state.flightTime >= 1) { state.phase = 'retrieve'; state.clock = 0; state.message = state.hit ? 'Can down! Retrieve the tsinelas before the guard resets and catches you.' : 'Missed! The can is still upright. Retrieve carefully.'; }
   }
   if (state.phase === 'retrieve' || state.phase === 'flight') {
-    if ((input.x || input.y) && (thrower === 0 || state.carrying)) {
+    if ((input.x || input.y) && (thrower === 0 || state.carrying || can.down)) {
       state.autoRetrieve = false; state.target = undefined;
       const length = Math.hypot(input.x, input.y); move(state.players[0], { x: state.players[0].x + input.x / length * 100, y: state.players[0].y + input.y / length * 100 }, 205, dt);
     }
@@ -94,11 +94,11 @@ export function stepTumbang(state: TumbangState, dt: number, input: Point = { x:
     if (thrower === 1 && !state.carrying && distance(state.players[thrower], state.slipper) < 20) toggleTsinelas(state);
     if (state.carrying && state.players[thrower].y >= TUMBANG_LINE + 12) { finishTurn(state, false, true); return; }
   }
-  if (guard === 1 && state.carrying) {
+  if (guard === 1 && (state.carrying || can.down)) {
     const target = can.down ? can : state.players[thrower].y < TUMBANG_LINE ? state.players[thrower] : { x: 555, y: 220 };
     move(state.players[guard], target, level.guardSpeed, dt);
-  } else if (guard === 0 && state.carrying && state.target) move(state.players[0], state.target, 205, dt);
-  if (state.carrying && can.down && distance(state.players[guard], can) < 27 && Math.hypot(can.vx, can.vy) < 25) {
+  } else if (guard === 0 && (state.carrying || can.down) && state.target) move(state.players[0], state.target, 205, dt);
+  if (can.down && distance(state.players[guard], can) < 27 && Math.hypot(can.vx, can.vy) < 60) {
     can.reset += dt;
     if (can.reset >= level.reset) { can.down = false; can.angle = 0; can.spin = 0; can.vx = 0; can.vy = 0; state.message = 'Can upright! Guard can tag outside the safety line.'; }
   } else can.reset = 0;
