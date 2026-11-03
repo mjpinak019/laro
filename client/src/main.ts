@@ -18,7 +18,7 @@ import './merienda.css';
 import './journey.css';
 import { playMerienda } from './merienda';
 import { awardXp, playerLevel, gameUnlocked, GAME_LEVELS } from './progression';
-import { ensureQuests, questById, acceptQuest, collectQuestItem, claimQuest, progressQuest, questReady, type QuestId } from './quests';
+import { ensureQuests, questById, acceptQuest, collectQuestItem, claimQuest, progressQuest, questReady, questExpired, questCooldown, questTimeLimit, type QuestId } from './quests';
 import { AccountService } from './account';
 import { mountAccount } from './account-ui';
 import { makeBackup } from './save-backup';
@@ -101,7 +101,7 @@ app.innerHTML = `
             <button id="emote-button" class="emote-button" aria-label="Wave to your neighbors" title="Wave · Space">☺ <span>SPACE</span></button>
             <div class="touch-controls" aria-label="Touch movement controls"><div id="touch-pad" class="touch-pad" role="group" aria-label="Movement control pad" aria-describedby="touch-pad-help" tabindex="0"><span class="stick-knob" aria-hidden="true"></span></div><span id="touch-pad-help" class="sr-only">Drag the circular pad to move in any direction, including diagonals. You can also use WASD or arrow keys.</span><button id="touch-run" aria-label="Takbo · hold to run">Takbo</button></div>
           </div>
-          <div class="world-bottom"><span class="hint" id="hint" role="status">Getting the neighborhood ready…</span><span class="stamina"><span>SPRINT</span><span class="stamina-track"><i id="stamina-fill"></i></span></span></div>
+          <div class="world-bottom"><span id="quest-timer" hidden></span><span class="hint" id="hint" role="status">Getting the neighborhood ready…</span><span class="stamina"><span>SPRINT</span><span class="stamina-track"><i id="stamina-fill"></i></span></span></div>
           <nav id="fullscreen-nav" class="fullscreen-nav" aria-label="Fullscreen game navigation"><button data-screen-nav="nav-hub">Barangay</button><button data-screen-nav="nav-play">Games</button><button data-screen-nav="avatar-button">Avatar</button><button data-screen-nav="guide-button">Rules</button><button data-screen-nav="settings-button">Settings</button><button data-screen-nav="sound-button">Sound</button><button id="exit-play-screen">Exit ⛶</button></nav>
           <span id="rotate-hint" class="rotate-hint" hidden>Turn your phone sideways for landscape play.</span>
         </section>
@@ -173,6 +173,7 @@ function openModal(content: string, dismissible = true) {
   scene.resetInput();
   game.input.keyboard!.preventDefault = false;
   lastFocus = document.activeElement as HTMLElement;
+  $('#modal-content').classList.remove('quest-details');
   $('#modal-content').innerHTML = content; $('#close-modal').hidden = !dismissible;
   if (!dialog.open) dialog.showModal();
   dialog.scrollTop = 0;
@@ -271,11 +272,14 @@ function questChange(change:()=>boolean) {
 function questGoal(id:QuestId) { const def=questById(id)!,goal=def.goal;return goal.kind==='collect'?`Collect ${goal.count} ${goal.item==='litter'?'pieces of litter for recycling':goal.item==='wallet'?'lost wallet':'library book'} on plaza paths.`:goal.kind==='buy'?`Buy ${'item'in goal?'biscuits':'any street-food snack'} from the ${goal.shop==='store'?'sari-sari store':'street-food cart'}.`:`Finish ${GAMES[goal.game].title}${goal.score?` with a score of at least ${goal.score}`:''}.`; }
 function openQuest(id:QuestId) {
   const def=questById(id);if(!def)return;
-  const atGiver=scene.active==='hub'&&Math.hypot(Number($('#game').dataset.x)-def.x,Number($('#game').dataset.y)-def.y)<55;
-  const active=profile.quests.active,ready=active?.id===id&&questReady(profile);
-  openModal(`<div class="eyebrow">${def.value}</div><h2 id="modal-title">${def.name}</h2><p><strong>${def.giver}</strong>: ${def.dialogue}</p><div class="quest-goal"><strong>Your task</strong><p>${questGoal(id)}</p><p>${active?.id===id?`Progress: ${active.progress}/${def.goal.kind==='collect'?def.goal.count:1}. ${ready?'Ready to return!':''}`:`Find ${def.giver} near the ${def.area}.`}</p><strong>Reward: ${def.xp} XP + ${def.coins} coins</strong></div>${active?.id===id?`<button id="quest-claim" class="primary-button" ${!ready||!atGiver?'disabled':''}>${ready?atGiver?'Claim reward':`Return to ${def.giver}`:'Task in progress'}</button><button id="quest-abandon" class="secondary-button">Leave this quest</button>`:`<button id="quest-accept" class="primary-button" ${!atGiver||!!active||profile.quests.claimed.length>=8?'disabled':''}>${active?'Finish your current quest first':atGiver?'I’ll help!':`Talk to ${def.giver} in the barangay`}</button>`}<p class="fine-print">One active quest at a time. Rewards are claimed in person, once per task per day; up to 8 rewarded quests daily.</p><button id="quest-journal" class="secondary-button">Quest journal</button><button id="quest-close" class="secondary-button">Keep exploring</button>`);
-  const accept=document.querySelector<HTMLButtonElement>('#quest-accept');if(accept)accept.onclick=()=>{if(questChange(()=>acceptQuest(profile,id)))openQuest(id);};
-  const claim=document.querySelector<HTMLButtonElement>('#quest-claim');if(claim)claim.onclick=()=>{const old=playerLevel(profile.xp).level;if(questChange(()=>claimQuest(profile,id))){openModal(`<div class="eyebrow">SALAMAT SA TULONG!</div><h2 id="modal-title">${def.giver} thanks you.</h2><p>${def.thanks}</p><p>+${def.coins} coins · ${playerLevel(profile.xp).capped?'Level 30 cap':`+${def.xp} XP`}${playerLevel(profile.xp).level>old?' · LEVEL UP!':''}</p><button id="quest-done" class="primary-button">Keep exploring</button>`);$('#quest-done').onclick=closeModal;}};
+  const giver=barangay.questGiverPosition(id);
+  const atGiver=scene.active==='hub'&&Math.hypot(Number($('#game').dataset.x)-giver.x,Number($('#game').dataset.y)-giver.y)<55;
+  const active=profile.quests.active,ready=active?.id===id&&questReady(profile),expired=active?.id===id&&questExpired(profile);
+  const timing=questTimeLimit(id)?`Time limit: ${questTimeLimit(id)/60000} minutes, including your return. Starts when accepted; real time continues in menus and after reload. No coin or XP penalty if time runs out.`:'Untimed task. Take your time.';
+  openModal(`<div class="eyebrow">${def.value}</div><h2 id="modal-title">${def.name}</h2><p><strong>${def.giver}</strong>: ${def.dialogue}</p><div class="quest-goal"><strong>Your task</strong><p>${timing}</p>${active?.id===id&&active.expiresAt?'<p data-quest-clock></p>':''}<p>${questGoal(id)}</p><p>${active?.id===id?`Progress: ${active.progress}/${def.goal.kind==='collect'?def.goal.count:1}. ${ready?'Ready to return!':''}`:`Find ${def.giver} near the ${def.area}.`}</p><strong>Reward: ${def.xp} XP + ${def.coins} coins</strong></div>${active?.id===id?`<button id="quest-claim" class="primary-button" ${!ready||!atGiver?'disabled':''}>${ready?atGiver?'Claim reward':`Return to ${def.giver}`:expired?'Time is up':'Task in progress'}</button><button id="quest-abandon" class="secondary-button">${expired?'Reset quest to try again':'Leave this quest'}</button>`:`<button id="quest-accept" class="primary-button" ${!atGiver||!!active||!!questCooldown(profile,def.giver)||!profile.quests.offers.includes(id)||profile.quests.claimed.length>=8?'disabled':''}>${active?'Finish your current quest first':atGiver?'I’ll help!':`Talk to ${def.giver} in the barangay`}</button>`}<p class="fine-print">After claiming, this neighbor takes a 15-minute break from all tasks. One active quest at a time. Rewards are claimed in person, once per task per day; up to 8 rewarded quests daily.</p><button id="quest-journal" class="secondary-button">Quest journal</button><button id="quest-close" class="secondary-button">Keep exploring</button>`);
+  $('#modal-content').classList.add('quest-details');updateQuestClocks();
+  const accept=document.querySelector<HTMLButtonElement>('#quest-accept');if(accept)accept.onclick=()=>{if(questChange(()=>acceptQuest(profile,id))){$('#toast').hidden=true;openQuest(id);}};
+  const claim=document.querySelector<HTMLButtonElement>('#quest-claim');if(claim)claim.onclick=()=>{const old=playerLevel(profile.xp).level;if(questChange(()=>claimQuest(profile,id))){openModal(`<div class="eyebrow">SALAMAT SA TULONG!</div><h2 id="modal-title">${def.giver} thanks you.</h2><p>${def.thanks}</p><p>+${def.coins} coins · ${playerLevel(profile.xp).capped?'Level 30 cap':`+${def.xp} XP`}${playerLevel(profile.xp).level>old?' · LEVEL UP!':''}</p><button id="quest-done" class="primary-button">Keep exploring</button>`);$('#modal-content').classList.add('quest-details');$('#quest-done').onclick=closeModal;}};
   const abandon=document.querySelector<HTMLButtonElement>('#quest-abandon');if(abandon)abandon.onclick=()=>{if(questChange(()=>{profile.quests.active=null;return true;}))openQuests();};
   $('#quest-journal').onclick=openQuests;$('#quest-close').onclick=closeModal;
   if(scene.active==='hub'&&Math.hypot(Number($('#game').dataset.x)-227,Number($('#game').dataset.y)-316)<75){$('#quest-close').insertAdjacentHTML('beforebegin','<button id="quest-shop" class="primary-button">Browse sari-sari store</button>');$('#quest-shop').onclick=()=>openFoodShop('store');}
@@ -283,9 +287,28 @@ function openQuest(id:QuestId) {
 function openQuests() {
   ensureQuests(profile);const ids=[...new Set([...(profile.quests.active?[profile.quests.active.id]:[]),...profile.quests.offers])];
   openModal(`<div class="eyebrow">KAPWA · HELPING OUR NEIGHBORS</div><h2 id="modal-title">Barangay quests</h2><p>Look for ? above neighbors and items. Accept a task in person, then return to its giver when ! appears. ${profile.quests.claimed.length}/8 rewarded tasks today · ${profile.quests.total} completed overall.</p><div class="quest-list">${ids.map(id=>{const def=questById(id)!;return `<article><strong>${profile.quests.active?.id===id?'ACTIVE · ':''}${def.name}</strong><p>${def.giver} · ${def.area}</p><p>${questGoal(id)}</p><button data-quest-details="${id}" class="secondary-button">${def.xp} XP · ${def.coins} coins · Details</button></article>`;}).join('')||'<p>No new offers now. Play to unlock more tasks, or visit tomorrow.</p>'}</div><button id="quests-close" class="secondary-button">Back to the barangay</button>`);
+  $('#modal-content').classList.add('quest-details');
+  $('#quests-close').insertAdjacentHTML('beforebegin',`<div id="quest-breaks">${Object.keys(profile.quests.cooldowns).map(giver=>`<p><strong>${giver}</strong> is taking a break: <span data-quest-cooldown="${giver}"></span></p>`).join('')}</div>${profile.quests.active?.expiresAt?'<p data-quest-clock></p>':''}`);updateQuestClocks();
   document.querySelectorAll<HTMLButtonElement>('[data-quest-details]').forEach(button=>button.onclick=()=>openQuest(button.dataset.questDetails as QuestId));$('#quests-close').onclick=closeModal;
 }
 $('#quests-button').onclick=openQuests;
+const clockText=(ms:number)=>{const seconds=Math.ceil(Math.max(0,ms)/1000);return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;};
+function updateQuestClocks() {
+  const run=profile.quests.active,expired=questExpired(profile);
+  const message=run?.expiresAt?(expired?'Time is up. Reset this quest in Quests to try again.':`Quest time left: ${clockText(run.expiresAt-Date.now())} · return to ${questById(run.id)!.giver}`):'';
+  const hud=$('#quest-timer');hud.hidden=!message;hud.textContent=run?.expiresAt?(expired?'Quest expired · Open Quests':`Quest ${clockText(run.expiresAt-Date.now())} · Quests for details`):'';
+  document.querySelectorAll<HTMLElement>('[data-quest-clock]').forEach(el=>el.textContent=message);
+  document.querySelectorAll<HTMLElement>('[data-quest-cooldown]').forEach(el=>{const left=questCooldown(profile,el.dataset.questCooldown!);el.textContent=left?`${clockText(left)} remaining`:'Break finished. Check available offers.';});
+  if(expired){const claim=document.querySelector<HTMLButtonElement>('#quest-claim');if(claim){claim.disabled=true;claim.textContent='Time is up';}const reset=document.querySelector<HTMLButtonElement>('#quest-abandon');if(reset)reset.textContent='Reset quest to try again';}
+}
+let expiredQuestNotice='';
+window.setInterval(()=>{
+  if(ensureQuests(profile)){saveProfile(profile);barangay.refreshQuests();}
+  updateQuestClocks();
+  const run=profile.quests.active;
+  if(run&&questExpired(profile)){const stamp=`${run.id}:${run.expiresAt}`;if(expiredQuestNotice!==stamp){expiredQuestNotice=stamp;toast('Quest time is up. No coins or XP lost. Open Quests to reset and try again.');barangay.refreshQuests();}}
+},1000);
+
 function openAccount() {
   openModal('<div class="eyebrow">YOUR LARO ACCOUNT</div><h2 id="modal-title">Account &amp; cloud progress</h2><div id="account-panel"></div><button id="account-close" class="secondary-button">Continue playing</button>');
   disposeAccount = mountAccount($('#account-panel'), account, profile, () => scene.active === 'hub', () => makeBackup(profile, savedDama()), backup => {

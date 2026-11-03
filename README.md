@@ -2,11 +2,18 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.14 includes nine neighborhood classics across eight areas, plus two
+Alpha 0.15 includes nine neighborhood classics across eight areas, plus two
 hidden phone games. All eleven games work offline after the first complete
 online load.
 
-## Alpha 0.14 — a growing barangay journey
+## Alpha 0.15 — moving quest markers and timed challenges
+
+Quest markers now follow their NPCs, and quest details use larger text.
+Reward claims give that neighbor a saved 15-minute cooldown. Selected tasks
+have 4–10 minute deadlines, with a visible countdown and a free reset after
+timeout. See [the journey guide](docs/JOURNEY.md) for durations and rules.
+
+## The barangay journey
 
 New players start at Level 0 with **Patintero, Luksong-tinik and Dama**.
 Other games unlock from Levels 2–12; Chess opens at Level 12 at the Dama

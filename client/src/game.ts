@@ -12,7 +12,7 @@ import { phoneSpotForPage, relocatePhone } from './phone-spots';
 import { GAMES } from './games/types';
 import { BarangayAnimals } from './wildlife';
 import { playerLevel, GAME_LEVELS, gameUnlocked } from './progression';
-import { questNodes, nearbyQuest, type QuestId } from './quests';
+import { questNodes, questById, type QuestId } from './quests';
 
 export interface GameUI {
   profile: Profile;
@@ -64,6 +64,7 @@ export class BarangayScene extends Phaser.Scene {
   private animals!: BarangayAnimals;
   private questMarkers: Phaser.GameObjects.GameObject[] = [];
   private questStamp = '';
+  private questLabels: {id:QuestId;spot:number;text:Phaser.GameObjects.Text}[] = [];
   resizeView() {
     if (!this.cameras?.main || !this.player) return;
     const camera = this.cameras.main, { width, height } = this.game.scale.gameSize;
@@ -86,17 +87,32 @@ export class BarangayScene extends Phaser.Scene {
 
   constructor(ui: GameUI) { super('barangay'); this.ui = ui; }
   refreshQuests() { if(this.mode==='hub')this.syncQuestMarkers(); }
+  questGiverPosition(id:QuestId) {
+    const def=questById(id)!;
+    const kid=this.neighbors.find(kid=>kid.name.text===def.giver);
+    return kid?{x:kid.x,y:kid.y}:{x:def.x,y:def.y};
+  }
+  private liveQuestNodes() { return questNodes(this.ui.profile).map(node=>node.spot<0?{...node,...this.questGiverPosition(node.id)}:node); }
+  private positionQuestMarkers() {
+    for(const marker of this.questLabels)if(marker.spot<0){const at=this.questGiverPosition(marker.id);marker.text.setPosition(at.x,at.y-90);}
+  }
   private syncQuestMarkers() {
-    const nodes=questNodes(this.ui.profile), stamp=JSON.stringify(nodes);if(stamp===this.questStamp)return;
-    this.questStamp=stamp;this.questMarkers.forEach(marker=>marker.destroy());this.questMarkers=[];
+    const nodes=questNodes(this.ui.profile), stamp=JSON.stringify(nodes);
+    if(stamp!==this.questStamp){
+    this.questStamp=stamp;this.questMarkers.forEach(marker=>marker.destroy());this.questMarkers=[];this.questLabels=[];
     for(const node of nodes) {
       if(node.spot>=0) {
         const color=node.item==='wallet'?0x946f4c:node.item==='book'?0x7da9a3:0xc0d0a0;
         this.questMarkers.push(this.add.rectangle(node.x,node.y-7,node.item==='litter'?12:19,14,0x213029).setDepth(node.y),this.add.rectangle(node.x,node.y-8,node.item==='litter'?8:15,10,color).setDepth(node.y+1));
       }
-      this.questMarkers.push(this.add.text(node.x,node.y-(node.spot<0?90:34),node.label,{...textStyle,fontSize:node.spot<0?'24px':'18px',color:node.label==='!'?'#ffe095':'#e2d3a0'}).setOrigin(.5,1).setDepth(2000));
+      const text=this.add.text(node.x,node.y-(node.spot<0?90:34),node.label,{...textStyle,fontSize:node.spot<0?'24px':'18px',color:node.label==='!'?'#ffe095':'#e2d3a0'}).setOrigin(.5,1).setDepth(2000);
+      this.questMarkers.push(text);this.questLabels.push({id:node.id,spot:node.spot,text});
     }
-    document.querySelector<HTMLElement>('#game')!.dataset.questNodes=stamp;
+    }
+    this.positionQuestMarkers();
+    const element=document.querySelector<HTMLElement>('#game')!;
+    element.dataset.questNodes=JSON.stringify(this.liveQuestNodes());
+    element.dataset.questMarkers=JSON.stringify(this.questLabels.map(marker=>({id:marker.id,spot:marker.spot,x:marker.text.x,y:marker.text.y,giver:marker.spot<0?this.questGiverPosition(marker.id):null})));
   }
 
   create() {
@@ -180,7 +196,7 @@ export class BarangayScene extends Phaser.Scene {
   }
 
   startMatch() {
-    this.questMarkers.forEach(marker=>marker.destroy());this.questMarkers=[];this.questStamp='';
+    this.questMarkers.forEach(marker=>marker.destroy());this.questMarkers=[];this.questLabels=[];this.questStamp='';
     if (!this.player) return;
     if (this.mode === 'hub') this.rememberHubPosition();
     this.blur(); this.clearKids(); this.mode = 'match'; this.pausedByUser = false;
@@ -268,7 +284,8 @@ export class BarangayScene extends Phaser.Scene {
         else this.drawKid(kid, time);
       });
       const site = nearbySite(this.player);
-      const quest = nearbyQuest(this.ui.profile,this.player);
+      this.positionQuestMarkers();
+      const quest = this.liveQuestNodes().filter(n=>Math.hypot(n.x-this.player.x,n.y-this.player.y)<48).sort((a,b)=>Math.hypot(a.x-this.player.x,a.y-this.player.y)-Math.hypot(b.x-this.player.x,b.y-this.player.y))[0];
       const atPhone = !this.phoneFound && Math.hypot(this.player.x - this.phoneSpot.x, this.player.y - this.phoneSpot.y) < 43;
       const atStore = Math.hypot(this.player.x - 227, this.player.y - 316) < 75;
       const atFood = [FOOD_CORNER, { x: 780, y: 1530 }].some(point => Math.hypot(this.player.x - point.x, this.player.y - point.y) < 80);

@@ -32,6 +32,25 @@ test('an elder errand counts a purchase after acceptance and requires returning 
   await talk(page,{x:227,y:316});if(await page.locator('#quest-shop').count())await page.locator('#quest-shop').click();await page.locator('[data-buy-snack="biscuit"]').click();await page.locator('#merienda-skip').click();await page.locator('#food-close').click();
   await page.locator('#quests-button').click();await page.locator('[data-quest-details="elder-errand"]').click();await expect(page.locator('#quest-claim')).toBeDisabled();await page.locator('#quest-close').click();
   await talk(page,{x:372,y:750});await page.locator('#quest-claim').click();await expect(page.locator('#coins')).toHaveText('117');
+  await page.locator('#quest-done').click();await page.locator('#quests-button').click();await expect(page.locator('[data-quest-cooldown="Tatay Efren"]')).toContainText('14:');await expect(page.locator('[data-quest-details="honest-wallet"]')).toHaveCount(0);
+  await page.locator('#quests-close').click();await page.reload();await expect(page.locator('#game')).toHaveAttribute('data-ready','true');await page.locator('#quests-button').click();await expect(page.locator('[data-quest-cooldown="Tatay Efren"]')).toBeVisible();
+  await page.clock.install();await page.clock.fastForward(15*60_000);await expect(page.locator('[data-quest-cooldown="Tatay Efren"]')).toContainText('Break finished');await page.locator('#quests-close').click();await page.locator('#quests-button').click();await expect(page.locator('[data-quest-cooldown="Tatay Efren"]')).toHaveCount(0);expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('laro.offline.profile.v1')!).quests.cooldowns['Tatay Efren'])).toBeUndefined();
+});
+
+test.describe('touch quest timers',()=>{
+test.use({hasTouch:true});
+test('quest labels track live NPC transforms and timed tasks expire without a penalty in larger mobile dialogs',async({page})=>{
+  await fresh(page);const marker=async()=>JSON.parse((await page.locator('#game').getAttribute('data-quest-markers'))!).find((m:any)=>m.id==='fair-play');
+  const start=await marker();await expect.poll(async()=>(await marker()).x).not.toBe(start.x);const moved=await marker();expect(moved.x).toBe(moved.giver.x);expect(moved.y).toBe(moved.giver.y-90);
+  await talk(page,{x:227,y:316});await expect(page.locator('.quest-goal')).toContainText('4 minutes');await page.locator('#quest-accept').click();await expect(page.locator('[data-quest-clock]')).toContainText('Quest time left');
+  await page.setViewportSize({width:390,height:844});expect(await page.locator('.quest-goal p').first().evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(18);await page.screenshot({path:'artifacts/quest-timed-mobile.png'});
+  await page.clock.install();await page.clock.fastForward(4*60_000);await expect(page.locator('#quest-claim')).toBeDisabled();await expect(page.locator('#quest-claim')).toHaveText('Time is up');await expect(page.locator('[data-quest-clock]')).toContainText('Time is up');
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('laro.offline.profile.v1')!));expect(saved.coins).toBe(100);expect(saved.xp).toBe(0);expect(saved.quests.total).toBe(0);
+  await page.locator('#quest-abandon').click();await page.locator('[data-quest-details="clean-plaza"]').click();await page.locator('#quest-accept').click();await expect(page.locator('[data-quest-clock]')).toContainText('Quest time left');await expect(page.locator('#quest-timer')).toContainText('Quests for details');
+  await page.locator('#quest-close').click();await page.setViewportSize({width:844,height:390});await page.locator('#fullscreen-button').click();await page.clock.runFor(200);await expect(page.locator('#quest-timer')).toBeVisible();await page.screenshot({path:'artifacts/quest-timer-landscape.png'});
+  const timer=await page.locator('#quest-timer').boundingBox();expect(timer!.x).toBeGreaterThanOrEqual(0);expect(timer!.x+timer!.width).toBeLessThanOrEqual(844);expect(timer!.y+timer!.height).toBeLessThanOrEqual(390);
+  for(const control of ['#touch-pad','#touch-run','#activity-action']){const box=await page.locator(control).boundingBox();if(box)expect(timer!.x+timer!.width<=box.x||timer!.x>=box.x+box.width||timer!.y+timer!.height<=box.y||timer!.y>=box.y+box.height).toBe(true);}
+});
 });
 test('Piko uses only toss timing, and Wendy visibly misses on Easy and completes a course on Hard',async({page})=>{
   test.setTimeout(65000);await fresh(page,xpForLevel(2));await page.evaluate(()=>{Math.random=()=>.1;});

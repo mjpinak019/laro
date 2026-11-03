@@ -1,4 +1,4 @@
-# Barangay journey — alpha 0.14
+# Barangay journey — alpha 0.15
 
 Levels start at 0 and stop at 30. Level 1 starts at 100 XP, Level 2 at 235,
 Level 3 at 415. The XP needed for each next level is
@@ -35,6 +35,28 @@ Collection tasks place separate objects at randomized, reachable plaza
 spots. Walk up and press E / Pick up. A ready quest changes its giver's
 marker to `!`; return in person and claim once. Browsing a quest in the
 journal cannot claim a reward from across the map.
+
+Both `?` and `!` follow the actual moving neighbor, and conversation/reward
+distance uses that same live position. Quest dialogue and goals use 18px text
+with larger buttons, including portrait and landscape fullscreen.
+
+Claiming a reward starts a **15-minute break for that NPC**, covering all of
+their tasks (including Tatay Efren's wallet and errand). Other neighbors
+remain available. Breaks survive reloads, backups and midnight. The journal
+shows remaining time. When a break finishes, that NPC becomes eligible for
+future random offers; a full set of three offers is not forcibly replaced.
+The existing once-per-task daily rule and eight-reward daily cap still apply.
+
+Selected tasks now have deadlines starting on acceptance, including returning
+to claim: cleanup **4 minutes**, biscuit and street-food errands **5 minutes**,
+rope challenge **8 minutes**, and can challenge **10 minutes**. A countdown is
+visible during play and in quest details. Time continues in menus, while
+offline, and through reloads. On expiry no quest reward is given and no extra
+coins/XP are taken; purchases already made remain purchases. Reset the quest
+in the journal and accept in person to retry. Wallet, book, fair-play and Piko
+practice remain untimed. Active quests saved before this update stay untimed.
+Unaccepted offer/question-mark expiration is still pending a duration choice;
+offers currently remain saved until completed or refreshed on a new day.
 
 | Quest | Task | XP / coins | Value |
 | --- | --- | --- | --- |
