@@ -55,8 +55,16 @@ offline, and through reloads. On expiry no quest reward is given and no extra
 coins/XP are taken; purchases already made remain purchases. Reset the quest
 in the journal and accept in person to retry. Wallet, book, fair-play and Piko
 practice remain untimed. Active quests saved before this update stay untimed.
-Unaccepted offer/question-mark expiration is still pending a duration choice;
-offers currently remain saved until completed or refreshed on a new day.
+Unaccepted offers and their `?` markers expire **10 minutes** after appearing.
+The journal and offer dialogue show a live countdown, and open dialogue cannot
+accept an expired offer. Eligible replacements rotate in automatically; expired
+tasks sit out the next 10-minute rotation before they can return. There may be
+fewer than three offers when few tasks are eligible. Accepted quests, their
+pickups and their return markers are protected from offer rotation; only their
+own task deadline applies. Offer deadlines and rotation state survive offline
+reloads, backups and configured cloud saves, so reloading does not restart the
+clock. Older saves get a fresh window on first load of this update. Midnight
+refreshes unaccepted offers, while preserving active tasks and NPC cooldowns.
 
 | Quest | Task | XP / coins | Value |
 | --- | --- | --- | --- |

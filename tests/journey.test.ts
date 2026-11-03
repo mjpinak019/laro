@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {normalizeProfile} from '../client/src/store.ts';
 import {MAX_XP,MAX_LEVEL,xpForLevel,playerLevel,GAME_LEVELS,gameUnlocked,awardXp} from '../client/src/progression.ts';
-import {QUESTS,QUEST_SPOTS,NPC_COOLDOWN,ensureQuests,acceptQuest,collectQuestItem,claimQuest,questReady,progressQuest,questNodes,questCooldown,questExpired,questTimeLimit,normalizeQuests} from '../client/src/quests.ts';
+import {QUESTS,QUEST_SPOTS,NPC_COOLDOWN,OFFER_LIFETIME,ensureQuests,acceptQuest,collectQuestItem,claimQuest,questReady,progressQuest,questNodes,questCooldown,questExpired,questTimeLimit,normalizeQuests} from '../client/src/quests.ts';
 import {buySnack,SNACKS} from '../client/src/food.ts';
 import {buyCosmetic,equipCosmetic,COSMETICS} from '../client/src/wardrobe.ts';
 import {makeBackup,readBackup} from '../client/src/save-backup.ts';
@@ -64,6 +64,27 @@ test('untimed and legacy active quests remain untimed; malformed cooldowns and d
   assert.equal(p.quests.active!.expiresAt,0);assert.equal(questExpired(p,Date.now()+1e9),false);assert.deepEqual(p.quests.cooldowns,{});
   assert.equal(normalizeQuests({active:{id:'clean-plaza',expiresAt:Infinity}}).active!.expiresAt,0);
   p.quests.active=null;p.quests.offers=['honest-wallet'];assert.ok(acceptQuest(p,'honest-wallet'));assert.equal(p.quests.active!.expiresAt,0);assert.equal(questTimeLimit('fair-play'),0);
+});
+
+test('unaccepted offers expire at ten minutes, rotate without immediately repeating, and reloads do not extend them',()=>{
+  const now=new Date(2026,10,3,12).getTime(),p=normalizeProfile({coins:100});ensureQuests(p,()=>0,new Date(now));
+  const original=[...p.quests.offers],deadlines={...p.quests.offerExpiresAt};assert.equal(original.length,3);for(const id of original)assert.equal(deadlines[id],now+OFFER_LIFETIME);
+  const restored=readBackup(JSON.stringify(makeBackup(p))).profile;ensureQuests(restored,()=>0,new Date(now+OFFER_LIFETIME-1));assert.deepEqual(restored.quests.offers,original);assert.deepEqual(restored.quests.offerExpiresAt,deadlines);
+  assert.equal(acceptQuest(restored,original[0],()=>0,now+OFFER_LIFETIME),false);ensureQuests(restored,()=>0,new Date(now+OFFER_LIFETIME));assert.ok(restored.quests.offers.length);assert.ok(restored.quests.offers.every(id=>!original.includes(id)));
+  ensureQuests(restored,()=>0,new Date(now+OFFER_LIFETIME+1000));assert.ok(restored.quests.offers.every(id=>!original.includes(id)));assert.equal(restored.coins,100);assert.equal(restored.xp,0);assert.deepEqual(restored.quests.cooldowns,{});
+  ensureQuests(restored,()=>0,new Date(now+OFFER_LIFETIME*2));assert.ok(restored.quests.offers.some(id=>original.includes(id)));
+});
+
+test('accepting protects an untimed quest and its pickups from offer rotation, while timed quests keep their own deadline',()=>{
+  const now=Date.now(),p=normalizeProfile({coins:100});ensureQuests(p,()=>0,new Date(now));assert.ok(acceptQuest(p,'honest-wallet',()=>0,now+OFFER_LIFETIME-1));const run=structuredClone(p.quests.active);
+  ensureQuests(p,()=>0,new Date(now+OFFER_LIFETIME+1));assert.deepEqual(p.quests.active,run);assert.equal(p.quests.offerExpiresAt['honest-wallet'],undefined);assert.ok(questNodes(p).some(node=>node.id==='honest-wallet'&&node.spot>=0));
+  p.quests.active=null;p.quests.offers=['clean-plaza'];p.quests.offerExpiresAt={};ensureQuests(p,()=>0,new Date(now));assert.ok(acceptQuest(p,'clean-plaza',()=>0,now));const deadline=p.quests.active!.expiresAt;ensureQuests(p,()=>0,new Date(now+OFFER_LIFETIME));assert.equal(p.quests.active!.expiresAt,deadline);assert.equal(deadline,now+questTimeLimit('clean-plaza'));
+});
+
+test('older offers gain one fresh window and malformed offer timestamps are ignored safely',()=>{
+  const now=Date.now(),d=new Date(now),day=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const p=normalizeProfile({quests:{day,offers:['fair-play'],offerExpiresAt:{'fair-play':Infinity,unknown:now}}});assert.deepEqual(p.quests.offerExpiresAt,{});ensureQuests(p,()=>0,d);assert.equal(p.quests.offerExpiresAt['fair-play'],now+OFFER_LIFETIME);ensureQuests(p,()=>0,new Date(now+1000));assert.equal(p.quests.offerExpiresAt['fair-play'],now+OFFER_LIFETIME);
+  p.quests.offerExpiresAt['fair-play']=now-1;assert.equal(questNodes(p).some(node=>node.id==='fair-play'),false);
 });
 test('fallen cans allow bot and human guards to move without holding, reset quickly, and cannot permit early tags',()=>{
   for(const difficulty of ['easy','normal','hard'] as const){const s=initialTumbang(difficulty);s.phase='retrieve';s.can.down=true;s.players[0]={x:600,y:330};const before={...s.players[1]};stepTumbang(s,.1);assert.notDeepEqual(s.players[1],before);assert.equal(s.carrying,false);s.players[1]={x:s.can.x,y:s.can.y};for(let t=0;t<TUMBANG_LEVELS[difficulty].reset+.1;t+=.01)stepTumbang(s,.01);assert.equal(s.can.down,false);assert.equal(s.tagged,false);assert.ok(TUMBANG_LEVELS[difficulty].reset<.7);

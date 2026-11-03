@@ -37,6 +37,17 @@ test('an elder errand counts a purchase after acceptance and requires returning 
   await page.clock.install();await page.clock.fastForward(15*60_000);await expect(page.locator('[data-quest-cooldown="Tatay Efren"]')).toContainText('Break finished');await page.locator('#quests-close').click();await page.locator('#quests-button').click();await expect(page.locator('[data-quest-cooldown="Tatay Efren"]')).toHaveCount(0);expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('laro.offline.profile.v1')!).quests.cooldowns['Tatay Efren'])).toBeUndefined();
 });
 
+test('ten-minute offers rotate live and reject an open expired dialogue without erasing an accepted quest',async({page,context})=>{
+  await fresh(page);await page.clock.install();await page.locator('#quests-button').click();await expect(page.locator('[data-quest-offer="fair-play"]')).toContainText('Offer expires in');
+  const first=await page.evaluate(()=>JSON.parse(localStorage.getItem('laro.offline.profile.v1')!).quests.offerExpiresAt);await page.locator('#quests-close').click();await page.reload();await expect(page.locator('#game')).toHaveAttribute('data-ready','true');expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('laro.offline.profile.v1')!).quests.offerExpiresAt)).toEqual(first);
+  await page.locator('#quests-button').click();await page.locator('[data-quest-details="fair-play"]').click();await page.clock.fastForward(10*60_000);await expect(page.locator('#quest-accept')).toBeDisabled();await expect(page.locator('#quest-accept')).toContainText('Offer expired');await expect(page.locator('[data-quest-offer="fair-play"]')).toContainText('expired');
+  await page.locator('#quest-journal').click();await expect(page.locator('[data-quest-details="fair-play"]')).toHaveCount(0);await expect(page.locator('[data-quest-details="elder-errand"]')).toBeVisible();await expect.poll(()=>page.locator('#game').getAttribute('data-quest-nodes')).not.toContain('fair-play');await page.screenshot({path:'artifacts/quest-offer-rotation.png'});
+  // A fresh window after the next rotation can be accepted; its own quest state then survives offer expiry offline.
+  await page.clock.fastForward(10*60_000);await expect(page.locator('[data-quest-details="honest-wallet"]')).toBeVisible();await page.locator('#quests-close').click();await page.clock.resume();await talk(page,{x:372,y:750});await page.locator('#quest-accept').click();await page.locator('#quest-close').click();
+  const run=await page.evaluate(()=>JSON.parse(localStorage.getItem('laro.offline.profile.v1')!).quests.active);expect(run.id).toBe('honest-wallet');expect(run.expiresAt).toBe(0);
+  await page.evaluate(async()=>{await navigator.serviceWorker.ready;});await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);await context.setOffline(true);await page.reload();await expect(page.locator('#game')).toHaveAttribute('data-ready','true');await page.clock.fastForward(10*60_000);expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('laro.offline.profile.v1')!).quests.active)).toEqual(run);await context.setOffline(false);
+});
+
 test.describe('touch quest timers',()=>{
 test.use({hasTouch:true});
 test('quest labels track live NPC transforms and timed tasks expire without a penalty in larger mobile dialogs',async({page})=>{

@@ -18,7 +18,7 @@ import './merienda.css';
 import './journey.css';
 import { playMerienda } from './merienda';
 import { awardXp, playerLevel, gameUnlocked, GAME_LEVELS } from './progression';
-import { ensureQuests, questById, acceptQuest, collectQuestItem, claimQuest, progressQuest, questReady, questExpired, questCooldown, questTimeLimit, type QuestId } from './quests';
+import { ensureQuests, questById, acceptQuest, collectQuestItem, claimQuest, progressQuest, questReady, questExpired, questCooldown, questTimeLimit, questOfferRemaining, type QuestId } from './quests';
 import { AccountService } from './account';
 import { mountAccount } from './account-ui';
 import { makeBackup } from './save-backup';
@@ -277,19 +277,29 @@ function openQuest(id:QuestId) {
   const active=profile.quests.active,ready=active?.id===id&&questReady(profile),expired=active?.id===id&&questExpired(profile);
   const timing=questTimeLimit(id)?`Time limit: ${questTimeLimit(id)/60000} minutes, including your return. Starts when accepted; real time continues in menus and after reload. No coin or XP penalty if time runs out.`:'Untimed task. Take your time.';
   openModal(`<div class="eyebrow">${def.value}</div><h2 id="modal-title">${def.name}</h2><p><strong>${def.giver}</strong>: ${def.dialogue}</p><div class="quest-goal"><strong>Your task</strong><p>${timing}</p>${active?.id===id&&active.expiresAt?'<p data-quest-clock></p>':''}<p>${questGoal(id)}</p><p>${active?.id===id?`Progress: ${active.progress}/${def.goal.kind==='collect'?def.goal.count:1}. ${ready?'Ready to return!':''}`:`Find ${def.giver} near the ${def.area}.`}</p><strong>Reward: ${def.xp} XP + ${def.coins} coins</strong></div>${active?.id===id?`<button id="quest-claim" class="primary-button" ${!ready||!atGiver?'disabled':''}>${ready?atGiver?'Claim reward':`Return to ${def.giver}`:expired?'Time is up':'Task in progress'}</button><button id="quest-abandon" class="secondary-button">${expired?'Reset quest to try again':'Leave this quest'}</button>`:`<button id="quest-accept" class="primary-button" ${!atGiver||!!active||!!questCooldown(profile,def.giver)||!profile.quests.offers.includes(id)||profile.quests.claimed.length>=8?'disabled':''}>${active?'Finish your current quest first':atGiver?'I’ll help!':`Talk to ${def.giver} in the barangay`}</button>`}<p class="fine-print">After claiming, this neighbor takes a 15-minute break from all tasks. One active quest at a time. Rewards are claimed in person, once per task per day; up to 8 rewarded quests daily.</p><button id="quest-journal" class="secondary-button">Quest journal</button><button id="quest-close" class="secondary-button">Keep exploring</button>`);
-  $('#modal-content').classList.add('quest-details');updateQuestClocks();
+  $('#modal-content').classList.add('quest-details');
+  if(active?.id!==id)document.querySelector('.quest-goal')!.insertAdjacentHTML('beforeend',`<p data-quest-offer="${id}"></p>`);
+  $('#modal-content').dataset.questDetailId=id;updateQuestClocks();
   const accept=document.querySelector<HTMLButtonElement>('#quest-accept');if(accept)accept.onclick=()=>{if(questChange(()=>acceptQuest(profile,id))){$('#toast').hidden=true;openQuest(id);}};
   const claim=document.querySelector<HTMLButtonElement>('#quest-claim');if(claim)claim.onclick=()=>{const old=playerLevel(profile.xp).level;if(questChange(()=>claimQuest(profile,id))){openModal(`<div class="eyebrow">SALAMAT SA TULONG!</div><h2 id="modal-title">${def.giver} thanks you.</h2><p>${def.thanks}</p><p>+${def.coins} coins · ${playerLevel(profile.xp).capped?'Level 30 cap':`+${def.xp} XP`}${playerLevel(profile.xp).level>old?' · LEVEL UP!':''}</p><button id="quest-done" class="primary-button">Keep exploring</button>`);$('#modal-content').classList.add('quest-details');$('#quest-done').onclick=closeModal;}};
   const abandon=document.querySelector<HTMLButtonElement>('#quest-abandon');if(abandon)abandon.onclick=()=>{if(questChange(()=>{profile.quests.active=null;return true;}))openQuests();};
   $('#quest-journal').onclick=openQuests;$('#quest-close').onclick=closeModal;
   if(scene.active==='hub'&&Math.hypot(Number($('#game').dataset.x)-227,Number($('#game').dataset.y)-316)<75){$('#quest-close').insertAdjacentHTML('beforebegin','<button id="quest-shop" class="primary-button">Browse sari-sari store</button>');$('#quest-shop').onclick=()=>openFoodShop('store');}
 }
+function renderQuestList() {
+  const list=document.querySelector<HTMLElement>('.quest-list');if(!list)return;
+  const ids=[...new Set([...(profile.quests.active?[profile.quests.active.id]:[]),...profile.quests.offers])],stamp=JSON.stringify(ids);
+  if(list.dataset.offers===stamp)return;
+  list.dataset.offers=stamp;
+  list.innerHTML=ids.map(id=>{const def=questById(id)!,active=profile.quests.active?.id===id;return `<article><strong>${active?'ACTIVE · ':''}${def.name}</strong><p>${def.giver} · ${def.area}</p><p>${questGoal(id)}</p>${active?'':`<p data-quest-offer="${id}"></p>`}<button data-quest-details="${id}" class="secondary-button">${def.xp} XP · ${def.coins} coins · Details</button></article>`;}).join('')||'<p>No offers right now. Check again in a few minutes, play to unlock more tasks, or visit tomorrow.</p>';
+  list.querySelectorAll<HTMLButtonElement>('[data-quest-details]').forEach(button=>button.onclick=()=>openQuest(button.dataset.questDetails as QuestId));
+}
 function openQuests() {
-  ensureQuests(profile);const ids=[...new Set([...(profile.quests.active?[profile.quests.active.id]:[]),...profile.quests.offers])];
-  openModal(`<div class="eyebrow">KAPWA · HELPING OUR NEIGHBORS</div><h2 id="modal-title">Barangay quests</h2><p>Look for ? above neighbors and items. Accept a task in person, then return to its giver when ! appears. ${profile.quests.claimed.length}/8 rewarded tasks today · ${profile.quests.total} completed overall.</p><div class="quest-list">${ids.map(id=>{const def=questById(id)!;return `<article><strong>${profile.quests.active?.id===id?'ACTIVE · ':''}${def.name}</strong><p>${def.giver} · ${def.area}</p><p>${questGoal(id)}</p><button data-quest-details="${id}" class="secondary-button">${def.xp} XP · ${def.coins} coins · Details</button></article>`;}).join('')||'<p>No new offers now. Play to unlock more tasks, or visit tomorrow.</p>'}</div><button id="quests-close" class="secondary-button">Back to the barangay</button>`);
+  if(ensureQuests(profile)){saveProfile(profile);barangay.refreshQuests();}
+  openModal(`<div class="eyebrow">KAPWA · HELPING OUR NEIGHBORS</div><h2 id="modal-title">Barangay quests</h2><p>Look for ? above neighbors and items. Unaccepted offers expire after 10 minutes, including time away. Accept in person to keep the quest; return when ! appears. ${profile.quests.claimed.length}/8 rewarded tasks today · ${profile.quests.total} completed overall.</p><div class="quest-list"></div><button id="quests-close" class="secondary-button">Back to the barangay</button>`);
   $('#modal-content').classList.add('quest-details');
   $('#quests-close').insertAdjacentHTML('beforebegin',`<div id="quest-breaks">${Object.keys(profile.quests.cooldowns).map(giver=>`<p><strong>${giver}</strong> is taking a break: <span data-quest-cooldown="${giver}"></span></p>`).join('')}</div>${profile.quests.active?.expiresAt?'<p data-quest-clock></p>':''}`);updateQuestClocks();
-  document.querySelectorAll<HTMLButtonElement>('[data-quest-details]').forEach(button=>button.onclick=()=>openQuest(button.dataset.questDetails as QuestId));$('#quests-close').onclick=closeModal;
+  renderQuestList();updateQuestClocks();$('#quests-close').onclick=closeModal;
 }
 $('#quests-button').onclick=openQuests;
 const clockText=(ms:number)=>{const seconds=Math.ceil(Math.max(0,ms)/1000);return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;};
@@ -299,11 +309,14 @@ function updateQuestClocks() {
   const hud=$('#quest-timer');hud.hidden=!message;hud.textContent=run?.expiresAt?(expired?'Quest expired · Open Quests':`Quest ${clockText(run.expiresAt-Date.now())} · Quests for details`):'';
   document.querySelectorAll<HTMLElement>('[data-quest-clock]').forEach(el=>el.textContent=message);
   document.querySelectorAll<HTMLElement>('[data-quest-cooldown]').forEach(el=>{const left=questCooldown(profile,el.dataset.questCooldown!);el.textContent=left?`${clockText(left)} remaining`:'Break finished. Check available offers.';});
+  document.querySelectorAll<HTMLElement>('[data-quest-offer]').forEach(el=>{const id=el.dataset.questOffer as QuestId,left=questOfferRemaining(profile,id);el.textContent=left&&profile.quests.offers.includes(id)?`Offer expires in ${clockText(left)}. Accept in person.`:'This offer has expired. Check the quest journal for current tasks.';});
+  const accept=document.querySelector<HTMLButtonElement>('#quest-accept');
+  if(accept){const id=$('#modal-content').dataset.questDetailId as QuestId;if(!profile.quests.offers.includes(id)||!questOfferRemaining(profile,id)){accept.disabled=true;accept.textContent='Offer expired · Check quest journal';}}
   if(expired){const claim=document.querySelector<HTMLButtonElement>('#quest-claim');if(claim){claim.disabled=true;claim.textContent='Time is up';}const reset=document.querySelector<HTMLButtonElement>('#quest-abandon');if(reset)reset.textContent='Reset quest to try again';}
 }
 let expiredQuestNotice='';
 window.setInterval(()=>{
-  if(ensureQuests(profile)){saveProfile(profile);barangay.refreshQuests();}
+  if(ensureQuests(profile)){saveProfile(profile);barangay.refreshQuests();renderQuestList();}
   updateQuestClocks();
   const run=profile.quests.active;
   if(run&&questExpired(profile)){const stamp=`${run.id}:${run.expiresAt}`;if(expiredQuestNotice!==stamp){expiredQuestNotice=stamp;toast('Quest time is up. No coins or XP lost. Open Quests to reset and try again.');barangay.refreshQuests();}}

@@ -15,13 +15,16 @@ export const QUESTS = [
 ] as const satisfies readonly {id:string;name:string;giver:string;x:number;y:number;area:string;level:number;xp:number;coins:number;value:string;dialogue:string;thanks:string;goal:Goal}[];
 export type QuestId = typeof QUESTS[number]['id'];
 export type QuestRun = { id:QuestId; progress:number; spots:number[]; collected:number[]; expiresAt:number };
-export type QuestState = { day:string; offers:QuestId[]; claimed:QuestId[]; total:number; active:QuestRun|null; cooldowns:Record<string,number> };
+export type QuestState = { day:string; offers:QuestId[]; claimed:QuestId[]; total:number; active:QuestRun|null; cooldowns:Record<string,number>; offerExpiresAt:Partial<Record<QuestId,number>> };
 export const NPC_COOLDOWN = 15 * 60_000;
+export const OFFER_LIFETIME = 10 * 60_000;
 const TASK_MINUTES:Partial<Record<QuestId,number>> = {'clean-plaza':4,'elder-errand':5,'share-merienda':5,'rope-patience':8,'can-care':10};
 export const questTimeLimit = (id:QuestId) => (TASK_MINUTES[id] ?? 0) * 60_000;
 const timestamp = (value:unknown) => typeof value==='number'&&Number.isFinite(value)&&value>0&&value<=8640000000000000?Math.floor(value):0;
 export const questExpired = (profile:Pick<Profile,'quests'>,now=Date.now()) => !!profile.quests.active?.expiresAt&&now>=profile.quests.active.expiresAt;
 export const questCooldown = (profile:Pick<Profile,'quests'>,giver:string,now=Date.now()) => Math.max(0,(profile.quests.cooldowns[giver]??0)-now);
+export const questOfferRemaining = (profile:Pick<Profile,'quests'>,id:QuestId,now=Date.now()) => Math.max(0,(profile.quests.offerExpiresAt[id]??0)-now);
+export const questOfferExpired = (profile:Pick<Profile,'quests'>,id:QuestId,now=Date.now()) => profile.quests.active?.id!==id&&!!profile.quests.offerExpiresAt[id]&&!questOfferRemaining(profile,id,now);
 export const QUEST_SPOTS = [{x:520,y:420},{x:600,y:460},{x:880,y:430},{x:450,y:540},{x:880,y:600},{x:680,y:480}];
 export const questById = (id:string) => QUESTS.find(q=>q.id===id);
 export function normalizeQuests(value:unknown):QuestState {
@@ -32,25 +35,30 @@ export function normalizeQuests(value:unknown):QuestState {
   const claimed=ids(raw.claimed); if(active&&claimed.includes(active.id)) active=null;
   const cooldowns:Record<string,number>={};
   if(raw.cooldowns&&typeof raw.cooldowns==='object')for(const giver of new Set(QUESTS.map(def=>def.giver))){const until=timestamp(raw.cooldowns[giver]);if(until)cooldowns[giver]=until;}
-  return {day:typeof raw.day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(raw.day)?raw.day:'',offers:ids(raw.offers).slice(0,3),claimed,total:typeof raw.total==='number'&&Number.isFinite(raw.total)?Math.max(0,Math.min(1000000,Math.floor(raw.total))):0,active,cooldowns};
+  const offerExpiresAt:Partial<Record<QuestId,number>>={};
+  if(raw.offerExpiresAt&&typeof raw.offerExpiresAt==='object')for(const def of QUESTS){const until=timestamp(raw.offerExpiresAt[def.id]);if(until)offerExpiresAt[def.id]=until;}
+  return {day:typeof raw.day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(raw.day)?raw.day:'',offers:ids(raw.offers).slice(0,3),claimed,total:typeof raw.total==='number'&&Number.isFinite(raw.total)?Math.max(0,Math.min(1000000,Math.floor(raw.total))):0,active,cooldowns,offerExpiresAt};
 }
 const today = (date:Date) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 export function ensureQuests(profile:Pick<Profile,'quests'|'xp'|'coins'>, random= Math.random, date=new Date()) {
-  const q=profile.quests, before=JSON.stringify(q), day=today(date);
+  const q=profile.quests, before=JSON.stringify(q), day=today(date),now=date.getTime();
   for(const [giver,until] of Object.entries(q.cooldowns))if(until<=date.getTime())delete q.cooldowns[giver];
-  if(q.day!==day) {q.day=day;q.claimed=[];q.offers=q.active?[q.active.id]:[];}
+  if(q.day!==day) {q.day=day;q.claimed=[];q.offers=q.active?[q.active.id]:[];q.offerExpiresAt={};}
   if(q.claimed.length>=8) {q.offers=[];return before!==JSON.stringify(q);}
-  q.offers=q.offers.filter(id=>!q.claimed.includes(id)&&!questCooldown(profile,questById(id)!.giver,date.getTime()));
-  const available=QUESTS.filter(def=>!questCooldown(profile,def.giver,date.getTime())&&def.level<=playerLevel(profile.xp).level&&!q.claimed.includes(def.id)&&!q.offers.includes(def.id)&& (def.goal.kind!=='game'||gameUnlocked(profile.xp,def.goal.game)) && (def.goal.kind!=='buy'||profile.coins>=3));
-  while(q.offers.length<3&&available.length&&q.claimed.length<8) {const i=Math.min(available.length-1,Math.floor(random()*available.length));q.offers.push(available.splice(i,1)[0].id);}
+  const expired=q.offers.filter(id=>questOfferExpired(profile,id,now));
+  q.offers=q.offers.filter(id=>!q.claimed.includes(id)&&!questCooldown(profile,questById(id)!.giver,now)&&!expired.includes(id));
+  for(const id of q.offers)if(id!==q.active?.id&&!q.offerExpiresAt[id])q.offerExpiresAt[id]=now+OFFER_LIFETIME;
+  // Keep expired offers out for the following rotation, so their markers do not immediately reappear.
+  const available=QUESTS.filter(def=>!expired.includes(def.id)&&(!q.offerExpiresAt[def.id]||now>=q.offerExpiresAt[def.id]!+OFFER_LIFETIME)&&!questCooldown(profile,def.giver,now)&&def.level<=playerLevel(profile.xp).level&&!q.claimed.includes(def.id)&&!q.offers.includes(def.id)&&def.id!==q.active?.id&& (def.goal.kind!=='game'||gameUnlocked(profile.xp,def.goal.game)) && (def.goal.kind!=='buy'||profile.coins>=3));
+  while(q.offers.length<3&&available.length&&q.claimed.length<8) {const i=Math.min(available.length-1,Math.floor(random()*available.length)),id=available.splice(i,1)[0].id;q.offers.push(id);q.offerExpiresAt[id]=now+OFFER_LIFETIME;}
   return before!==JSON.stringify(q);
 }
 export function acceptQuest(profile:Profile,id:QuestId,random=Math.random,now=Date.now()) {
-  const q=profile.quests,def=questById(id);if(!def||questCooldown(profile,def.giver,now)||q.active||!q.offers.includes(id)||q.claimed.includes(id)||q.claimed.length>=8||playerLevel(profile.xp).level<def.level)return false;
+  const q=profile.quests,def=questById(id);if(!def||questOfferExpired(profile,id,now)||questCooldown(profile,def.giver,now)||q.active||!q.offers.includes(id)||q.claimed.includes(id)||q.claimed.length>=8||playerLevel(profile.xp).level<def.level)return false;
   const pool=QUEST_SPOTS.map((_,i)=>i),spots:number[]=[];
   const count=def.goal.kind==='collect'?def.goal.count:0;
   while(spots.length<count){const i=Math.min(pool.length-1,Math.floor(random()*pool.length));spots.push(pool.splice(i,1)[0]);}
-  q.active={id,progress:0,spots,collected:[],expiresAt:questTimeLimit(id)?now+questTimeLimit(id):0};return true;
+  q.active={id,progress:0,spots,collected:[],expiresAt:questTimeLimit(id)?now+questTimeLimit(id):0};delete q.offerExpiresAt[id];return true;
 }
 export type QuestEvent={kind:'buy';id:string;shop:'street'|'store'}|{kind:'game';game:string;score:number};
 export function progressQuest(profile:Pick<Profile,'quests'>,event:QuestEvent,now=Date.now()) {
@@ -66,11 +74,12 @@ export function collectQuestItem(profile:Profile,spot:number,now=Date.now()) {
 export function questReady(profile:Pick<Profile,'quests'>,now=Date.now()) { const run=profile.quests.active,def=run&&questById(run.id);return !questExpired(profile,now)&&!!run&&!!def&&run.progress>=(def.goal.kind==='collect'?def.goal.count:1); }
 export function claimQuest(profile:Profile,id:QuestId,now=Date.now()) {
   const q=profile.quests,def=questById(id);if(!def||q.active?.id!==id||!questReady(profile,now)||q.claimed.includes(id)||q.claimed.length>=8)return false;
+  for(const task of QUESTS)if(task.giver===def.giver)delete q.offerExpiresAt[task.id];
   profile.xp=Math.min(MAX_XP,profile.xp+def.xp);profile.coins=Math.min(1000000,profile.coins+def.coins);q.claimed.push(id);q.total++;q.active=null;q.cooldowns[def.giver]=now+NPC_COOLDOWN;q.offers=q.offers.filter(offered=>offered!==id);ensureQuests(profile,Math.random,new Date(now));return true;
 }
 export function questNodes(profile:Pick<Profile,'quests'>) {
   const q=profile.quests,ids=[...new Set([...q.offers,...(q.active?[q.active.id]:[])])];
-  const nodes:{id:QuestId;x:number;y:number;label:string;spot:number;item:string}[]=ids.filter(id=>!q.claimed.includes(id)&&!questCooldown(profile,questById(id)!.giver)).sort((a,b)=>Number(b===q.active?.id)-Number(a===q.active?.id)).map(id=>{const def=questById(id)!;return {id,x:def.x,y:def.y,label:q.active?.id===id?(questExpired(profile)?'…':questReady(profile)?'!':'?'):'?',spot:-1,item:''};}).filter((node,index,list)=>list.findIndex(other=>other.x===node.x&&other.y===node.y)===index);
+  const nodes:{id:QuestId;x:number;y:number;label:string;spot:number;item:string}[]=ids.filter(id=>!questOfferExpired(profile,id)&&!q.claimed.includes(id)&&!questCooldown(profile,questById(id)!.giver)).sort((a,b)=>Number(b===q.active?.id)-Number(a===q.active?.id)).map(id=>{const def=questById(id)!;return {id,x:def.x,y:def.y,label:q.active?.id===id?(questExpired(profile)?'…':questReady(profile)?'!':'?'):'?',spot:-1,item:''};}).filter((node,index,list)=>list.findIndex(other=>other.x===node.x&&other.y===node.y)===index);
   const run=q.active,def=run&&questById(run.id);if(run&&def&&!questExpired(profile)&&def.goal.kind==='collect'&&!questReady(profile)) for(const spot of run.spots.filter(n=>!run.collected.includes(n))) nodes.push({id:run.id,...QUEST_SPOTS[spot],label:'?',spot,item:def.goal.item});
   return nodes;
 }

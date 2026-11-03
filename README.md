@@ -12,6 +12,8 @@ Quest markers now follow their NPCs, and quest details use larger text.
 Reward claims give that neighbor a saved 15-minute cooldown. Selected tasks
 have 4–10 minute deadlines, with a visible countdown and a free reset after
 timeout. See [the journey guide](docs/JOURNEY.md) for durations and rules.
+As of 0.15.1, unaccepted question-mark offers expire after 10 minutes, with
+saved countdowns and automatic rotation. Accepted quests keep their own timers.
 
 ## The barangay journey
 
