@@ -1,4 +1,4 @@
-# Barangay journey — alpha 0.15
+# Barangay journey — alpha 0.16
 
 Levels start at 0 and stop at 30. Level 1 starts at 100 XP, Level 2 at 235,
 Level 3 at 415. The XP needed for each next level is
@@ -12,12 +12,16 @@ practice, abandoned games and empty early rope cash-outs award none.
 | --- | --- |
 | 0–1 | Patintero, Luksong-tinik, Dama |
 | 2 | Piko |
+| 2 | Tic-tac-toe, at Jhing's table |
 | 3 | Tagu-taguan |
 | 4 | Snake, after finding the pocket phone |
 | 5 | Jolen |
+| 6 | Langit-Lupa, at Jr's play park |
 | 7 | Luksong Lubid |
+| 8 | Tagalog Krosword, at Geron's Dyaryo desk |
 | 9 | Tumbang Preso |
 | 10 | Orbit Patrol, after finding the pocket phone |
+| 11 | Sudoku, at the Dyaryo desk |
 | 12 | Chess, at the Dama table |
 
 The picker, setup, map entrances, phone and Chess tab all respect the same

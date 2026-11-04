@@ -37,7 +37,7 @@ test('the themed loading screen appears before the game and About has the credit
   await page.locator('#about-button').click(); await expect(page.getByRole('heading', { name: 'About LARO' })).toBeVisible();
   await expect(page.locator('.about-credits')).toContainText('tphilo games'); await expect(page.locator('.about-credits')).toContainText('developed by Sab');
   await expect(page.locator('#about-version')).toHaveText(`Version ${GAME_VERSION}`); await page.locator('#about-close').click();
-  await expect(page.locator('#hub-map')).toContainText('8 PLACES'); await expect(page.locator('[data-game]')).toHaveCount(8);
+  await expect(page.locator('#hub-map')).toContainText('11 PLACES'); await expect(page.locator('[data-game]')).toHaveCount(12);
 });
 test('Jolen has fast timed power, persistent shooters, visible bot motion, and no early-leave rewards', async ({ page }) => {
   await openJolen(page);

@@ -1,11 +1,11 @@
 import type { Profile } from '../store';
 
-export type GameId = 'patintero' | 'dama' | 'chess' | 'taguan' | 'tinik' | 'jolen' | 'lubid' | 'snake' | 'impact' | 'piko' | 'tumbang';
-export const PUBLIC_GAMES: GameId[] = ['jolen', 'patintero', 'dama', 'taguan', 'tinik', 'lubid', 'piko', 'tumbang'];
+export type GameId = 'patintero' | 'dama' | 'chess' | 'taguan' | 'tinik' | 'jolen' | 'lubid' | 'snake' | 'impact' | 'piko' | 'tumbang' | 'langit' | 'crossword' | 'sudoku' | 'tictactoe';
+export const PUBLIC_GAMES: GameId[] = ['jolen', 'patintero', 'dama', 'taguan', 'tinik', 'lubid', 'piko', 'tumbang', 'langit', 'crossword', 'sudoku', 'tictactoe'];
 export type NewGameId = Exclude<GameId, 'patintero'>;
 export type Sound = 'step' | 'tag' | 'turn' | 'win' | 'emote';
 export type FailureKind = 'mistake' | 'hit' | 'loss';
-export type Result = { game: NewGameId; won: boolean; draw?: boolean; title: string; summary: string; coins: number; record: number; practice?: boolean; failure?: boolean };
+export type Result = { game: NewGameId; won: boolean; draw?: boolean; title: string; summary: string; coins: number; record: number; practice?: boolean; failure?: boolean; xp?:number };
 export type HUD = { left: string; objective: string; right: string; countdown?: number };
 export interface ActivityUI {
   profile: Profile;
@@ -29,6 +29,10 @@ export interface ActivityControls {
   finishRun?(): void;
 }
 export const GAMES: Record<GameId, { title: string; description: string; tags: string[]; category: string; record: string }> = {
+  langit: {title:'Langit-Lupa',description:'Jack-en-Poy chooses the taya. Escape across raised platforms with Jr, or chase on the ground. Heaven never lasts forever.',tags:['Easy · Hard','90 seconds · solo / local'],category:'CHASE GAME · WITH JR',record:'BEST ROUND SCORE'},
+  crossword: {title:'Dyaryo · Krosword',description:'Visit Geron’s newspaper desk. Solve changing Tagalog crosswords about everyday life, nature and Filipino values.',tags:['Tagalog clues','Changing editions'],category:'DYARYO · TAGALOG CROSSWORDS',record:'PUZZLES SOLVED'},
+  sudoku: {title:'Dyaryo · Sudoku',description:'A fresh number puzzle at Geron’s desk. Fill every row, column and 3×3 box with the numbers 1–9.',tags:['Unique solutions','Easy · Hard'],category:'DYARYO · NUMBER PUZZLES',record:'PUZZLES SOLVED'},
+  tictactoe: {title:'Tic-tac-toe',description:'Sit with Jhing for a quick game of three in a row. Challenge her or share the device with a friend.',tags:['Easy · Hard','Bot or pass-and-play'],category:'BOARD GAME · WITH JHING',record:'BOT WINS'},
   piko: { title: 'Piko', description: 'Wendy drew a chalk court in the east lane. Toss your pamato, skip its square, and time each landing out and back.', tags: ['8 pamato courses', 'One foot or two'], category: 'HOPPING GAME · SOLO WITH WENDY', record: 'COURSES / 8' },
   tumbang: { title: 'Tumbang Preso', description: 'Throw a tsinelas, topple the spinning tin can, and bring your slipper home. Take turns guarding with Eric.', tags: ['Aim + retrieve', 'Thrower / guard rotation'], category: 'AIMING GAME · SOLO + ERIC', record: 'BEST POINTS' },
   chess: { title: 'Chess', description: 'Share the Dama table for a game of chess. Play a neighbor or pass the device between friends.', tags: ['At the Dama table', 'Bot or pass-and-play'], category: 'BOARD GAME · 1–2 PLAYERS', record: 'MATCHES' },

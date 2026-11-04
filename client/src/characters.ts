@@ -11,10 +11,13 @@ export const CHARACTERS = {
   pom: 'Pom',
   wendy: 'Wendy',
   eric: 'Eric',
+  jr: 'Jr',
+  geron: 'Geron',
+  jhing: 'Jhing',
 } as const;
 export const DEFAULT_PLAYER_NAME = 'Ikaw';
 export type AvatarGender = 'boy' | 'girl';
-export type CharacterLook = AvatarGender | 'mama-shoni' | 'tatay-efren' | 'ferdie' | 'mj' | 'audrey' | 'sheena' | 'weng' | 'weng-new' | 'pom' | 'wendy' | 'eric';
+export type CharacterLook = AvatarGender | 'mama-shoni' | 'tatay-efren' | 'ferdie' | 'mj' | 'audrey' | 'sheena' | 'weng' | 'weng-new' | 'pom' | 'wendy' | 'eric' | 'jr' | 'geron' | 'jhing';
 export type CharacterId = keyof typeof CHARACTERS;
 export const BOT_APPEARANCES: Record<CharacterId, { look: CharacterLook; color: number; gender: AvatarGender; elderly: boolean }> = {
   mamaShoni: { look: 'mama-shoni', color: 4, gender: 'girl', elderly: true },
@@ -28,5 +31,8 @@ export const BOT_APPEARANCES: Record<CharacterId, { look: CharacterLook; color: 
   pom: { look: 'pom', color: 0, gender: 'boy', elderly: false },
   wendy: { look: 'wendy', color: 2, gender: 'girl', elderly: false },
   eric: { look: 'eric', color: 1, gender: 'boy', elderly: false },
+  jr: {look:'jr',color:2,gender:'boy',elderly:false},
+  geron: {look:'geron',color:3,gender:'boy',elderly:false},
+  jhing: {look:'jhing',color:1,gender:'girl',elderly:false},
 };
 export const characterTexture = (look: CharacterLook, color: number, direction = 0, frame = 0) => `person-${look}-${color}-${direction}-${frame}`;

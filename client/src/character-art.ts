@@ -9,7 +9,7 @@ const fill = (c: Painter, x: number, y: number, w: number, h: number, color: str
 /** All looks share the same padded frame and feet anchor, including walking frames. */
 export function drawCharacter(c: Painter, color: string, look: CharacterLook, direction = 0, frame = 0, outfit?: Record<WardrobeSlot, string>, gesture?: CharacterGesture) {
   const elderlyWoman = look === 'mama-shoni', elderlyMan = look === 'tatay-efren';
-  const girl = ['girl', 'mama-shoni', 'audrey', 'sheena', 'weng', 'weng-new', 'wendy'].includes(look);
+  const girl = ['girl', 'mama-shoni', 'audrey', 'sheena', 'weng', 'weng-new', 'wendy', 'jhing'].includes(look);
   const elderly = elderlyWoman || elderlyMan, bob = frame % 2;
   const stride = frame === 1 ? -2 : frame === 3 ? 2 : 0;
   const hair = elderly ? '#c9c7b5' : look === 'weng' ? '#604533' : look === 'sheena' ? '#4b3833' : '#323c34';
@@ -43,6 +43,12 @@ export function drawCharacter(c: Painter, color: string, look: CharacterLook, di
     fill(c, 6, 7 - bob, 2, 5, hair); fill(c, 17, 7 - bob, 2, 5, hair);
     fill(c, 7, 13 - bob, 1, 2, '#ebc97f'); fill(c, 17, 13 - bob, 1, 2, '#ebc97f');
     for (const [x, y] of [[8, 17], [14, 20], [6, 20]]) { fill(c, x, y - bob, 2, 2, '#efcf9e'); fill(c, x, y - bob, 1, 1, '#bf8d99'); }
+  } else if (look === 'jr') {
+    fill(c,6,6-bob,13,2,'#e0b95d');fill(c,direction===1?3:18,7-bob,4,3,'#e0b95d');fill(c,10,17-bob,5,4,'#f3e0b7');
+  } else if (look === 'geron') {
+    fill(c,6,2-bob,13,3,'#7e6246');fill(c,8,1-bob,7,2,'#7e6246');
+    if(direction!==3){fill(c,8,9-bob,4,4,'#38524b');fill(c,14,9-bob,4,4,'#38524b');fill(c,9,10-bob,2,2,'#b6d3bc');fill(c,15,10-bob,2,2,'#b6d3bc');fill(c,12,10-bob,2,1,'#38524b');}
+    fill(c,7,20-bob,10,2,'#e9cd8f');
   } else if (look === 'ferdie') {
     fill(c, 6, 3 - bob, 13, 4, '#64734a'); fill(c, direction === 1 ? 3 : 8, 6 - bob, 13, 2, '#e0c777');
     fill(c, 11, 4 - bob, 3, 2, '#d3dab7');
@@ -68,6 +74,7 @@ export function drawCharacter(c: Painter, color: string, look: CharacterLook, di
       fill(c, direction === 1 ? 18 : 3, 8 - bob, 3, 3, '#d6a8cc');
       fill(c, 7, 17 - bob, 10, 2, '#f3dfbb');
     }
+    if(look==='jhing'){fill(c,direction===1?3:18,5-bob,4,13,'#654a3c');fill(c,direction===1?3:18,5-bob,4,3,'#d6a1a1');fill(c,8,18-bob,8,2,'#f0d998');}
     fill(c, 10, 15 - bob, 5, 2, '#f5e7cb');
   } else fill(c, 6, 8 - bob, 3, 4, hair);
 

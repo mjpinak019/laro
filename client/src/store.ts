@@ -6,7 +6,7 @@ import { legacyXp, MAX_XP } from './progression.ts';
 import { normalizeQuests, type QuestState } from './quests.ts';
 
 export const COLORS = ['#e7b65d', '#7fafba', '#ca867b', '#a3af75'] as const;
-export const RECORD_IDS = ['dama', 'chess', 'taguan', 'tinik', 'jolen', 'lubid', 'snake', 'impact', 'piko', 'tumbang'] as const;
+export const RECORD_IDS = ['dama', 'chess', 'taguan', 'tinik', 'jolen', 'lubid', 'snake', 'impact', 'piko', 'tumbang', 'langit', 'crossword', 'sudoku', 'tictactoe'] as const;
 export type RecordBook = Record<typeof RECORD_IDS[number], { wins: number; played: number; best: number }>;
 const freshRecords = (): RecordBook => Object.fromEntries(RECORD_IDS.map(id => [id, { wins: 0, played: 0, best: 0 }])) as RecordBook;
 export interface Profile {
@@ -22,6 +22,8 @@ export interface Profile {
   damaDifficulty: DamaDifficulty;
   jolenDifficulty: DamaDifficulty;
   chessDifficulty: Difficulty;
+  langitDifficulty?: 'easy'|'hard';
+  puzzleDifficulty?: 'easy'|'hard';
   records: RecordBook;
   wardrobe: Wardrobe;
   phoneFinds: number;
@@ -52,6 +54,7 @@ export function normalizeProfile(value: unknown): Profile {
       name: typeof raw.name === 'string' && raw.name.trim() && raw.name.trim() !== 'Kaibigan' ? raw.name.trim().slice(0, 16) : defaults.name,
       color: number(raw.color, 3), coins: number(raw.coins), wins: number(raw.wins), played: number(raw.played),
       gender: raw.gender === 'girl' ? 'girl' : 'boy',
+      langitDifficulty:raw.langitDifficulty==='hard'?'hard':'easy',puzzleDifficulty:raw.puzzleDifficulty==='hard'?'hard':'easy',
       best: number(raw.best, 90), muted: typeof raw.muted === 'boolean' ? raw.muted : false,
       difficulty: raw.difficulty === 'hard' ? 'hard' : raw.difficulty === 'normal' ? 'normal' : 'easy',
       damaDifficulty: isDamaDifficulty(raw.damaDifficulty) ? raw.damaDifficulty : isDamaDifficulty(raw.difficulty) ? raw.difficulty : 'easy',

@@ -217,6 +217,13 @@ function drawHub(c: Painter) {
   label(c, 'MERIENDA CORNER', 230, 682, '#416147', 8); pennants(c, 147, 565, 160);
   label(c, 'JEEPNEY STOP', 350, 635, '#416147', 8); label(c, 'BAHAY KALINGA', 1220, 460, '#416147', 8);
   for (let x = 160; x < 1090; x += 50) rect(c, x, 662, 16, 2, '#e9d8b2');
+  // Small neighborhood destinations occupy the open gaps between the housing loops.
+  rect(c,205,520,100,75,'#b6b18c');rect(c,125,548,115,20,'#cdb994');
+  label(c,'JHING · TIC-TAC-TOE',251,520,'#395d44',7);pennants(c,207,503,96);
+  rect(c,465,638,190,110,'#aaaf80');rect(c,467,641,184,103,'#c4b38c');
+  label(c,'LANGIT-LUPA',575,645,'#3d6043',9);label(c,'JR’S PLAY PARK',575,659,'#4b6948',7);pennants(c,474,623,175);
+  rect(c,925,683,135,62,'#c3b18c');label(c,'DYARYO · GERON',987,676,'#395c44',8);
+  rect(c,985,716,25,5,'#72885f');label(c,'BASA AT BILANG',989,747,'#446247',7);
 }
 
 function drawHidingObject(c: Painter, kind: string, x: number, y: number, w: number, h: number) {

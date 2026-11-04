@@ -2,9 +2,19 @@
 
 Installed on October 28, 2026. This directory is separate from the existing
 Tio Philo Next.js application and has its own npm workspaces and lockfile.
-Alpha 0.15 includes nine neighborhood classics across eight areas, plus two
-hidden phone games. All eleven games work offline after the first complete
+Alpha 0.16 includes thirteen neighborhood games across eleven areas, plus two
+hidden phone games. All fifteen games work offline after the first complete
 online load.
+
+## Alpha 0.16 — Langit-Lupa and the Dyaryo desk
+
+Jr hosts Langit-Lupa at Level 6: Jack-en-Poy chooses taya, raised platforms
+have limited safety and reset times, and both players manage sprint energy.
+Easy and Hard support solo against Jr or friendly shared-keyboard local play.
+Jhing hosts Tic-tac-toe from Level 2. Geron's Dyaryo desk opens Tagalog
+crosswords at Level 8 and uniquely solvable Sudoku at Level 11. Puzzles vary
+between rounds. See [the expansion guide](docs/BARANGAY-EXPANSION.md) and the
+[proposed launch strategy](docs/LAUNCH-STRATEGY.md).
 
 ## Alpha 0.15 — moving quest markers and timed challenges
 

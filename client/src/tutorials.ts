@@ -1,7 +1,9 @@
 import type { GameId } from './games/types';
+import {BARANGAY_TUTORIALS,barangayIllustration} from './games/barangay-tutorials.ts';
 
 export type TutorialStep = { title: string; text: string; keys: string };
 export const TUTORIALS: Record<GameId, TutorialStep[]> = {
+  ...BARANGAY_TUTORIALS,
   piko: [
     { title: 'Time the pamato', text: 'The next numbered square is targeted automatically. Start the timing meter, then release in gold. You and Wendy alternate courses; she can make mistakes too, especially on Easy.', keys: 'Space or Toss · Release in gold' },
     { title: 'One square, one foot. Two squares, two feet.', text: 'Skip the pamato square. A single highlighted square needs One foot. A highlighted pair needs the blue Two feet button. If the pamato occupies half a pair, use one foot.', keys: 'Gold: One foot / Space · Blue: Two feet / D' },
@@ -60,6 +62,7 @@ export const TUTORIALS: Record<GameId, TutorialStep[]> = {
 };
 
 export function tutorialIllustration(id: GameId, step: number): string {
+  const extra=barangayIllustration(id,step);if(extra)return extra;
   const kid = (x: number, y: number, color = '#e9bf73') => `<g transform="translate(${x} ${y})"><circle cy="-24" r="10" fill="#dda97c"/><path d="M-10-28v-6h20v6" fill="#33483a"/><path d="M-12-14h24v22h-24z" fill="${color}"/><path d="M-7 8v13m14-13v13" stroke="#264b3d" stroke-width="7"/></g>`;
   const arrow = '<path d="M310 110h70m-18-14 18 14-18 14" fill="none" stroke="#f2c46d" stroke-width="5"/>';
   let art = '';

@@ -9,6 +9,8 @@ import { TinikScene } from './tinik';
 import { JolenGame } from './jolen';
 import { LubidScene } from './lubid';
 import { RetroGame } from './retro';
+import {LangitScene} from './langit';
+import {DyaryoGame} from './dyaryo';
 import type { ActivityControls, ActivityUI, GameId } from './types';
 import { gameUnlocked, GAME_LEVELS } from '../progression';
 
@@ -20,16 +22,18 @@ export class GameDirector {
   private street?: PikoGame | TumbangGame;
   private jolen?: JolenGame;
   private retro?: RetroGame;
+  private paper?:DyaryoGame;
   private phoneSession = false;
   private returnPhone() { if (!this.phoneSession) return; this.phoneSession = false; this.barangay.respawnPhone(); this.ui.phoneReturned?.(); }
   constructor(private game: Phaser.Game, private barangay: BarangayScene, private ui: ActivityUI) {}
 
   private stop() {
+    this.paper?.dispose();this.paper=undefined;
     this.street?.dispose(); this.street = undefined;
     this.chess?.dispose(); this.chess = undefined;
     this.activity?.resetInput(); this.activity = undefined; this.dama?.dispose(); this.dama = undefined; this.jolen?.dispose(); this.jolen = undefined;
     this.returnPhone(); this.retro?.dispose(); this.retro = undefined;
-    for (const key of ['taguan', 'tinik', 'lubid']) if (this.game.scene.getScene(key)) this.game.scene.remove(key);
+    for (const key of ['taguan', 'tinik', 'lubid', 'langit']) if (this.game.scene.getScene(key)) this.game.scene.remove(key);
     this.barangay.resetInput();
     document.querySelector<HTMLElement>('#game')!.style.visibility = '';
   }
@@ -40,7 +44,9 @@ export class GameDirector {
     if (id === 'patintero') { this.startMatch(); return; }
     if (this.active === 'hub') this.barangay.rememberHubPosition();
     this.stop(); this.active = id; this.game.scene.sleep('barangay');
-    if (id === 'snake' || id === 'impact') {
+    if(id==='crossword'||id==='sudoku'||id==='tictactoe'){
+      document.querySelector<HTMLElement>('#game')!.style.visibility='hidden';this.paper=new DyaryoGame(this.ui,id,options.mode==='local');this.activity=this.paper;
+    } else if (id === 'snake' || id === 'impact') {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.phoneSession = true;
       this.retro = new RetroGame({ ...this.ui, result: result => { this.returnPhone(); this.ui.result(result); } }, id); this.activity = this.retro;
@@ -57,7 +63,7 @@ export class GameDirector {
       document.querySelector<HTMLElement>('#game')!.style.visibility = 'hidden';
       this.dama = new DamaGame(this.ui, options.mode ?? 'bot', options.resume); this.activity = this.dama;
     } else {
-      const scene = id === 'lubid' ? new LubidScene(this.ui) : id === 'taguan' ? new TaguanScene(this.ui) : new TinikScene(this.ui, options.practice);
+      const scene = id === 'langit'?new LangitScene(this.ui,options.mode==='local'):id === 'lubid' ? new LubidScene(this.ui) : id === 'taguan' ? new TaguanScene(this.ui) : new TinikScene(this.ui, options.practice);
       this.activity = scene; this.game.scene.add(id, scene, true);
     }
   }

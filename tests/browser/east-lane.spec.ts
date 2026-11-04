@@ -87,7 +87,7 @@ test('new games fit portrait and short landscape fullscreen and reload offline',
 });
 test('the expanded map has reachable Wendy and Eric game entrances', async ({ page }) => {
   test.setTimeout(100000); await ready(page); const game = page.locator('#game');
-  await expect(page.locator('#hub-map')).toContainText('8 PLACES');
+  await expect(page.locator('#hub-map')).toContainText('11 PLACES');
   for (const [id, target] of [['piko', { x: 1900, y: 520 }], ['tumbang', { x: 1900, y: 1160 }]] as const) {
     const from = { x: Number(await game.getAttribute('data-x')), y: Number(await game.getAttribute('data-y')) };
     for (const at of pathTo(from, target)) {

@@ -13,6 +13,7 @@ import { GAMES } from './games/types';
 import { BarangayAnimals } from './wildlife';
 import { playerLevel, GAME_LEVELS, gameUnlocked } from './progression';
 import { questNodes, questById, type QuestId } from './quests';
+import {expansionProps} from './hub-expansion';
 
 export interface GameUI {
   profile: Profile;
@@ -54,7 +55,7 @@ export class BarangayScene extends Phaser.Scene {
   private touchSprint = false;
   private lastStep = 0;
   private interactRequested = false;
-  private hubProps: Phaser.GameObjects.Image[] = [];
+  private hubProps: (Phaser.GameObjects.Image|Phaser.GameObjects.Container)[] = [];
   private courtProps: Phaser.GameObjects.Image[] = [];
   private locationMarkers: Phaser.GameObjects.GameObject[] = [];
   private hubReturnPoint = { x: 514, y: 422 };
@@ -120,12 +121,13 @@ export class BarangayScene extends Phaser.Scene {
     createPlayerArt(this, this.ui.profile);
     this.background = this.add.image(0, 0, 'hub').setOrigin(0).setScale(2);
     this.hubProps = addWorldProps(this, 'hub');
+    this.hubProps.push(...expansionProps(this));
     this.animals = new BarangayAnimals(this);
     this.courtProps = addWorldProps(this, 'court').map(prop => prop.setVisible(false));
     this.hubProps.push(this.add.image(450, 720, 'world-dama-table').setScale(2).setOrigin(.5, 44 / 48).setDepth(720));
     for (const site of HUB_SITES.filter(site => site.game !== 'patintero')) {
       const ring = this.add.ellipse(site.at.x, site.at.y, 52, 23, 0xe6c078, .25).setDepth(.5);
-      const label = this.add.text(site.at.x, site.at.y + 26, `${site.game === 'dama' ? 'DAMA TABLE' : GAMES[site.game].title.toUpperCase()} · E`, { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950);
+      const label = this.add.text(site.at.x, site.at.y + 26, `${site.game === 'dama' ? 'DAMA TABLE' : site.game==='crossword'?'DYARYO · KROSWORD / SUDOKU':GAMES[site.game].title.toUpperCase()} · E`, { ...textStyle, fontSize: '16px' }).setOrigin(.5, 0).setDepth(950);
       this.locationMarkers.push(ring, label);
     }
     for (const point of [FOOD_CORNER, { x: 780, y: 1530 }]) {
@@ -189,6 +191,7 @@ export class BarangayScene extends Phaser.Scene {
     this.player.x = this.hubReturnPoint.x; this.player.y = this.hubReturnPoint.y; this.player.sprite.setAlpha(1);
     this.cameras.main.setScroll(Phaser.Math.Clamp(this.player.x - 480, 0, HUB_SIZE.width - 960), Phaser.Math.Clamp(this.player.y - 300, 0, HUB_SIZE.height - 600));
     this.neighbors = [this.bot(227, 316, 'mamaShoni'), this.bot(675, 396, 'mj'), this.bot(792, 417, 'audrey'), this.bot(372, 750, 'tatayEfren'), this.bot(1250, 420, 'amor'), this.bot(1360, 420, 'ferdie'), this.bot(1400, 860, 'sheena'), this.bot(1030, 460, 'pom'), this.bot(530, 938, 'weng'), this.bot(1790, 490, 'wendy'), this.bot(1790, 1110, 'eric')];
+    this.neighbors.push(this.bot(1100,1465,'jr'),this.bot(2070,1445,'geron'),this.bot(585,1125,'jhing'));
     this.animals.setVisible(true);
     this.ui.location('hub'); this.ui.status(null);
     this.ui.hint('Explore the larger barangay. Walk to a game marker and press E, or use Games.');
